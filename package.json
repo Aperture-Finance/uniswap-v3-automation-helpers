@@ -22,11 +22,13 @@
   "homepage": "https://aperture.finance/",
   "dependencies": {
     "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.4",
+    "@ethersproject/providers": "^5.7.2",
     "@uniswap/sdk-core": "^3.2.2",
     "@uniswap/v3-sdk": "^3.9.0",
-    "ethers": "^6.3.0"
+    "ethers": "^5.7.2"
   },
   "devDependencies": {
+    "hardhat": "^2.14.0",
     "prettier": "^2.8.8"
   }
 }

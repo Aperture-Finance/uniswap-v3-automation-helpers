@@ -1,4 +1,4 @@
-import { getAddress } from 'ethers';
+import { getAddress } from 'ethers/lib/utils';
 
 export type ChainId = number;
 export const ETHEREUM_MAINNET_CHAIN_ID: ChainId = 1;
