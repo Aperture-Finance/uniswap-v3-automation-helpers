@@ -19,5 +19,14 @@
   "bugs": {
     "url": "https://github.com/Aperture-Finance/uniswap-v3-automation-helpers/issues"
   },
-  "homepage": "https://aperture.finance/"
+  "homepage": "https://aperture.finance/",
+  "dependencies": {
+    "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.4",
+    "@uniswap/sdk-core": "^3.2.2",
+    "@uniswap/v3-sdk": "^3.9.0",
+    "ethers": "^6.3.0"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.8"
+  }
 }
