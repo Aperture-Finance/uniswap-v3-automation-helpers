@@ -10,7 +10,7 @@ import {
   IUniswapV3Pool__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
 
-interface BasicPositionInfo {
+export interface BasicPositionInfo {
   poolAddress: string;
   token0: Token;
   token1: Token;
