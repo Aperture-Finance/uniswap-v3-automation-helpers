@@ -2,6 +2,7 @@ import { BigintIsh, Token } from '@uniswap/sdk-core';
 import { Pool, Position, computePoolAddress } from '@uniswap/v3-sdk';
 import { ethers } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
+import { providers } from '@0xsequence/multicall';
 import { CHAIN_ID_TO_INFO } from './chain';
 import {
   ERC20__factory,
@@ -88,8 +89,10 @@ export async function getUniswapSDKPosition(
 ) {
   // If `provider` is undefined, we use the public Infura node.
   if (provider === undefined) {
-    provider = new ethers.providers.InfuraProvider(
-      CHAIN_ID_TO_INFO.get(chainId)!.infura_network_id!,
+    provider = new providers.MulticallProvider(
+      new ethers.providers.InfuraProvider(
+        CHAIN_ID_TO_INFO.get(chainId)!.infura_network_id!,
+      ),
     );
   }
   return getUniswapSDKPositionFromBasicInfo(

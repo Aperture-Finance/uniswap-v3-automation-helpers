@@ -1,1 +1,16 @@
+# Dependency directories
 node_modules/
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Cache
+cache/
+
+# Others
+.DS_Store
+.vscode
+.idea
