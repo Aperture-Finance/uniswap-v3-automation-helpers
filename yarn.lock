@@ -136,10 +136,12 @@
     "@0xsequence/transactions" "^0.43.26"
     "@0xsequence/utils" "^0.43.26"
 
-"@aperture_finance/uniswap-v3-automation-sdk@^0.0.4":
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-0.0.4.tgz#5f9eb7e91d8780d2433f0627fc2e0c4fe8b50981"
-  integrity sha512-FWaZHYA1FbxbUI2yf9qLHLuTibP/R7eNxQoYho9vnFyBWQF5AL39E9sbtSTVh7XUqpjAMv5OKgLdT8XLGihsTw==
+"@aperture_finance/uniswap-v3-automation-sdk@^0.0.6":
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-0.0.6.tgz#09c8f5df147e04b92ebbe739161afee8c6afd613"
+  integrity sha512-RiM2GYAdAUA3X506HuYtTWormXAd/mistwLXyNYMNs2cPuVy5xrm22xGwaSsOi5arDdurUMDWcajcAGQMNCMLA==
+  dependencies:
+    ethers "^5.7.2"
 
 "@ethersproject/abi@5.7.0", "@ethersproject/abi@^5.0.12", "@ethersproject/abi@^5.7.0":
   version "5.7.0"

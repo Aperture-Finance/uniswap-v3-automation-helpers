@@ -1,7 +1,7 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean"
@@ -23,7 +23,7 @@
   "homepage": "https://aperture.finance/",
   "dependencies": {
     "@0xsequence/multicall": "^0.43.26",
-    "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.4",
+    "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.6",
     "@ethersproject/providers": "^5.7.2",
     "@uniswap/sdk-core": "^3.2.2",
     "@uniswap/v3-sdk": "^3.9.0",
