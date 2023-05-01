@@ -1,10 +1,11 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
-  "version": "0.0.2",
-  "files": [
-    "*.ts"
-  ],
+  "version": "0.0.3",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Aperture-Finance/uniswap-v3-automation-helpers.git"
