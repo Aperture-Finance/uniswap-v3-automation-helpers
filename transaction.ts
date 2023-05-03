@@ -20,6 +20,7 @@ import { getNativeEther } from './currency';
 import { getPoolFromBasicPositionInfo } from './pool';
 import { BasicPositionInfo } from './position';
 import JSBI from 'jsbi';
+import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
 
 /**
  * Generates an unsigned transaction that creates a position for the specified limit order.
@@ -112,5 +113,25 @@ export async function getCreatePositionTxForLimitOrder(
     to: CHAIN_ID_TO_INFO.get(chainId)!.uniswap_v3_nonfungible_position_manager,
     data: calldata,
     value,
+  };
+}
+
+/**
+ * Set or revoke Aperture UniV3 Automan contract as an operator of the signer's UniV3 positions.
+ * @param chainId Chain id.
+ * @param approved True if setting approval, false if revoking approval.
+ * @returns The unsigned tx setting or revoking approval.
+ */
+export function getSetApprovalForAllTx(
+  chainId: number,
+  approved: boolean,
+): UnsignedTransaction {
+  const chainInfo = CHAIN_ID_TO_INFO.get(chainId)!;
+  return {
+    to: chainInfo.uniswap_v3_nonfungible_position_manager,
+    data: INonfungiblePositionManager__factory.createInterface().encodeFunctionData(
+      'setApprovalForAll',
+      [chainInfo.aperture_uniswap_v3_automan, approved],
+    ),
   };
 }
