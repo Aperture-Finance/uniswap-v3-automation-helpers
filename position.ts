@@ -11,7 +11,7 @@ import { getPoolFromBasicPositionInfo } from './pool';
 export interface BasicPositionInfo {
   token0: Token;
   token1: Token;
-  liquidity: BigintIsh;
+  liquidity?: BigintIsh;
   tickLower: number;
   tickUpper: number;
   fee: number;
@@ -53,6 +53,9 @@ export async function getUniswapSDKPositionFromBasicInfo(
   basicInfo: BasicPositionInfo,
   provider: Provider,
 ): Promise<Position> {
+  if (basicInfo.liquidity === undefined) {
+    throw 'Missing position liquidity info';
+  }
   return new Position({
     pool: await getPoolFromBasicPositionInfo(basicInfo, provider),
     liquidity: basicInfo.liquidity,
