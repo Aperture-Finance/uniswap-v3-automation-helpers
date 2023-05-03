@@ -1,7 +1,13 @@
-import { Currency, CurrencyAmount, Ether, NativeCurrency, Token } from "@uniswap/sdk-core";
+import {
+  Currency,
+  CurrencyAmount,
+  Ether,
+  NativeCurrency,
+  Token,
+} from '@uniswap/sdk-core';
 import { Provider } from '@ethersproject/abstract-provider';
-import { ERC20__factory } from "@aperture_finance/uniswap-v3-automation-sdk";
-import { parseFixed } from "@ethersproject/bignumber";
+import { ERC20__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
+import { parseFixed } from '@ethersproject/bignumber';
 
 // The `Currency` type is defined as `Currency = NativeCurrency | Token`.
 // When a liquidity pool involves ETH, i.e. WETH is one of the two tokens in the pool, the
@@ -12,13 +18,23 @@ import { parseFixed } from "@ethersproject/bignumber";
 // latter case, `getToken()` with WETH's address should be invoked to represent the WETH
 // token, similar to all other ERC-20 tokens.
 
-export async function getToken(tokenAddress: string, provider: Provider): Promise<Token> {
-    const decimals = await ERC20__factory.connect(tokenAddress, provider).decimals();
-    return new Token((await provider.getNetwork()).chainId, tokenAddress, decimals);
+export async function getToken(
+  tokenAddress: string,
+  provider: Provider,
+): Promise<Token> {
+  const decimals = await ERC20__factory.connect(
+    tokenAddress,
+    provider,
+  ).decimals();
+  return new Token(
+    (await provider.getNetwork()).chainId,
+    tokenAddress,
+    decimals,
+  );
 }
 
 export function getNativeEther(chainId: number): NativeCurrency {
-    return Ether.onChain(chainId);
+  return Ether.onChain(chainId);
 }
 
 /**
@@ -31,6 +47,12 @@ export function getNativeEther(chainId: number): NativeCurrency {
  * @param humanAmount The human-readable amount.
  * @returns The constructed CurrencyAmount.
  */
-export function getCurrencyAmount(currency: Currency, humanAmount: string): CurrencyAmount<Currency> {
-    return CurrencyAmount.fromRawAmount(currency, parseFixed(humanAmount, currency.decimals).toString());
+export function getCurrencyAmount(
+  currency: Currency,
+  humanAmount: string,
+): CurrencyAmount<Currency> {
+  return CurrencyAmount.fromRawAmount(
+    currency,
+    parseFixed(humanAmount, currency.decimals).toString(),
+  );
 }

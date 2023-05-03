@@ -1,5 +1,12 @@
-import { Price, Token } from "@uniswap/sdk-core";
-import { FeeAmount, TICK_SPACINGS, TickMath, nearestUsableTick, priceToClosestTick, tickToPrice } from "@uniswap/v3-sdk";
+import { Price, Token } from '@uniswap/sdk-core';
+import {
+  FeeAmount,
+  TICK_SPACINGS,
+  TickMath,
+  nearestUsableTick,
+  priceToClosestTick,
+  tickToPrice,
+} from '@uniswap/v3-sdk';
 
 /**
  * Finds the closest usable tick for the specified price and pool fee tier.
@@ -8,11 +15,14 @@ import { FeeAmount, TICK_SPACINGS, TickMath, nearestUsableTick, priceToClosestTi
  * @param poolFee Liquidity pool fee tier.
  * @returns The closest usable tick.
  */
-export function priceToClosestUsableTick(price: Price<Token, Token>, poolFee: FeeAmount): number {
-    let tick = priceToClosestTick(price);
-    tick = Math.max(tick, TickMath.MIN_TICK);
-    tick = Math.min(tick, TickMath.MAX_TICK);
-    return nearestUsableTick(tick, TICK_SPACINGS[poolFee]);
+export function priceToClosestUsableTick(
+  price: Price<Token, Token>,
+  poolFee: FeeAmount,
+): number {
+  let tick = priceToClosestTick(price);
+  tick = Math.max(tick, TickMath.MIN_TICK);
+  tick = Math.min(tick, TickMath.MAX_TICK);
+  return nearestUsableTick(tick, TICK_SPACINGS[poolFee]);
 }
 
 /**
@@ -21,6 +31,13 @@ export function priceToClosestUsableTick(price: Price<Token, Token>, poolFee: Fe
  * @param poolFee Liquidity pool fee tier.
  * @returns The aligned price.
  */
-export function alignPriceToClosestUsableTick(price: Price<Token, Token>, poolFee: FeeAmount): Price<Token, Token> {
-    return tickToPrice(price.baseCurrency, price.quoteCurrency, priceToClosestUsableTick(price, poolFee));
+export function alignPriceToClosestUsableTick(
+  price: Price<Token, Token>,
+  poolFee: FeeAmount,
+): Price<Token, Token> {
+  return tickToPrice(
+    price.baseCurrency,
+    price.quoteCurrency,
+    priceToClosestUsableTick(price, poolFee),
+  );
 }
