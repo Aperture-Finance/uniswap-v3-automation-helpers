@@ -1,11 +1,11 @@
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
-import { Position } from '@uniswap/v3-sdk';
+import { FeeAmount, Position } from '@uniswap/v3-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
 import { getChainInfo } from './chain';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
 import { getPoolFromBasicPositionInfo } from './pool';
 import { getToken } from './currency';
-import { BigNumber } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 
 export interface BasicPositionInfo {
   token0: Token;
@@ -13,12 +13,12 @@ export interface BasicPositionInfo {
   liquidity?: BigintIsh;
   tickLower: number;
   tickUpper: number;
-  fee: number;
+  fee: FeeAmount;
 }
 
 export async function getBasicPositionInfo(
   chainId: number,
-  positionId: number,
+  positionId: BigNumberish,
   provider: Provider,
 ): Promise<BasicPositionInfo> {
   const chainInfo = getChainInfo(chainId);
@@ -60,7 +60,7 @@ export async function getUniswapSDKPositionFromBasicInfo(
 
 export async function getUniswapSDKPosition(
   chainId: number,
-  positionId: number,
+  positionId: BigNumberish,
   provider: Provider,
 ) {
   return getUniswapSDKPositionFromBasicInfo(
@@ -81,7 +81,7 @@ export async function getUniswapSDKPosition(
  */
 export async function getCollectableTokenAmounts(
   chainId: number,
-  positionId: number,
+  positionId: BigNumberish,
   provider: Provider,
   basicPositionInfo?: BasicPositionInfo,
 ): Promise<{
