@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { providers } from '@0xsequence/multicall';
-import { CHAIN_ID_TO_INFO } from './chain';
+import { getChainInfo } from './chain';
 
 /**
  * Creates a public ethers provider for the specified chain id.
@@ -12,7 +12,7 @@ export function getPublicProvider(
 ): providers.MulticallProvider {
   return new providers.MulticallProvider(
     new ethers.providers.InfuraProvider(
-      CHAIN_ID_TO_INFO.get(chainId)!.infura_network_id!,
+      getChainInfo(chainId).infura_network_id!,
     ),
   );
 }

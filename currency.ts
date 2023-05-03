@@ -20,17 +20,14 @@ import { parseFixed } from '@ethersproject/bignumber';
 
 export async function getToken(
   tokenAddress: string,
+  chainId: number,
   provider: Provider,
 ): Promise<Token> {
   const decimals = await ERC20__factory.connect(
     tokenAddress,
     provider,
   ).decimals();
-  return new Token(
-    (await provider.getNetwork()).chainId,
-    tokenAddress,
-    decimals,
-  );
+  return new Token(chainId, tokenAddress, decimals);
 }
 
 export function getNativeEther(chainId: number): NativeCurrency {

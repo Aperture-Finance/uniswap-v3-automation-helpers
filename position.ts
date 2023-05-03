@@ -1,7 +1,7 @@
 import { BigintIsh, Token } from '@uniswap/sdk-core';
-import { Pool, Position, computePoolAddress } from '@uniswap/v3-sdk';
+import { Position } from '@uniswap/v3-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
-import { CHAIN_ID_TO_INFO } from './chain';
+import { getChainInfo } from './chain';
 import {
   ERC20__factory,
   INonfungiblePositionManager__factory,
@@ -22,7 +22,7 @@ export async function getBasicPositionInfo(
   positionId: number,
   provider: Provider,
 ): Promise<BasicPositionInfo> {
-  const chainInfo = CHAIN_ID_TO_INFO.get(chainId)!;
+  const chainInfo = getChainInfo(chainId);
   const nonfungiblePositionManager =
     INonfungiblePositionManager__factory.connect(
       chainInfo.uniswap_v3_nonfungible_position_manager,
@@ -51,13 +51,14 @@ export async function getBasicPositionInfo(
 
 export async function getUniswapSDKPositionFromBasicInfo(
   basicInfo: BasicPositionInfo,
+  chainId: number,
   provider: Provider,
 ): Promise<Position> {
   if (basicInfo.liquidity === undefined) {
     throw 'Missing position liquidity info';
   }
   return new Position({
-    pool: await getPoolFromBasicPositionInfo(basicInfo, provider),
+    pool: await getPoolFromBasicPositionInfo(basicInfo, chainId, provider),
     liquidity: basicInfo.liquidity,
     tickLower: basicInfo.tickLower,
     tickUpper: basicInfo.tickUpper,
@@ -71,6 +72,7 @@ export async function getUniswapSDKPosition(
 ) {
   return getUniswapSDKPositionFromBasicInfo(
     await getBasicPositionInfo(chainId, positionId, provider),
+    chainId,
     provider,
   );
 }
