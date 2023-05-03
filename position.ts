@@ -1,17 +1,14 @@
 import { BigintIsh, Token } from '@uniswap/sdk-core';
 import { Pool, Position, computePoolAddress } from '@uniswap/v3-sdk';
-import { ethers } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
-import { providers } from '@0xsequence/multicall';
 import { CHAIN_ID_TO_INFO } from './chain';
 import {
   ERC20__factory,
   INonfungiblePositionManager__factory,
-  IUniswapV3Pool__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
+import { getPoolFromBasicPositionInfo } from './pool';
 
 export interface BasicPositionInfo {
-  poolAddress: string;
   token0: Token;
   token1: Token;
   liquidity: BigintIsh;
@@ -49,12 +46,6 @@ export async function getBasicPositionInfo(
     tickLower: positionInfo.tickLower,
     tickUpper: positionInfo.tickUpper,
     liquidity: positionInfo.liquidity.toString(),
-    poolAddress: computePoolAddress({
-      factoryAddress: chainInfo.uniswap_v3_factory,
-      tokenA: token0,
-      tokenB: token1,
-      fee: positionInfo.fee,
-    }),
   };
 }
 
@@ -62,20 +53,8 @@ export async function getUniswapSDKPositionFromBasicInfo(
   basicInfo: BasicPositionInfo,
   provider: Provider,
 ): Promise<Position> {
-  const poolContract = IUniswapV3Pool__factory.connect(
-    basicInfo.poolAddress,
-    provider,
-  );
-  const slot0 = await poolContract.slot0();
   return new Position({
-    pool: new Pool(
-      basicInfo.token0,
-      basicInfo.token1,
-      basicInfo.fee,
-      slot0.sqrtPriceX96.toString(),
-      basicInfo.liquidity,
-      slot0.tick,
-    ),
+    pool: await getPoolFromBasicPositionInfo(basicInfo, provider),
     liquidity: basicInfo.liquidity,
     tickLower: basicInfo.tickLower,
     tickUpper: basicInfo.tickUpper,
@@ -85,16 +64,8 @@ export async function getUniswapSDKPositionFromBasicInfo(
 export async function getUniswapSDKPosition(
   chainId: number,
   positionId: number,
-  provider?: Provider,
+  provider: Provider,
 ) {
-  // If `provider` is undefined, we use the public Infura node.
-  if (provider === undefined) {
-    provider = new providers.MulticallProvider(
-      new ethers.providers.InfuraProvider(
-        CHAIN_ID_TO_INFO.get(chainId)!.infura_network_id!,
-      ),
-    );
-  }
   return getUniswapSDKPositionFromBasicInfo(
     await getBasicPositionInfo(chainId, positionId, provider),
     provider,
