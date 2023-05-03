@@ -64,3 +64,11 @@ export const CHAIN_ID_TO_INFO: Map<ChainId, ChainInfo> = new Map([
     },
   ],
 ]);
+
+export function getChainInfo(chainId: number) {
+  const chainInfo = CHAIN_ID_TO_INFO.get(chainId);
+  if (chainInfo === undefined) {
+    throw 'Unsupported chain id';
+  }
+  return chainInfo;
+}

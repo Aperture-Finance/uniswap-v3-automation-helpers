@@ -15,7 +15,7 @@ import {
 import { UnsignedTransaction } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 import { priceToClosestUsableTick } from './tick';
-import { CHAIN_ID_TO_INFO } from './chain';
+import { getChainInfo } from './chain';
 import { getNativeEther } from './currency';
 import { getPoolFromBasicPositionInfo } from './pool';
 import { BasicPositionInfo } from './position';
@@ -46,9 +46,9 @@ export async function getCreatePositionTxForLimitOrder(
   inputCurrencyAmount: CurrencyAmount<Currency>,
   poolFee: FeeAmount,
   deadlineEpochSeconds: number,
+  chainId: number,
   provider: Provider,
 ): Promise<UnsignedTransaction> {
-  const chainId = (await provider.getNetwork()).chainId;
   if (
     inputCurrencyAmount.currency.isNative &&
     !getNativeEther(chainId).wrapped.equals(outerLimitPrice.baseCurrency)
@@ -76,7 +76,11 @@ export async function getCreatePositionTxForLimitOrder(
     tickUpper: zeroToOne ? outerTick : outerTick + tickSpacing,
     fee: poolFee,
   };
-  const pool = await getPoolFromBasicPositionInfo(basicPositionInfo, provider);
+  const pool = await getPoolFromBasicPositionInfo(
+    basicPositionInfo,
+    chainId,
+    provider,
+  );
   const position = zeroToOne
     ? Position.fromAmount0({
         pool,
@@ -110,7 +114,7 @@ export async function getCreatePositionTxForLimitOrder(
     },
   );
   return {
-    to: CHAIN_ID_TO_INFO.get(chainId)!.uniswap_v3_nonfungible_position_manager,
+    to: getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
     data: calldata,
     value,
   };
@@ -126,7 +130,7 @@ export function getSetApprovalForAllTx(
   chainId: number,
   approved: boolean,
 ): UnsignedTransaction {
-  const chainInfo = CHAIN_ID_TO_INFO.get(chainId)!;
+  const chainInfo = getChainInfo(chainId);
   return {
     to: chainInfo.uniswap_v3_nonfungible_position_manager,
     data: INonfungiblePositionManager__factory.createInterface().encodeFunctionData(
