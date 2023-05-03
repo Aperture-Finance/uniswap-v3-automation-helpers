@@ -144,6 +144,7 @@ export async function getCreatePositionTxForLimitOrder(
  * @param chainId Chain id.
  * @param provider Ethers provider.
  * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
+ * @param receiveNativeEtherIfApplicable If set to true and the position involves ETH, send native ether instead of WETH to `recipient`.
  * @returns
  */
 export async function getRemoveLiquidityTx(
@@ -152,6 +153,7 @@ export async function getRemoveLiquidityTx(
   chainId: number,
   provider: Provider,
   position?: Position,
+  receiveNativeEtherIfApplicable?: boolean,
 ): Promise<UnsignedTransaction> {
   if (position === undefined) {
     position = await getUniswapSDKPosition(
@@ -160,7 +162,7 @@ export async function getRemoveLiquidityTx(
       provider,
     );
   }
-  const collectableAmount = await getCollectableTokenAmounts(
+  const collectableTokenAmount = await getCollectableTokenAmounts(
     chainId,
     removeLiquidityOptions.tokenId.toString(),
     provider,
@@ -172,14 +174,33 @@ export async function getRemoveLiquidityTx(
       fee: position.pool.fee,
     },
   );
+  let expectedCurrencyOwed0: CurrencyAmount<Currency> =
+    collectableTokenAmount.token0Amount;
+  let expectedCurrencyOwed1: CurrencyAmount<Currency> =
+    collectableTokenAmount.token1Amount;
+  const nativeEther = getNativeEther(chainId);
+  const weth = nativeEther.wrapped;
+  if (receiveNativeEtherIfApplicable) {
+    if (weth.equals(position.amount0.currency)) {
+      expectedCurrencyOwed0 = CurrencyAmount.fromRawAmount(
+        nativeEther,
+        collectableTokenAmount.token0Amount.quotient,
+      );
+    } else if (weth.equals(position.amount1.currency)) {
+      expectedCurrencyOwed1 = CurrencyAmount.fromRawAmount(
+        nativeEther,
+        collectableTokenAmount.token1Amount.quotient,
+      );
+    }
+  }
   const { calldata, value } = NonfungiblePositionManager.removeCallParameters(
     position,
     {
       ...removeLiquidityOptions,
       collectOptions: {
         recipient,
-        expectedCurrencyOwed0: collectableAmount.token0Amount,
-        expectedCurrencyOwed1: collectableAmount.token1Amount,
+        expectedCurrencyOwed0,
+        expectedCurrencyOwed1,
       },
     },
   );
