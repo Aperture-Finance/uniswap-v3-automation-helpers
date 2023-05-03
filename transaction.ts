@@ -7,6 +7,7 @@ import {
 } from '@uniswap/sdk-core';
 import {
   FeeAmount,
+  IncreaseOptions,
   NonfungiblePositionManager,
   Position,
   RemoveLiquidityOptions,
@@ -129,6 +130,40 @@ export async function getCreatePositionTxForLimitOrder(
         : undefined,
       recipient,
     },
+  );
+  return getTxToNonfungiblePositionManager(
+    getChainInfo(chainId),
+    calldata,
+    value,
+  );
+}
+
+/**
+ * Generates an unsigned transaction that adds liquidity to an existing position.
+ * Note that if the position involves ETH and the user wishes to provide native ether instead of WETH, then
+ * `increaseLiquidityOptions.useNative` should be set to `getNativeEther(chainId)`.
+ * @param increaseLiquidityOptions Increase liquidity options.
+ * @param chainId Chain id.
+ * @param provider Ethers provider.
+ * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
+ * @returns
+ */
+export async function getAddLiquidityTx(
+  increaseLiquidityOptions: IncreaseOptions,
+  chainId: number,
+  provider: Provider,
+  position?: Position,
+): Promise<UnsignedTransaction> {
+  if (position === undefined) {
+    position = await getUniswapSDKPosition(
+      chainId,
+      increaseLiquidityOptions.tokenId.toString(),
+      provider,
+    );
+  }
+  const { calldata, value } = NonfungiblePositionManager.addCallParameters(
+    position,
+    increaseLiquidityOptions,
   );
   return getTxToNonfungiblePositionManager(
     getChainInfo(chainId),
