@@ -9,18 +9,35 @@ import {
   FeeAmount,
   NonfungiblePositionManager,
   Position,
+  RemoveLiquidityOptions,
   TICK_SPACINGS,
   tickToPrice,
 } from '@uniswap/v3-sdk';
-import { UnsignedTransaction } from 'ethers';
+import { BigNumberish, UnsignedTransaction } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 import { priceToClosestUsableTick } from './tick';
-import { getChainInfo } from './chain';
+import { ChainInfo, getChainInfo } from './chain';
 import { getNativeEther } from './currency';
 import { getPoolFromBasicPositionInfo } from './pool';
-import { BasicPositionInfo } from './position';
+import {
+  BasicPositionInfo,
+  getCollectableTokenAmounts,
+  getUniswapSDKPosition,
+} from './position';
 import JSBI from 'jsbi';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
+
+function getTxToNonfungiblePositionManager(
+  chainInfo: ChainInfo,
+  data: string,
+  value?: BigNumberish,
+) {
+  return {
+    to: chainInfo.uniswap_v3_nonfungible_position_manager,
+    data,
+    value,
+  };
+}
 
 /**
  * Generates an unsigned transaction that creates a position for the specified limit order.
@@ -113,11 +130,64 @@ export async function getCreatePositionTxForLimitOrder(
       recipient,
     },
   );
-  return {
-    to: getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
-    data: calldata,
+  return getTxToNonfungiblePositionManager(
+    getChainInfo(chainId),
+    calldata,
     value,
-  };
+  );
+}
+
+/**
+ * Generates an unsigned transaction that removes partial or entire liquidity from the specified position and claim accrued fees.
+ * @param removeLiquidityOptions Remove liquidity options.
+ * @param recipient The recipient address (connected wallet address).
+ * @param chainId Chain id.
+ * @param provider Ethers provider.
+ * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
+ * @returns
+ */
+export async function getRemoveLiquidityTx(
+  removeLiquidityOptions: Omit<RemoveLiquidityOptions, 'collectOptions'>,
+  recipient: string,
+  chainId: number,
+  provider: Provider,
+  position?: Position,
+): Promise<UnsignedTransaction> {
+  if (position === undefined) {
+    position = await getUniswapSDKPosition(
+      chainId,
+      removeLiquidityOptions.tokenId.toString(),
+      provider,
+    );
+  }
+  const collectableAmount = await getCollectableTokenAmounts(
+    chainId,
+    removeLiquidityOptions.tokenId.toString(),
+    provider,
+    {
+      token0: position.amount0.currency,
+      token1: position.amount1.currency,
+      tickLower: position.tickLower,
+      tickUpper: position.tickUpper,
+      fee: position.pool.fee,
+    },
+  );
+  const { calldata, value } = NonfungiblePositionManager.removeCallParameters(
+    position,
+    {
+      ...removeLiquidityOptions,
+      collectOptions: {
+        recipient,
+        expectedCurrencyOwed0: collectableAmount.token0Amount,
+        expectedCurrencyOwed1: collectableAmount.token1Amount,
+      },
+    },
+  );
+  return getTxToNonfungiblePositionManager(
+    getChainInfo(chainId),
+    calldata,
+    value,
+  );
 }
 
 /**
@@ -131,11 +201,11 @@ export function getSetApprovalForAllTx(
   approved: boolean,
 ): UnsignedTransaction {
   const chainInfo = getChainInfo(chainId);
-  return {
-    to: chainInfo.uniswap_v3_nonfungible_position_manager,
-    data: INonfungiblePositionManager__factory.createInterface().encodeFunctionData(
+  return getTxToNonfungiblePositionManager(
+    chainInfo,
+    INonfungiblePositionManager__factory.createInterface().encodeFunctionData(
       'setApprovalForAll',
       [chainInfo.aperture_uniswap_v3_automan, approved],
     ),
-  };
+  );
 }
