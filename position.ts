@@ -124,3 +124,49 @@ export async function getCollectableTokenAmounts(
     ),
   };
 }
+
+/**
+ * Lists all position ids owned by the specified owner.
+ * @param owner The owner.
+ * @param chainId Chain id.
+ * @param provider Ethers provider.
+ * @returns List of all position ids of the specified owner.
+ */
+export async function getPositionIdsByOwner(
+  owner: string,
+  chainId: number,
+  provider: Provider,
+): Promise<BigNumber[]> {
+  const npmContract = INonfungiblePositionManager__factory.connect(
+    getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+    provider,
+  );
+  const numPositions = (await npmContract.balanceOf(owner)).toNumber();
+  const promises = [...Array(numPositions).keys()].map((index) =>
+    npmContract.tokenOfOwnerByIndex(owner, index),
+  );
+  return Promise.all(promises);
+}
+
+/**
+ * Fetches basic info of all positions of the specified owner.
+ * @param owner The owner.
+ * @param chainId Chain id.
+ * @param provider Ethers provider.
+ * @returns A map where each key is a position id and its associated value is BasicPositionInfo of that position.
+ */
+export async function getAllPositionBasicInfoByOwner(
+  owner: string,
+  chainId: number,
+  provider: Provider,
+): Promise<Map<BigNumber, BasicPositionInfo>> {
+  const positionIds = await getPositionIdsByOwner(owner, chainId, provider);
+  const positionInfos = await Promise.all(
+    positionIds.map((positionId) =>
+      getBasicPositionInfo(chainId, positionId, provider),
+    ),
+  );
+  return new Map(
+    positionIds.map((positionId, index) => [positionId, positionInfos[index]]),
+  );
+}
