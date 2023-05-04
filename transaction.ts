@@ -155,6 +155,7 @@ export async function getAddLiquidityTx(
   provider: Provider,
   position?: Position,
 ): Promise<UnsignedTransaction> {
+  // TODO: The current implementation is incorrect. The `position` object should represent the incremental liquidity increase amount, not the current position state. Will fix this in the next PR.
   if (position === undefined) {
     position = await getUniswapSDKPosition(
       chainId,

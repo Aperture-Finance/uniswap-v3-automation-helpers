@@ -26,7 +26,7 @@ export function priceToClosestUsableTick(
 }
 
 /**
- * Aligns price to the closest usable tick.
+ * Aligns price to the closest usable tick and returns the aligned price.
  * @param price The price to align.
  * @param poolFee Liquidity pool fee tier.
  * @returns The aligned price.
