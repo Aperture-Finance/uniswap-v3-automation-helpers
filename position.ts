@@ -42,7 +42,7 @@ export async function getBasicPositionInfo(
   };
 }
 
-export async function getUniswapSDKPositionFromBasicInfo(
+export async function getPositionFromBasicInfo(
   basicInfo: BasicPositionInfo,
   chainId: number,
   provider: Provider,
@@ -58,12 +58,12 @@ export async function getUniswapSDKPositionFromBasicInfo(
   });
 }
 
-export async function getUniswapSDKPosition(
+export async function getPosition(
   chainId: number,
   positionId: BigNumberish,
   provider: Provider,
 ) {
-  return getUniswapSDKPositionFromBasicInfo(
+  return getPositionFromBasicInfo(
     await getBasicPositionInfo(chainId, positionId, provider),
     chainId,
     provider,

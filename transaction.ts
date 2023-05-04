@@ -25,7 +25,7 @@ import { getPoolFromBasicPositionInfo } from './pool';
 import {
   BasicPositionInfo,
   getCollectableTokenAmounts,
-  getUniswapSDKPosition,
+  getPosition,
 } from './position';
 import JSBI from 'jsbi';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
@@ -186,7 +186,7 @@ export async function getAddLiquidityTx(
   position?: Position,
 ): Promise<UnsignedTransaction> {
   if (position === undefined) {
-    position = await getUniswapSDKPosition(
+    position = await getPosition(
       chainId,
       increaseLiquidityOptions.tokenId.toString(),
       provider,
@@ -267,7 +267,7 @@ export async function getRemoveLiquidityTx(
   position?: Position,
 ): Promise<UnsignedTransaction> {
   if (position === undefined) {
-    position = await getUniswapSDKPosition(
+    position = await getPosition(
       chainId,
       removeLiquidityOptions.tokenId.toString(),
       provider,
