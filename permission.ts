@@ -112,6 +112,7 @@ export function generateTypedDataForPermit(
     value: {
       spender: chainInfo.aperture_uniswap_v3_automan,
       tokenId: positionId,
+      // TODO: Figure out how to query nonce and populate here.
       nonce: 0,
       deadline: deadlineEpochSeconds,
     },
