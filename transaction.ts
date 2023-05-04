@@ -7,6 +7,7 @@ import {
   Token,
 } from '@uniswap/sdk-core';
 import {
+  ADDRESS_ZERO,
   FeeAmount,
   IncreaseOptions,
   MintOptions,
@@ -16,8 +17,9 @@ import {
   TICK_SPACINGS,
   tickToPrice,
 } from '@uniswap/v3-sdk';
-import { BigNumberish, UnsignedTransaction } from 'ethers';
+import { BigNumberish } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
+import { TransactionRequest } from '@ethersproject/providers';
 import { priceToClosestUsableTick } from './tick';
 import { ChainInfo, getChainInfo } from './chain';
 import { getNativeEther } from './currency';
@@ -28,7 +30,11 @@ import {
   getPosition,
 } from './position';
 import JSBI from 'jsbi';
-import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
+import {
+  INonfungiblePositionManager__factory,
+  IUniswapV3Factory__factory,
+  IUniswapV3Pool__factory,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import { getBasicPositionInfo } from './position';
 
 function getTxToNonfungiblePositionManager(
@@ -69,7 +75,7 @@ export async function getCreatePositionTxForLimitOrder(
   deadlineEpochSeconds: number,
   chainId: number,
   provider: Provider,
-): Promise<UnsignedTransaction> {
+): Promise<TransactionRequest> {
   if (
     inputCurrencyAmount.currency.isNative &&
     !getNativeEther(chainId).wrapped.equals(outerLimitPrice.baseCurrency)
@@ -148,24 +154,33 @@ export async function getCreatePositionTxForLimitOrder(
  * @param chainId Chain id.
  * @returns The unsigned tx.
  */
-export function getCreatePositionTx(
+export async function getCreatePositionTx(
   position: Position,
   options: Omit<MintOptions, 'createPool'>,
   chainId: number,
-): UnsignedTransaction {
+  provider: Provider,
+): Promise<TransactionRequest> {
+  const chainInfo = getChainInfo(chainId);
+  const poolAddress = await IUniswapV3Factory__factory.connect(
+    chainInfo.uniswap_v3_factory,
+    provider,
+  ).getPool(
+    position.pool.token0.address,
+    position.pool.token1.address,
+    position.pool.fee,
+  );
   const { calldata, value } = NonfungiblePositionManager.addCallParameters(
     position,
     {
       ...options,
-      // TODO: This should be set to true iff `position.pool` has not been created or not been initialized.
-      createPool: false,
+      createPool:
+        poolAddress == ADDRESS_ZERO ||
+        (
+          await IUniswapV3Pool__factory.connect(poolAddress, provider).slot0()
+        ).sqrtPriceX96.isZero(),
     },
   );
-  return getTxToNonfungiblePositionManager(
-    getChainInfo(chainId),
-    calldata,
-    value,
-  );
+  return getTxToNonfungiblePositionManager(chainInfo, calldata, value);
 }
 
 /**
@@ -184,7 +199,7 @@ export async function getAddLiquidityTx(
   provider: Provider,
   liquidityToAdd: BigintIsh,
   position?: Position,
-): Promise<UnsignedTransaction> {
+): Promise<TransactionRequest> {
   if (position === undefined) {
     position = await getPosition(
       chainId,
@@ -265,7 +280,7 @@ export async function getRemoveLiquidityTx(
   provider: Provider,
   receiveNativeEtherIfApplicable?: boolean,
   position?: Position,
-): Promise<UnsignedTransaction> {
+): Promise<TransactionRequest> {
   if (position === undefined) {
     position = await getPosition(
       chainId,
@@ -325,7 +340,7 @@ export async function getCollectTx(
   provider: Provider,
   receiveNativeEtherIfApplicable?: boolean,
   basicPositionInfo?: BasicPositionInfo,
-): Promise<UnsignedTransaction> {
+): Promise<TransactionRequest> {
   if (basicPositionInfo === undefined) {
     basicPositionInfo = await getBasicPositionInfo(
       chainId,
@@ -372,7 +387,7 @@ export async function getCollectTx(
 export function getSetApprovalForAllTx(
   chainId: number,
   approved: boolean,
-): UnsignedTransaction {
+): TransactionRequest {
   const chainInfo = getChainInfo(chainId);
   return getTxToNonfungiblePositionManager(
     chainInfo,
