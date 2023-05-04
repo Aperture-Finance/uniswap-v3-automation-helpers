@@ -1,4 +1,5 @@
 import {
+  BigintIsh,
   Currency,
   CurrencyAmount,
   Percent,
@@ -8,6 +9,7 @@ import {
 import {
   FeeAmount,
   IncreaseOptions,
+  MintOptions,
   NonfungiblePositionManager,
   Position,
   RemoveLiquidityOptions,
@@ -140,6 +142,33 @@ export async function getCreatePositionTxForLimitOrder(
 }
 
 /**
+ * Generates an unsigned transaction that creates a position as specified.
+ * @param position The position to create.
+ * @param options Options.
+ * @param chainId Chain id.
+ * @returns The unsigned tx.
+ */
+export function getCreatePositionTx(
+  position: Position,
+  options: Omit<MintOptions, 'createPool'>,
+  chainId: number,
+): UnsignedTransaction {
+  const { calldata, value } = NonfungiblePositionManager.addCallParameters(
+    position,
+    {
+      ...options,
+      // TODO: This should be set to true iff `position.pool` has not been created or not been initialized.
+      createPool: false,
+    },
+  );
+  return getTxToNonfungiblePositionManager(
+    getChainInfo(chainId),
+    calldata,
+    value,
+  );
+}
+
+/**
  * Generates an unsigned transaction that adds liquidity to an existing position.
  * Note that if the position involves ETH and the user wishes to provide native ether instead of WETH, then
  * `increaseLiquidityOptions.useNative` should be set to `getNativeEther(chainId)`.
@@ -147,15 +176,15 @@ export async function getCreatePositionTxForLimitOrder(
  * @param chainId Chain id.
  * @param provider Ethers provider.
  * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
- * @returns
+ * @returns The unsigned tx.
  */
 export async function getAddLiquidityTx(
   increaseLiquidityOptions: IncreaseOptions,
   chainId: number,
   provider: Provider,
+  liquidityToAdd: BigintIsh,
   position?: Position,
 ): Promise<UnsignedTransaction> {
-  // TODO: The current implementation is incorrect. The `position` object should represent the incremental liquidity increase amount, not the current position state. Will fix this in the next PR.
   if (position === undefined) {
     position = await getUniswapSDKPosition(
       chainId,
@@ -163,8 +192,15 @@ export async function getAddLiquidityTx(
       provider,
     );
   }
+  // Same as `position` except that the liquidity field represents the amount of liquidity to add to the existing `position`.
+  const incrementalPosition = new Position({
+    pool: position.pool,
+    liquidity: liquidityToAdd,
+    tickLower: position.tickLower,
+    tickUpper: position.tickUpper,
+  });
   const { calldata, value } = NonfungiblePositionManager.addCallParameters(
-    position,
+    incrementalPosition,
     increaseLiquidityOptions,
   );
   return getTxToNonfungiblePositionManager(
@@ -220,7 +256,7 @@ function convertCollectableTokenAmountToExpectedCurrencyOwed(
  * @param provider Ethers provider.
  * @param receiveNativeEtherIfApplicable If set to true and the position involves ETH, send native ether instead of WETH to `recipient`.
  * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
- * @returns
+ * @returns The unsigned tx.
  */
 export async function getRemoveLiquidityTx(
   removeLiquidityOptions: Omit<RemoveLiquidityOptions, 'collectOptions'>,
@@ -280,7 +316,7 @@ export async function getRemoveLiquidityTx(
  * @param provider Ethers provider.
  * @param receiveNativeEtherIfApplicable If set to true and the position involves ETH, send native ether instead of WETH to `recipient`.
  * @param basicPositionInfo Basic position info (optional); if undefined, one will be created.
- * @returns
+ * @returns The unsigned tx.
  */
 export async function getCollectTx(
   positionId: BigNumberish,
