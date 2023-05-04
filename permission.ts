@@ -1,4 +1,5 @@
 import { BigNumberish, TypedDataDomain, TypedDataField, ethers } from 'ethers';
+import { Provider } from '@ethersproject/abstract-provider';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
 import { PermitInfo } from '@aperture_finance/uniswap-v3-automation-sdk/interfaces';
 import { getChainInfo } from './chain';
@@ -84,15 +85,16 @@ export async function checkPositionApprovalStatus(
  * @param deadlineEpochSeconds The signed permission will be valid until this deadline specified in number of seconds since UNIX epoch.
  * @returns An object containing typed data ready to be signed with, for example, ethers `Wallet._signTypedData(domain, types, value)`.
  */
-export function generateTypedDataForPermit(
+export async function generateTypedDataForPermit(
   chainId: number,
   positionId: BigNumberish,
   deadlineEpochSeconds: number,
-): {
+  provider: Provider,
+): Promise<{
   domain: TypedDataDomain;
   types: Record<string, Array<TypedDataField>>;
   value: Record<string, any>;
-} {
+}> {
   const chainInfo = getChainInfo(chainId);
   return {
     domain: {
@@ -112,8 +114,12 @@ export function generateTypedDataForPermit(
     value: {
       spender: chainInfo.aperture_uniswap_v3_automan,
       tokenId: positionId,
-      // TODO: Figure out how to query nonce and populate here.
-      nonce: 0,
+      nonce: (
+        await INonfungiblePositionManager__factory.connect(
+          chainInfo.uniswap_v3_nonfungible_position_manager,
+          provider,
+        ).positions(positionId)
+      ).nonce,
       deadline: deadlineEpochSeconds,
     },
   };
