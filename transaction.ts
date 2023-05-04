@@ -27,6 +27,7 @@ import {
 } from './position';
 import JSBI from 'jsbi';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
+import { getBasicPositionInfo } from './position';
 
 function getTxToNonfungiblePositionManager(
   chainInfo: ChainInfo,
@@ -172,14 +173,52 @@ export async function getAddLiquidityTx(
   );
 }
 
+function convertCollectableTokenAmountToExpectedCurrencyOwed(
+  collectableTokenAmount: {
+    token0Amount: CurrencyAmount<Token>;
+    token1Amount: CurrencyAmount<Token>;
+  },
+  chainId: number,
+  token0: Token,
+  token1: Token,
+  receiveNativeEtherIfApplicable?: boolean,
+): {
+  expectedCurrencyOwed0: CurrencyAmount<Currency>;
+  expectedCurrencyOwed1: CurrencyAmount<Currency>;
+} {
+  let expectedCurrencyOwed0: CurrencyAmount<Currency> =
+    collectableTokenAmount.token0Amount;
+  let expectedCurrencyOwed1: CurrencyAmount<Currency> =
+    collectableTokenAmount.token1Amount;
+  const nativeEther = getNativeEther(chainId);
+  const weth = nativeEther.wrapped;
+  if (receiveNativeEtherIfApplicable) {
+    if (weth.equals(token0)) {
+      expectedCurrencyOwed0 = CurrencyAmount.fromRawAmount(
+        nativeEther,
+        collectableTokenAmount.token0Amount.quotient,
+      );
+    } else if (weth.equals(token1)) {
+      expectedCurrencyOwed1 = CurrencyAmount.fromRawAmount(
+        nativeEther,
+        collectableTokenAmount.token1Amount.quotient,
+      );
+    }
+  }
+  return {
+    expectedCurrencyOwed0,
+    expectedCurrencyOwed1,
+  };
+}
+
 /**
  * Generates an unsigned transaction that removes partial or entire liquidity from the specified position and claim accrued fees.
  * @param removeLiquidityOptions Remove liquidity options.
  * @param recipient The recipient address (connected wallet address).
  * @param chainId Chain id.
  * @param provider Ethers provider.
- * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
  * @param receiveNativeEtherIfApplicable If set to true and the position involves ETH, send native ether instead of WETH to `recipient`.
+ * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
  * @returns
  */
 export async function getRemoveLiquidityTx(
@@ -187,8 +226,8 @@ export async function getRemoveLiquidityTx(
   recipient: string,
   chainId: number,
   provider: Provider,
-  position?: Position,
   receiveNativeEtherIfApplicable?: boolean,
+  position?: Position,
 ): Promise<UnsignedTransaction> {
   if (position === undefined) {
     position = await getUniswapSDKPosition(
@@ -209,36 +248,77 @@ export async function getRemoveLiquidityTx(
       fee: position.pool.fee,
     },
   );
-  let expectedCurrencyOwed0: CurrencyAmount<Currency> =
-    collectableTokenAmount.token0Amount;
-  let expectedCurrencyOwed1: CurrencyAmount<Currency> =
-    collectableTokenAmount.token1Amount;
-  const nativeEther = getNativeEther(chainId);
-  const weth = nativeEther.wrapped;
-  if (receiveNativeEtherIfApplicable) {
-    if (weth.equals(position.amount0.currency)) {
-      expectedCurrencyOwed0 = CurrencyAmount.fromRawAmount(
-        nativeEther,
-        collectableTokenAmount.token0Amount.quotient,
-      );
-    } else if (weth.equals(position.amount1.currency)) {
-      expectedCurrencyOwed1 = CurrencyAmount.fromRawAmount(
-        nativeEther,
-        collectableTokenAmount.token1Amount.quotient,
-      );
-    }
-  }
   const { calldata, value } = NonfungiblePositionManager.removeCallParameters(
     position,
     {
       ...removeLiquidityOptions,
       collectOptions: {
         recipient,
-        expectedCurrencyOwed0,
-        expectedCurrencyOwed1,
+        ...convertCollectableTokenAmountToExpectedCurrencyOwed(
+          collectableTokenAmount,
+          chainId,
+          position.amount0.currency,
+          position.amount1.currency,
+          receiveNativeEtherIfApplicable,
+        ),
       },
     },
   );
+  return getTxToNonfungiblePositionManager(
+    getChainInfo(chainId),
+    calldata,
+    value,
+  );
+}
+
+/**
+ * Generates an unsigned transaction that collects tokens from the specified position.
+ * @param positionId Position id.
+ * @param recipient The recipient address (connected wallet address).
+ * @param chainId Chain id.
+ * @param provider Ethers provider.
+ * @param receiveNativeEtherIfApplicable If set to true and the position involves ETH, send native ether instead of WETH to `recipient`.
+ * @param basicPositionInfo Basic position info (optional); if undefined, one will be created.
+ * @returns
+ */
+export async function getCollectTx(
+  positionId: BigNumberish,
+  recipient: string,
+  chainId: number,
+  provider: Provider,
+  receiveNativeEtherIfApplicable?: boolean,
+  basicPositionInfo?: BasicPositionInfo,
+): Promise<UnsignedTransaction> {
+  if (basicPositionInfo === undefined) {
+    basicPositionInfo = await getBasicPositionInfo(
+      chainId,
+      positionId,
+      provider,
+    );
+  }
+  const collectableTokenAmount = await getCollectableTokenAmounts(
+    chainId,
+    positionId.toString(),
+    provider,
+    {
+      token0: basicPositionInfo.token0,
+      token1: basicPositionInfo.token1,
+      tickLower: basicPositionInfo.tickLower,
+      tickUpper: basicPositionInfo.tickUpper,
+      fee: basicPositionInfo.fee,
+    },
+  );
+  const { calldata, value } = NonfungiblePositionManager.collectCallParameters({
+    tokenId: positionId.toString(),
+    recipient,
+    ...convertCollectableTokenAmountToExpectedCurrencyOwed(
+      collectableTokenAmount,
+      chainId,
+      basicPositionInfo.token0,
+      basicPositionInfo.token1,
+      receiveNativeEtherIfApplicable,
+    ),
+  });
   return getTxToNonfungiblePositionManager(
     getChainInfo(chainId),
     calldata,
