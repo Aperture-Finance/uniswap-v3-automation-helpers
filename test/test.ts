@@ -7,7 +7,7 @@ import { parsePrice } from '../price';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { getCurrencyAmount } from '../currency';
 import { getCreatePositionTxForLimitOrder } from '../transaction';
-import { FeeAmount, TICK_SPACINGS, tickToPrice } from '@uniswap/v3-sdk';
+import { FeeAmount, TICK_SPACINGS, priceToClosestTick, tickToPrice } from '@uniswap/v3-sdk';
 import { alignPriceToClosestUsableTick } from '../tick';
 import { getPool } from '../pool';
 import {
@@ -36,6 +36,7 @@ const TEST_WALLET_PRIVATE_KEY =
 
 describe('Transaction tests', function () {
   let WBTC: Token, WETH: Token;
+  const poolFee = FeeAmount.MEDIUM;
 
   before(async function () {
     WBTC = await getToken(
@@ -58,7 +59,6 @@ describe('Transaction tests', function () {
       '102.34',
     );
 
-    const poolFee = FeeAmount.MEDIUM;
     await expect(
       getCreatePositionTxForLimitOrder(
         eoa,
@@ -150,8 +150,8 @@ describe('Transaction tests', function () {
       token0: WBTC,
       token1: WETH,
       liquidity: '133959413978504760',
-      tickLower: 258060,
-      tickUpper: 258060 + TICK_SPACINGS[poolFee],
+      tickLower: priceToClosestTick(alignedLimitPrice) - TICK_SPACINGS[poolFee],
+      tickUpper: priceToClosestTick(alignedLimitPrice),
       fee: poolFee,
     });
     const position = await getPositionFromBasicInfo(
@@ -162,6 +162,89 @@ describe('Transaction tests', function () {
     // The user actually provided 9.99999999 WBTC due to liquidity precision, i.e. 10 WBTC would have yielded the exact same liquidity amount of 133959413978504760.
     expect(position.amount0.quotient.toString()).to.equal('999999999');
     expect(position.amount1.quotient.toString()).to.equal('0');
+  });
+
+  it('Create position for limit order (selling WETH for WBTC)', async function () {
+    const tenWETH = getCurrencyAmount(WETH, "10");
+
+    // The current price is 1 WBTC = 15.295542 WETH. Trying to sell WETH at 1 WETH = 1/18 WBTC is lower than the current price and therefore should be rejected.
+    await expect(
+      getCreatePositionTxForLimitOrder(
+        eoa,
+        alignPriceToClosestUsableTick(parsePrice(WBTC, WETH, "18").invert(), poolFee),
+        tenWETH,
+        poolFee,
+        deadline,
+        ETHEREUM_MAINNET_CHAIN_ID,
+        hardhatForkProvider,
+      ),
+    ).to.be.rejectedWith('Specified limit price lower than current price');
+
+    const alignedLimitPrice = alignPriceToClosestUsableTick(
+      parsePrice(WBTC, WETH, '12.12').invert(),
+      poolFee,
+    );
+    expect(alignedLimitPrice.toFixed(6)).to.be.equal('0.082342');
+    const tx = await getCreatePositionTxForLimitOrder(
+      eoa,
+      alignedLimitPrice,
+      tenWETH,
+      poolFee,
+      deadline,
+      ETHEREUM_MAINNET_CHAIN_ID,
+      hardhatForkProvider,
+    );
+    const npmAddress = getChainInfo(
+      ETHEREUM_MAINNET_CHAIN_ID,
+    ).uniswap_v3_nonfungible_position_manager;
+    expect(tx).to.deep.equal({
+      to: npmAddress,
+      data: '0x883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000bb8000000000000000000000000000000000000000000000000000000000003e508000000000000000000000000000000000000000000000000000000000003e54400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ac7230489e7fe5900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ac7230489e7fe590000000000000000000000004bd047ca72fa05f0b89ad08fe5ba5ccdc07dffbf00000000000000000000000000000000000000000000000000000000f3fd9d70',
+      value: '0x00',
+    });
+    // Top up 10 WETH to `eoa` from `impersonatedWBTCWhale`.
+    const impersonatedWETHWhale = await ethers.getImpersonatedSigner(
+      '0x8EB8a3b98659Cce290402893d0123abb75E3ab28',
+    );
+    await IERC20__factory.connect(WETH.address, impersonatedWETHWhale).transfer(
+      eoa,
+      tenWETH.quotient.toString(),
+    );
+    const impersonatedEOA = await ethers.getImpersonatedSigner(eoa);
+    await IERC20__factory.connect(WETH.address, impersonatedEOA).approve(
+      npmAddress,
+      tenWETH.quotient.toString(),
+    );
+    // Create the limit order position.
+    await (await impersonatedEOA.sendTransaction(tx)).wait();
+    const npmContract = INonfungiblePositionManager__factory.connect(
+      npmAddress,
+      hardhatForkProvider,
+    );
+    const positionId = await npmContract.tokenByIndex(
+      (await npmContract.totalSupply()).sub(1),
+    );
+    const basicPositionInfo = await getBasicPositionInfo(
+      ETHEREUM_MAINNET_CHAIN_ID,
+      positionId,
+      hardhatForkProvider,
+    );
+    expect(basicPositionInfo).to.deep.equal({
+      token0: WBTC,
+      token1: WETH,
+      liquidity: '9551241229311572',
+      tickLower: priceToClosestTick(alignedLimitPrice),
+      tickUpper: priceToClosestTick(alignedLimitPrice) + TICK_SPACINGS[poolFee],
+      fee: poolFee,
+    });
+    const position = await getPositionFromBasicInfo(
+      basicPositionInfo,
+      ETHEREUM_MAINNET_CHAIN_ID,
+      hardhatForkProvider,
+    );
+    // The user actually provided 9.999999999999999576 WETH due to liquidity precision, i.e. 10 WETH would have yielded the exact same liquidity amount of 9551241229311572.
+    expect(position.amount0.quotient.toString()).to.equal('0');
+    expect(position.amount1.quotient.toString()).to.equal('9999999999999999576');
   });
 });
 
