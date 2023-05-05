@@ -23,7 +23,7 @@
   "homepage": "https://aperture.finance/",
   "dependencies": {
     "@0xsequence/multicall": "^0.43.27",
-    "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.9",
+    "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.10",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@uniswap/sdk-core": "^3.2.2",
