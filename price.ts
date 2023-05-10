@@ -1,5 +1,7 @@
 import { Price, Token } from '@uniswap/sdk-core';
 import JSBI from 'jsbi';
+import { getChainInfo } from './chain';
+import axios from 'axios';
 
 /**
  * Parses the specified price string for the price of `baseToken` denominated in `quoteToken`.
@@ -36,4 +38,21 @@ export function parsePrice(
     ),
     JSBI.multiply(withoutDecimals, JSBI.BigInt(10 ** quoteToken.decimals)),
   );
+}
+
+/**
+ * Fetches the specified token's current USD price from Coingecko.
+ * @param token The token to fetch price information for.
+ * @returns The token's current USD price as a number. For example, USDC's price may be 0.999695.
+ */
+export async function getTokenUSDPriceFromCoingecko(
+  token: Token,
+): Promise<number> {
+  const chainInfo = getChainInfo(token.chainId);
+  if (chainInfo.coingecko_asset_platform_id === undefined) return 0;
+  const priceResponse = await axios.get(
+    `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}?contract_addresses=${token.address}&vs_currencies=usd`,
+  );
+  // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&vs_currencies=usd
+  return priceResponse.data[token.address.toLowerCase()]['usd'];
 }
