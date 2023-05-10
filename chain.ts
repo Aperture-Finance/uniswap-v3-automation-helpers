@@ -1,6 +1,7 @@
 import { getAddress } from 'ethers/lib/utils';
 import whitelistedPoolsEthereum from './data/whitelistedPools-1.json';
 import whitelistedPoolsArbitrum from './data/whitelistedPools-42161.json';
+import { WhitelistedPool, getWhitelistedPools } from './whitelist';
 
 export type ChainId = number;
 export const ETHEREUM_MAINNET_CHAIN_ID: ChainId = 1;
@@ -13,26 +14,12 @@ export interface ChainInfo {
   uniswap_v3_nonfungible_position_manager: string;
   aperture_uniswap_v3_automan: string;
   infura_network_id: string;
-  coingecko_asset_platform_id?: string; // See https://api.coingecko.com/api/v3/asset_platforms.
-  uniswap_subgraph_url?: string; // Only populated for mainnets.
-  whitelistedPools?: {
-    id: string;
-    totalValueLockedUSD: string;
-    feeTier: string;
-    volumeUSD: string;
-    token0: {
-      id: string;
-      symbol: string;
-      decimals: string;
-      name: string;
-    };
-    token1: {
-      id: string;
-      symbol: string;
-      decimals: string;
-      name: string;
-    };
-  }[];
+  // Only populated for mainnets. See https://api.coingecko.com/api/v3/asset_platforms.
+  coingecko_asset_platform_id?: string;
+  // Only populated for mainnets.
+  uniswap_subgraph_url?: string;
+  // Only populated for mainnets. Map from pool addresses to `WhitelistedPool` with information about the two tokens and pool fee tier.
+  whitelistedPools?: Map<string, WhitelistedPool>;
 }
 
 export const CHAIN_ID_TO_INFO: Map<ChainId, ChainInfo> = new Map([
@@ -83,7 +70,10 @@ export const CHAIN_ID_TO_INFO: Map<ChainId, ChainInfo> = new Map([
       infura_network_id: 'mainnet',
       uniswap_subgraph_url:
         'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
-      whitelistedPools: whitelistedPoolsEthereum,
+      whitelistedPools: getWhitelistedPools(
+        ETHEREUM_MAINNET_CHAIN_ID,
+        whitelistedPoolsEthereum,
+      ),
     },
   ],
   [
@@ -103,7 +93,10 @@ export const CHAIN_ID_TO_INFO: Map<ChainId, ChainInfo> = new Map([
       infura_network_id: 'arbitrum',
       uniswap_subgraph_url:
         'https://api.thegraph.com/subgraphs/name/ianlapham/arbitrum-minimal',
-      whitelistedPools: whitelistedPoolsArbitrum,
+      whitelistedPools: getWhitelistedPools(
+        ARBITRUM_MAINNET_CHAIN_ID,
+        whitelistedPoolsArbitrum,
+      ),
     },
   ],
 ]);
