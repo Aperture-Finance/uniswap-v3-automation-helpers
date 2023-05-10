@@ -1,6 +1,5 @@
 import { Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
-import { getChainInfo } from './chain';
 
 export interface WhitelistedPool {
   token0: Token;
@@ -15,9 +14,25 @@ export interface WhitelistedPool {
  */
 export function getWhitelistedPools(
   chainId: number,
+  whitelistedPoolsJson: {
+    id: string;
+    feeTier: string;
+    token0: {
+      id: string;
+      decimals: string;
+      symbol: string;
+      name: string;
+    };
+    token1: {
+      id: string;
+      decimals: string;
+      symbol: string;
+      name: string;
+    };
+  }[],
 ): Map<string, WhitelistedPool> {
   const whitelistedPoolsMap = new Map();
-  for (const pool of getChainInfo(chainId).whitelistedPools!) {
+  for (const pool of whitelistedPoolsJson) {
     whitelistedPoolsMap.set(pool.id, {
       feeTier: Number(pool.feeTier),
       token0: new Token(
