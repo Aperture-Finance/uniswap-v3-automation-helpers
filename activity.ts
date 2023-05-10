@@ -190,5 +190,3 @@ export async function getWalletActivities(address: string) {
     ).data.data.portfolios,
   );
 }
-
-getWalletActivities('0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5');
