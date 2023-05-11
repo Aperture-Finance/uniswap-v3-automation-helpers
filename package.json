@@ -1,10 +1,11 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "scripts": {
     "build": "tsc --build",
-    "clean": "tsc --build --clean"
+    "clean": "tsc --build --clean",
+    "graphql:generate:data": "graphql-codegen --config graphql.data.codegen.config.ts"
   },
   "repository": {
     "type": "git",
@@ -26,13 +27,19 @@
     "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.13",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
+    "@lingui/macro": "^4.0.0",
+    "@uniswap/conedison": "^1.6.0",
     "@uniswap/sdk-core": "^3.2.2",
     "@uniswap/v3-sdk": "^3.9.0",
     "axios": "^1.4.0",
+    "babel-plugin-macros": "^3.1.0",
     "ethers": "^5.7.2",
     "jsbi": "^3.1.4"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^3.3.1",
+    "@graphql-codegen/typescript": "^3.0.4",
+    "@graphql-codegen/typescript-operations": "^3.0.4",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@types/chai": "^4.3.5",
     "@types/chai-as-promised": "^7.1.5",
@@ -40,6 +47,7 @@
     "@types/node": "^18.16.3",
     "chai": "^4.3.7",
     "chai-as-promised": "^7.1.1",
+    "graphql": "^16.6.0",
     "hardhat": "^2.14.0",
     "prettier": "^2.8.8",
     "ts-node": "^10.9.1",

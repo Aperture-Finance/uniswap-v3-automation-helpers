@@ -8,6 +8,7 @@ import {
 import { Provider } from '@ethersproject/abstract-provider';
 import { ERC20__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { parseFixed } from '@ethersproject/bignumber';
+import { ApertureSupportedChainId } from './chain';
 
 // The `Currency` type is defined as `Currency = NativeCurrency | Token`.
 // When a liquidity pool involves ETH, i.e. WETH is one of the two tokens in the pool, the
@@ -20,7 +21,7 @@ import { parseFixed } from '@ethersproject/bignumber';
 
 export async function getToken(
   tokenAddress: string,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Token> {
   const decimals = await ERC20__factory.connect(
@@ -30,7 +31,9 @@ export async function getToken(
   return new Token(chainId, tokenAddress, decimals);
 }
 
-export function getNativeEther(chainId: number): NativeCurrency {
+export function getNativeEther(
+  chainId: ApertureSupportedChainId,
+): NativeCurrency {
   return Ether.onChain(chainId);
 }
 

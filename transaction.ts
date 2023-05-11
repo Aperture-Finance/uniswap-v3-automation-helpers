@@ -21,7 +21,7 @@ import { BigNumberish } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 import { TransactionRequest } from '@ethersproject/providers';
 import { priceToClosestUsableTick } from './tick';
-import { ChainInfo, getChainInfo } from './chain';
+import { ApertureSupportedChainId, ChainInfo, getChainInfo } from './chain';
 import { getNativeEther } from './currency';
 import { getPoolFromBasicPositionInfo } from './pool';
 import {
@@ -73,7 +73,7 @@ export async function getCreatePositionTxForLimitOrder(
   inputCurrencyAmount: CurrencyAmount<Currency>,
   poolFee: FeeAmount,
   deadlineEpochSeconds: number,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<TransactionRequest> {
   if (
@@ -157,7 +157,7 @@ export async function getCreatePositionTxForLimitOrder(
 export async function getCreatePositionTx(
   position: Position,
   options: Omit<MintOptions, 'createPool'>,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<TransactionRequest> {
   const chainInfo = getChainInfo(chainId);
@@ -195,7 +195,7 @@ export async function getCreatePositionTx(
  */
 export async function getAddLiquidityTx(
   increaseLiquidityOptions: IncreaseOptions,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
   liquidityToAdd: BigintIsh,
   position?: Position,
@@ -230,7 +230,7 @@ function convertCollectableTokenAmountToExpectedCurrencyOwed(
     token0Amount: CurrencyAmount<Token>;
     token1Amount: CurrencyAmount<Token>;
   },
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   token0: Token,
   token1: Token,
   receiveNativeEtherIfApplicable?: boolean,
@@ -276,7 +276,7 @@ function convertCollectableTokenAmountToExpectedCurrencyOwed(
 export async function getRemoveLiquidityTx(
   removeLiquidityOptions: Omit<RemoveLiquidityOptions, 'collectOptions'>,
   recipient: string,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
   receiveNativeEtherIfApplicable?: boolean,
   position?: Position,
@@ -336,7 +336,7 @@ export async function getRemoveLiquidityTx(
 export async function getCollectTx(
   positionId: BigNumberish,
   recipient: string,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
   receiveNativeEtherIfApplicable?: boolean,
   basicPositionInfo?: BasicPositionInfo,
@@ -385,7 +385,7 @@ export async function getCollectTx(
  * @returns The unsigned tx setting or revoking approval.
  */
 export function getSetApprovalForAllTx(
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   approved: boolean,
 ): TransactionRequest {
   const chainInfo = getChainInfo(chainId);

@@ -1,6 +1,7 @@
 import { Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import { getAddress } from 'ethers/lib/utils';
+import { ApertureSupportedChainId } from './chain';
 
 export interface WhitelistedPool {
   token0: Token;
@@ -14,7 +15,7 @@ export interface WhitelistedPool {
  * @returns A map of whitelisted pools keyed by pool addresses.
  */
 export function getWhitelistedPools(
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   whitelistedPoolsJson: {
     id: string;
     feeTier: string;
