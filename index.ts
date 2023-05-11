@@ -1,5 +1,6 @@
 export * from './chain';
 export * from './currency';
+export * from './permission';
 export * from './pool';
 export * from './position';
 export * from './price';
