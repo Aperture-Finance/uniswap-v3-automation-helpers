@@ -1,7 +1,7 @@
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount, Position } from '@uniswap/v3-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
-import { getChainInfo } from './chain';
+import { ApertureSupportedChainId, getChainInfo } from './chain';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
 import { getPoolFromBasicPositionInfo } from './pool';
 import { getToken } from './currency';
@@ -17,7 +17,7 @@ export interface BasicPositionInfo {
 }
 
 export async function getBasicPositionInfo(
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
 ): Promise<BasicPositionInfo> {
@@ -44,7 +44,7 @@ export async function getBasicPositionInfo(
 
 export async function getPositionFromBasicInfo(
   basicInfo: BasicPositionInfo,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Position> {
   if (basicInfo.liquidity === undefined) {
@@ -59,7 +59,7 @@ export async function getPositionFromBasicInfo(
 }
 
 export async function getPosition(
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
 ) {
@@ -80,7 +80,7 @@ export async function getPosition(
  * @returns A promise that resolves to collectable amount of the two tokens in the position.
  */
 export async function getCollectableTokenAmounts(
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
   basicPositionInfo?: BasicPositionInfo,
@@ -134,7 +134,7 @@ export async function getCollectableTokenAmounts(
  */
 export async function getPositionIdsByOwner(
   owner: string,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<BigNumber[]> {
   const npmContract = INonfungiblePositionManager__factory.connect(
@@ -157,7 +157,7 @@ export async function getPositionIdsByOwner(
  */
 export async function getAllPositionBasicInfoByOwner(
   owner: string,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Map<BigNumber, BasicPositionInfo>> {
   const positionIds = await getPositionIdsByOwner(owner, chainId, provider);

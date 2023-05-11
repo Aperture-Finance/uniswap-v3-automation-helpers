@@ -2,7 +2,7 @@ import { Provider } from '@ethersproject/abstract-provider';
 import { FeeAmount, Pool, computePoolAddress } from '@uniswap/v3-sdk';
 import { BasicPositionInfo } from './position';
 import { IUniswapV3Pool__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { getChainInfo } from './chain';
+import { ApertureSupportedChainId, getChainInfo } from './chain';
 import { Token } from '@uniswap/sdk-core';
 
 /**
@@ -14,7 +14,7 @@ import { Token } from '@uniswap/sdk-core';
  */
 export async function getPoolFromBasicPositionInfo(
   basicInfo: BasicPositionInfo,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Pool> {
   const chainInfo = getChainInfo(chainId);
@@ -55,7 +55,7 @@ export async function getPool(
   tokenA: Token,
   tokenB: Token,
   fee: FeeAmount,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Pool> {
   const poolContract = IUniswapV3Pool__factory.connect(

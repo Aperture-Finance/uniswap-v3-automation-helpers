@@ -2,12 +2,17 @@ import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
 import { ethers } from 'hardhat';
 import { getToken } from '../currency';
-import { ETHEREUM_MAINNET_CHAIN_ID, getChainInfo } from '../chain';
+import { ApertureSupportedChainId, getChainInfo } from '../chain';
 import { parsePrice } from '../price';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { getCurrencyAmount } from '../currency';
 import { getCreatePositionTxForLimitOrder } from '../transaction';
-import { FeeAmount, TICK_SPACINGS, priceToClosestTick, tickToPrice } from '@uniswap/v3-sdk';
+import {
+  FeeAmount,
+  TICK_SPACINGS,
+  priceToClosestTick,
+  tickToPrice,
+} from '@uniswap/v3-sdk';
 import { alignPriceToClosestUsableTick } from '../tick';
 import { getPool } from '../pool';
 import {
@@ -19,6 +24,7 @@ import {
   checkPositionApprovalStatus,
   generateTypedDataForPermit,
 } from '../permission';
+import { getWalletActivities } from '../activity';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -41,12 +47,12 @@ describe('Transaction tests', function () {
   before(async function () {
     WBTC = await getToken(
       '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
     WETH = await getToken(
       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
   });
@@ -66,7 +72,7 @@ describe('Transaction tests', function () {
         tenWBTC,
         poolFee,
         deadline,
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.be.rejectedWith('Outer limit price not aligned');
@@ -79,7 +85,7 @@ describe('Transaction tests', function () {
         tenWBTC,
         poolFee,
         deadline,
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.be.rejectedWith('Specified limit price lower than current price');
@@ -88,7 +94,7 @@ describe('Transaction tests', function () {
       WETH,
       WBTC,
       poolFee,
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
     const currentPrice = tickToPrice(
@@ -108,11 +114,11 @@ describe('Transaction tests', function () {
       tenWBTC,
       poolFee,
       deadline,
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
     const npmAddress = getChainInfo(
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
     ).uniswap_v3_nonfungible_position_manager;
     expect(tx).to.deep.equal({
       to: npmAddress,
@@ -142,7 +148,7 @@ describe('Transaction tests', function () {
       (await npmContract.totalSupply()).sub(1),
     );
     const basicPositionInfo = await getBasicPositionInfo(
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       positionId,
       hardhatForkProvider,
     );
@@ -156,7 +162,7 @@ describe('Transaction tests', function () {
     });
     const position = await getPositionFromBasicInfo(
       basicPositionInfo,
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
     // The user actually provided 9.99999999 WBTC due to liquidity precision, i.e. 10 WBTC would have yielded the exact same liquidity amount of 133959413978504760.
@@ -165,17 +171,20 @@ describe('Transaction tests', function () {
   });
 
   it('Create position for limit order (selling WETH for WBTC)', async function () {
-    const tenWETH = getCurrencyAmount(WETH, "10");
+    const tenWETH = getCurrencyAmount(WETH, '10');
 
     // The current price is 1 WBTC = 15.295542 WETH. Trying to sell WETH at 1 WETH = 1/18 WBTC is lower than the current price and therefore should be rejected.
     await expect(
       getCreatePositionTxForLimitOrder(
         eoa,
-        alignPriceToClosestUsableTick(parsePrice(WBTC, WETH, "18").invert(), poolFee),
+        alignPriceToClosestUsableTick(
+          parsePrice(WBTC, WETH, '18').invert(),
+          poolFee,
+        ),
         tenWETH,
         poolFee,
         deadline,
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.be.rejectedWith('Specified limit price lower than current price');
@@ -191,11 +200,11 @@ describe('Transaction tests', function () {
       tenWETH,
       poolFee,
       deadline,
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
     const npmAddress = getChainInfo(
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
     ).uniswap_v3_nonfungible_position_manager;
     expect(tx).to.deep.equal({
       to: npmAddress,
@@ -225,7 +234,7 @@ describe('Transaction tests', function () {
       (await npmContract.totalSupply()).sub(1),
     );
     const basicPositionInfo = await getBasicPositionInfo(
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       positionId,
       hardhatForkProvider,
     );
@@ -239,18 +248,22 @@ describe('Transaction tests', function () {
     });
     const position = await getPositionFromBasicInfo(
       basicPositionInfo,
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
     // The user actually provided 9.999999999999999576 WETH due to liquidity precision, i.e. 10 WETH would have yielded the exact same liquidity amount of 9551241229311572.
     expect(position.amount0.quotient.toString()).to.equal('0');
-    expect(position.amount1.quotient.toString()).to.equal('9999999999999999576');
+    expect(position.amount1.quotient.toString()).to.equal(
+      '9999999999999999576',
+    );
   });
 });
 
 describe('Util tests', function () {
   it('Position approval', async function () {
-    const chainInfo = getChainInfo(ETHEREUM_MAINNET_CHAIN_ID);
+    const chainInfo = getChainInfo(
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+    );
     const automanAddress = chainInfo.aperture_uniswap_v3_automan;
     // This position is owned by `eoa`.
     const positionId = 4;
@@ -258,7 +271,7 @@ describe('Util tests', function () {
       await checkPositionApprovalStatus(
         positionId,
         undefined,
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -277,7 +290,7 @@ describe('Util tests', function () {
       await checkPositionApprovalStatus(
         positionId,
         undefined,
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -290,7 +303,7 @@ describe('Util tests', function () {
       await checkPositionApprovalStatus(
         positionId,
         undefined,
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -301,7 +314,7 @@ describe('Util tests', function () {
     // Construct and sign a permit message approving position id 4.
     const wallet = new ethers.Wallet(TEST_WALLET_PRIVATE_KEY);
     const permitTypedData = await generateTypedDataForPermit(
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       positionId,
       deadline,
       hardhatForkProvider,
@@ -323,7 +336,7 @@ describe('Util tests', function () {
           deadline,
           signature,
         },
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -333,7 +346,7 @@ describe('Util tests', function () {
 
     // Test permit message with an incorrect position id.
     const anotherPermitTypedData = await generateTypedDataForPermit(
-      ETHEREUM_MAINNET_CHAIN_ID,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       positionId + 1,
       deadline,
       hardhatForkProvider,
@@ -350,12 +363,33 @@ describe('Util tests', function () {
           deadline,
           signature: anotherSignature,
         },
-        ETHEREUM_MAINNET_CHAIN_ID,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
         hardhatForkProvider,
       ),
     ).to.deep.include({
       hasAuthority: false,
       reason: 'invalidSignedPermission',
     });
+  });
+});
+
+// TODO: This test currently fails with the following error.
+/* Error: Cannot find module '/Users/gnarlycow/dev/uniswap-v3-automation-helpers/node_modules/@uniswap/conedison/dist/format'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1022:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1015:15)
+    at resolveExports (node:internal/modules/cjs/loader:529:14)
+    at Function.Module._findPath (node:internal/modules/cjs/loader:569:31)
+    at Function.Module._resolveFilename (node:internal/modules/cjs/loader:981:27)
+    at Function.Module._resolveFilename.sharedData.moduleResolveFilenameHook.installedValue [as _resolveFilename] (/Users/gnarlycow/.config/yarn/global/node_modules/@cspotcode/source-map-support/source-map-support.js:811:30)
+    at Function.Module._load (node:internal/modules/cjs/loader:841:27)
+    at Module.require (node:internal/modules/cjs/loader:1067:19)
+    at require (node:internal/modules/cjs/helpers:103:18)
+    at Object.<anonymous> (/Users/gnarlycow/dev/uniswap-v3-automation-helpers/activity.ts:4:1) {
+  code: 'MODULE_NOT_FOUND',
+  path: '/Users/gnarlycow/dev/uniswap-v3-automation-helpers/node_modules/@uniswap/conedison/package.json'
+} */
+describe('Wallet activity tests', function () {
+  it('Wallet activity', async function () {
+    console.log(await getWalletActivities('0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5'));
   });
 });

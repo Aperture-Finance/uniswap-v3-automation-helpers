@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { writeFileSync } from 'fs';
 import {
-  ARBITRUM_MAINNET_CHAIN_ID,
-  ETHEREUM_MAINNET_CHAIN_ID,
+  ApertureSupportedChainId,
   getChainInfo,
 } from '../chain';
 import { config as dotenvConfig } from 'dotenv';
@@ -47,7 +46,7 @@ async function generateWhitelistedPools(chainId: number) {
     (pool: { volumeUSD: string }) => pool.volumeUSD != '0',
   );
   const filteredPools =
-    chainId === ETHEREUM_MAINNET_CHAIN_ID
+    chainId === ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID
       ? pools.filter(
           (pool: { id: string }) =>
             // ETH-ETHM pool with 5000 ETH and ETHM; no trades at all during the 120-day period before May 9, 2023.
@@ -101,7 +100,7 @@ async function generateWhitelistedPools(chainId: number) {
   );
 }
 
-generateWhitelistedPools(ETHEREUM_MAINNET_CHAIN_ID);
-generateWhitelistedPools(ARBITRUM_MAINNET_CHAIN_ID);
+generateWhitelistedPools(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID);
+generateWhitelistedPools(ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID);
 // There are 42 whitelisted pools involving 26 tokens on Ethereum mainnet.
 // There are 23 whitelisted pools involving 17 tokens on Arbitrum.

@@ -2,7 +2,7 @@ import { BigNumberish, TypedDataDomain, TypedDataField, ethers } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
 import { PermitInfo } from '@aperture_finance/uniswap-v3-automation-sdk/interfaces';
-import { getChainInfo } from './chain';
+import { ApertureSupportedChainId, getChainInfo } from './chain';
 
 export interface PositionApprovalStatus {
   hasAuthority: boolean;
@@ -21,7 +21,7 @@ export interface PositionApprovalStatus {
 export async function checkPositionApprovalStatus(
   positionId: BigNumberish,
   permitInfo: PermitInfo | undefined,
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   provider: ethers.providers.Provider,
 ): Promise<PositionApprovalStatus> {
   const chainInfo = getChainInfo(chainId);
@@ -86,7 +86,7 @@ export async function checkPositionApprovalStatus(
  * @returns An object containing typed data ready to be signed with, for example, ethers `Wallet._signTypedData(domain, types, value)`.
  */
 export async function generateTypedDataForPermit(
-  chainId: number,
+  chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   deadlineEpochSeconds: number,
   provider: Provider,
