@@ -12,7 +12,7 @@ export function generateLimitOrderCloseRequestPayload(
   inputCurrencyAmount: CurrencyAmount<Currency>,
   feeTier: FeeAmount,
   maxGasProportion: number,
-): Payload | undefined {
+): Payload {
   const token0 = [
     outerLimitPrice.baseCurrency.address,
     outerLimitPrice.quoteCurrency.address,
