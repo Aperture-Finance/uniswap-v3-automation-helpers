@@ -1,4 +1,5 @@
 // Copied from https://github.com/Uniswap/conedison/blob/main/src/format.ts.
+// Importing from https://www.npmjs.com/package/@uniswap/conedison doesn't work because the npm package only has ECMAScript modules and we need CommonJS ones.
 import { Currency, CurrencyAmount, Percent, Price } from '@uniswap/sdk-core';
 
 import { Nullish } from './types';
