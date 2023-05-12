@@ -6,7 +6,10 @@ import { ApertureSupportedChainId, getChainInfo } from '../chain';
 import { parsePrice } from '../price';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { getCurrencyAmount } from '../currency';
-import { getCreatePositionTxForLimitOrder } from '../transaction';
+import {
+  getCreatePositionTxForLimitOrder,
+  getMintedPositionIdFromTxReceipt,
+} from '../transaction';
 import {
   FeeAmount,
   TICK_SPACINGS,
@@ -139,14 +142,12 @@ describe('Transaction tests', function () {
       tenWBTC.quotient.toString(),
     );
     // Create the limit order position.
-    await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const npmContract = INonfungiblePositionManager__factory.connect(
-      npmAddress,
-      hardhatForkProvider,
-    );
-    const positionId = await npmContract.tokenByIndex(
-      (await npmContract.totalSupply()).sub(1),
-    );
+    const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
+    const positionId = getMintedPositionIdFromTxReceipt(
+      txReceipt,
+      impersonatedEOA.address,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+    )!;
     const basicPositionInfo = await getBasicPositionInfo(
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       positionId,
@@ -225,14 +226,12 @@ describe('Transaction tests', function () {
       tenWETH.quotient.toString(),
     );
     // Create the limit order position.
-    await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const npmContract = INonfungiblePositionManager__factory.connect(
-      npmAddress,
-      hardhatForkProvider,
-    );
-    const positionId = await npmContract.tokenByIndex(
-      (await npmContract.totalSupply()).sub(1),
-    );
+    const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
+    const positionId = getMintedPositionIdFromTxReceipt(
+      txReceipt,
+      impersonatedEOA.address,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+    )!;
     const basicPositionInfo = await getBasicPositionInfo(
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       positionId,
@@ -388,8 +387,10 @@ describe('Util tests', function () {
   code: 'MODULE_NOT_FOUND',
   path: '/Users/gnarlycow/dev/uniswap-v3-automation-helpers/node_modules/@uniswap/conedison/package.json'
 } */
+/*
 describe('Wallet activity tests', function () {
   it('Wallet activity', async function () {
     console.log(await getWalletActivities('0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5'));
   });
 });
+*/
