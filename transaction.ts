@@ -17,9 +17,12 @@ import {
   TICK_SPACINGS,
   tickToPrice,
 } from '@uniswap/v3-sdk';
-import { BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
-import { TransactionRequest } from '@ethersproject/providers';
+import {
+  TransactionReceipt,
+  TransactionRequest,
+} from '@ethersproject/providers';
 import { priceToClosestUsableTick } from './tick';
 import { ApertureSupportedChainId, ChainInfo, getChainInfo } from './chain';
 import { getNativeEther } from './currency';
@@ -396,4 +399,34 @@ export function getSetApprovalForAllTx(
       [chainInfo.aperture_uniswap_v3_automan, approved],
     ),
   );
+}
+
+/**
+ * Parses the specified transaction receipt and extracts the position id (token id) minted by NPM within the transaction.
+ * @param txReceipt The transaction receipt to parse.
+ * @param recipientAddress The receipt address to which the position is minted.
+ * @param chainId The chain id.
+ * @returns If a position is minted to `recipientAddress`, the position id is returned. If there is more than one, the first is returned. If there are none, `undefined` is returned.
+ */
+export function getMintedPositionIdFromTxReceipt(
+  txReceipt: TransactionReceipt,
+  recipientAddress: string,
+  chainId: ApertureSupportedChainId,
+): BigNumber | undefined {
+  const npmInterface = INonfungiblePositionManager__factory.createInterface();
+  const npmAddress =
+    getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
+  for (const log of txReceipt.logs) {
+    if (npmAddress === log.address) {
+      const parsedLog = npmInterface.parseLog(log);
+      if (
+        parsedLog.name === 'Transfer' &&
+        parsedLog.args.from === ADDRESS_ZERO &&
+        parsedLog.args.to === recipientAddress
+      ) {
+        return parsedLog.args.tokenId;
+      }
+    }
+  }
+  return undefined;
 }
