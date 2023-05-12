@@ -372,25 +372,8 @@ describe('Util tests', function () {
   });
 });
 
-// TODO: This test currently fails with the following error.
-/* Error: Cannot find module '/Users/gnarlycow/dev/uniswap-v3-automation-helpers/node_modules/@uniswap/conedison/dist/format'
-    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1022:15)
-    at finalizeEsmResolution (node:internal/modules/cjs/loader:1015:15)
-    at resolveExports (node:internal/modules/cjs/loader:529:14)
-    at Function.Module._findPath (node:internal/modules/cjs/loader:569:31)
-    at Function.Module._resolveFilename (node:internal/modules/cjs/loader:981:27)
-    at Function.Module._resolveFilename.sharedData.moduleResolveFilenameHook.installedValue [as _resolveFilename] (/Users/gnarlycow/.config/yarn/global/node_modules/@cspotcode/source-map-support/source-map-support.js:811:30)
-    at Function.Module._load (node:internal/modules/cjs/loader:841:27)
-    at Module.require (node:internal/modules/cjs/loader:1067:19)
-    at require (node:internal/modules/cjs/helpers:103:18)
-    at Object.<anonymous> (/Users/gnarlycow/dev/uniswap-v3-automation-helpers/activity.ts:4:1) {
-  code: 'MODULE_NOT_FOUND',
-  path: '/Users/gnarlycow/dev/uniswap-v3-automation-helpers/node_modules/@uniswap/conedison/package.json'
-} */
-/*
 describe('Wallet activity tests', function () {
   it('Wallet activity', async function () {
     console.log(await getWalletActivities('0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5'));
   });
 });
-*/

@@ -1,7 +1,6 @@
 // Adapted from https://github.com/Uniswap/interface/blob/main/src/components/AccountDrawer/MiniPortfolio/Activity/parseRemote.tsx.
-import { t } from '@lingui/macro';
 import axios from 'axios';
-import { formatNumberOrString, NumberType } from '@uniswap/conedison/format';
+import { formatNumberOrString, NumberType } from './uniswap-conedison/format';
 import {
   ActivityType,
   AssetActivityPartsFragment,
@@ -122,7 +121,7 @@ function getSwapTitle(
       received.asset.address,
     )
   )
-    return t`Wrapped`;
+    return `Wrapped`;
   else if (
     received.tokenStandard === 'NATIVE' &&
     isSameAddress(
@@ -131,9 +130,9 @@ function getSwapTitle(
       received.asset.address,
     )
   ) {
-    return t`Unwrapped`;
+    return `Unwrapped`;
   } else {
-    return t`Swapped`;
+    return `Swapped`;
   }
 }
 
@@ -141,8 +140,7 @@ function parseSwap(changes: TransactionFragments) {
   if (changes.NftTransfer.length > 0 && changes.TokenTransfer.length === 1) {
     const collectionCounts = getCollectionCounts(changes.NftTransfer);
 
-    const title =
-      changes.NftTransfer[0].direction === 'IN' ? t`Bought` : t`Sold`;
+    const title = changes.NftTransfer[0].direction === 'IN' ? `Bought` : `Sold`;
     const descriptor = Object.entries(collectionCounts)
       .map(([collectionName, count]) => `${count} ${collectionName}`)
       .join();
@@ -170,19 +168,19 @@ function parseSwap(changes: TransactionFragments) {
       };
     }
   }
-  return { title: t`Unknown Swap` };
+  return { title: `Unknown Swap` };
 }
 
 function parseApprove(changes: TransactionFragments) {
   if (changes.TokenApproval.length === 1) {
     const title =
       parseInt(changes.TokenApproval[0].quantity) === 0
-        ? t`Revoked Approval`
-        : t`Approved`;
+        ? `Revoked Approval`
+        : `Approved`;
     const descriptor = `${changes.TokenApproval[0].asset.symbol}`;
     return { title, descriptor };
   }
-  return { title: t`Unknown Approval` };
+  return { title: `Unknown Approval` };
 }
 
 function parseLPTransfers(changes: TransactionFragments) {
@@ -218,7 +216,7 @@ function parseSendReceive(
     changes.TokenTransfer.length === 2 &&
     callsPositionManagerContract(assetActivity)
   ) {
-    return { title: t`Removed Liquidity`, ...parseLPTransfers(changes) };
+    return { title: `Removed Liquidity`, ...parseLPTransfers(changes) };
   }
 
   let transfer:
@@ -241,17 +239,17 @@ function parseSendReceive(
   if (transfer && assetName && amount) {
     return transfer.direction === 'IN'
       ? {
-          title: t`Received`,
-          descriptor: `${amount} ${assetName} ${t`from`} `,
+          title: `Received`,
+          descriptor: `${amount} ${assetName} ${`from`} `,
           otherAccount: isAddress(transfer.sender) || undefined,
         }
       : {
-          title: t`Sent`,
-          descriptor: `${amount} ${assetName} ${t`to`} `,
+          title: `Sent`,
+          descriptor: `${amount} ${assetName} ${`to`} `,
           otherAccount: isAddress(transfer.recipient) || undefined,
         };
   }
-  return { title: t`Unknown Send` };
+  return { title: `Unknown Send` };
 }
 
 function parseMint(
@@ -267,14 +265,14 @@ function parseMint(
       changes.TokenTransfer.length === 2 &&
       callsPositionManagerContract(assetActivity)
     ) {
-      return { title: t`Added Liquidity`, ...parseLPTransfers(changes) };
+      return { title: `Added Liquidity`, ...parseLPTransfers(changes) };
     }
     return {
-      title: t`Minted`,
+      title: `Minted`,
       descriptor: `${collectionMap[collectionName]} ${collectionName}`,
     };
   }
-  return { title: t`Unknown Mint` };
+  return { title: `Unknown Mint` };
 }
 
 const UNI_IMG =
@@ -285,33 +283,33 @@ const ENS_IMG =
 
 const COMMON_CONTRACTS: { [key: string]: Partial<Activity> | undefined } = {
   ['0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984'.toLowerCase()]: {
-    title: t`UNI Governance`,
-    descriptor: t`Contract Interaction`,
+    title: `UNI Governance`,
+    descriptor: `Contract Interaction`,
     logos: [UNI_IMG],
   },
   '0x000000000022d473030f116ddee9f6b43ac78ba3': {
-    title: t`Permit2`,
-    descriptor: t`Uniswap Protocol`,
+    title: `Permit2`,
+    descriptor: `Uniswap Protocol`,
     logos: [UNI_IMG],
   },
   '0x4976fb03c32e5b8cfe2b6ccb31c09ba78ebaba41': {
-    title: t`Ethereum Name Service`,
-    descriptor: t`Public Resolver`,
+    title: `Ethereum Name Service`,
+    descriptor: `Public Resolver`,
     logos: [ENS_IMG],
   },
   '0x58774bb8acd458a640af0b88238369a167546ef2': {
-    title: t`Ethereum Name Service`,
-    descriptor: t`DNS Registrar`,
+    title: `Ethereum Name Service`,
+    descriptor: `DNS Registrar`,
     logos: [ENS_IMG],
   },
   '0x084b1c3c81545d370f3634392de611caabff8148': {
-    title: t`Ethereum Name Service`,
-    descriptor: t`Reverse Registrar`,
+    title: `Ethereum Name Service`,
+    descriptor: `Reverse Registrar`,
     logos: [ENS_IMG],
   },
   '0x283af0b28c62c092c9727f1ee09c02ca627eb7f5': {
-    title: t`Ethereum Name Service`,
-    descriptor: t`ETH Registrar Controller`,
+    title: `Ethereum Name Service`,
+    descriptor: `ETH Registrar Controller`,
     logos: [ENS_IMG],
   },
 };
@@ -321,7 +319,7 @@ function parseUnknown(
   assetActivity: AssetActivityPartsFragment,
 ) {
   return {
-    title: t`Contract Interaction`,
+    title: `Contract Interaction`,
     ...COMMON_CONTRACTS[assetActivity.transaction.to.toLowerCase()],
   };
 }
