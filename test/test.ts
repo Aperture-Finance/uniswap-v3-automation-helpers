@@ -1,7 +1,7 @@
 import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
 import { ethers } from 'hardhat';
-import { getToken } from '../currency';
+import { getNativeEther, getToken } from '../currency';
 import { ApertureSupportedChainId, getChainInfo } from '../chain';
 import { parsePrice } from '../price';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
@@ -28,6 +28,7 @@ import {
   generateTypedDataForPermit,
 } from '../permission';
 import { getWalletActivities } from '../activity';
+import { generateLimitOrderCloseRequestPayload } from '../payload';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -43,7 +44,7 @@ const deadline = 4093484400;
 const TEST_WALLET_PRIVATE_KEY =
   '0x077646fb889571f9ce30e420c155812277271d4d914c799eef764f5709cafd5b';
 
-describe('Transaction tests', function () {
+describe('Limit order tests', function () {
   let WBTC: Token, WETH: Token;
   const poolFee = FeeAmount.MEDIUM;
 
@@ -60,7 +61,7 @@ describe('Transaction tests', function () {
     );
   });
 
-  it('Create position for limit order (selling WBTC for WETH)', async function () {
+  it('Selling WBTC for WETH', async function () {
     const price = parsePrice(WBTC, WETH, '10.234');
     expect(price.toFixed(6)).to.equal('10.234000');
     const tenWBTC = getCurrencyAmount(WBTC, '10.0');
@@ -145,7 +146,7 @@ describe('Transaction tests', function () {
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
     const positionId = getMintedPositionIdFromTxReceipt(
       txReceipt,
-      impersonatedEOA.address,
+      eoa,
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
     )!;
     const basicPositionInfo = await getBasicPositionInfo(
@@ -169,9 +170,38 @@ describe('Transaction tests', function () {
     // The user actually provided 9.99999999 WBTC due to liquidity precision, i.e. 10 WBTC would have yielded the exact same liquidity amount of 133959413978504760.
     expect(position.amount0.quotient.toString()).to.equal('999999999');
     expect(position.amount1.quotient.toString()).to.equal('0');
+    expect(
+      generateLimitOrderCloseRequestPayload(
+        eoa,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        positionId,
+        alignedLimitPrice,
+        tenWBTC,
+        poolFee,
+        /*maxGasProportion=*/ 0.2,
+      ),
+    ).to.deep.equal({
+      action: {
+        feeTier: 3000,
+        inputTokenAmount: {
+          address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+          rawAmount: '1000000000',
+        },
+        maxGasProportion: 0.2,
+        outputTokenAddr: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+        type: 'LimitOrderClose',
+      },
+      chainId: 1,
+      condition: {
+        type: 'TokenAmount',
+        zeroAmountToken: 0,
+      },
+      nftId: 500511,
+      ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
+    });
   });
 
-  it('Create position for limit order (selling WETH for WBTC)', async function () {
+  it('Selling WETH for WBTC', async function () {
     const tenWETH = getCurrencyAmount(WETH, '10');
 
     // The current price is 1 WBTC = 15.295542 WETH. Trying to sell WETH at 1 WETH = 1/18 WBTC is lower than the current price and therefore should be rejected.
@@ -229,7 +259,7 @@ describe('Transaction tests', function () {
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
     const positionId = getMintedPositionIdFromTxReceipt(
       txReceipt,
-      impersonatedEOA.address,
+      eoa,
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
     )!;
     const basicPositionInfo = await getBasicPositionInfo(
@@ -255,6 +285,106 @@ describe('Transaction tests', function () {
     expect(position.amount1.quotient.toString()).to.equal(
       '9999999999999999576',
     );
+    expect(
+      generateLimitOrderCloseRequestPayload(
+        eoa,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        positionId,
+        alignedLimitPrice,
+        tenWETH,
+        poolFee,
+        /*maxGasProportion=*/ 0.2,
+      ),
+    ).to.deep.equal({
+      action: {
+        feeTier: 3000,
+        inputTokenAmount: {
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+          rawAmount: '10000000000000000000',
+        },
+        maxGasProportion: 0.2,
+        outputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+        type: 'LimitOrderClose',
+      },
+      chainId: 1,
+      condition: {
+        type: 'TokenAmount',
+        zeroAmountToken: 1,
+      },
+      nftId: 500512,
+      ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
+    });
+
+    // Create another WETH -> WBTC limit order but provide native ether this time.
+    const tenETH = getCurrencyAmount(
+      getNativeEther(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID),
+      '10',
+    );
+    const nativeEthTx = await getCreatePositionTxForLimitOrder(
+      eoa,
+      alignedLimitPrice,
+      tenETH,
+      poolFee,
+      deadline,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      hardhatForkProvider,
+    );
+    expect(nativeEthTx).to.deep.equal({
+      to: npmAddress,
+      data: '0xac9650d800000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001e00000000000000000000000000000000000000000000000000000000000000164883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000bb8000000000000000000000000000000000000000000000000000000000003e508000000000000000000000000000000000000000000000000000000000003e54400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ac7230489e7fe5900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ac7230489e7fe590000000000000000000000004bd047ca72fa05f0b89ad08fe5ba5ccdc07dffbf00000000000000000000000000000000000000000000000000000000f3fd9d7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000412210e8a00000000000000000000000000000000000000000000000000000000',
+      value: '0x8ac7230489e7fe59',
+    });
+    const nativeEthTxReceipt = await (
+      await impersonatedEOA.sendTransaction(nativeEthTx)
+    ).wait();
+    const nativeEthPositionId = getMintedPositionIdFromTxReceipt(
+      nativeEthTxReceipt,
+      eoa,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+    )!;
+    expect(
+      await getBasicPositionInfo(
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        nativeEthPositionId,
+        hardhatForkProvider,
+      ),
+    ).to.deep.equal({
+      token0: WBTC,
+      token1: WETH,
+      liquidity: '9551241229311572',
+      tickLower: priceToClosestTick(alignedLimitPrice),
+      tickUpper: priceToClosestTick(alignedLimitPrice) + TICK_SPACINGS[poolFee],
+      fee: poolFee,
+    });
+    expect(
+      generateLimitOrderCloseRequestPayload(
+        eoa,
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        nativeEthPositionId,
+        alignedLimitPrice,
+        tenETH,
+        poolFee,
+        /*maxGasProportion=*/ 0.2,
+      ),
+    ).to.deep.equal({
+      action: {
+        feeTier: 3000,
+        inputTokenAmount: {
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+          rawAmount: '10000000000000000000',
+        },
+        maxGasProportion: 0.2,
+        outputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+        type: 'LimitOrderClose',
+      },
+      chainId: 1,
+      condition: {
+        type: 'TokenAmount',
+        zeroAmountToken: 1,
+      },
+      nftId: 500513,
+      ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
+    });
   });
 });
 
@@ -374,6 +504,8 @@ describe('Util tests', function () {
 
 describe('Wallet activity tests', function () {
   it('Wallet activity', async function () {
-    console.log(await getWalletActivities('0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5'));
+    console.log(
+      await getWalletActivities('0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5'),
+    );
   });
 });

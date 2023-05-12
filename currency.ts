@@ -31,6 +31,7 @@ export async function getToken(
   return new Token(chainId, tokenAddress, decimals);
 }
 
+// TODO: `Ether` is only for Ethereum mainnet and all testnets. Arbitrum mainnet and testnet should use another NativeCurrency subclass.
 export function getNativeEther(
   chainId: ApertureSupportedChainId,
 ): NativeCurrency {

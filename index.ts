@@ -1,6 +1,7 @@
 export * from './activity';
 export * from './chain';
 export * from './currency';
+export * from './payload';
 export * from './permission';
 export * from './pool';
 export * from './position';
