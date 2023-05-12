@@ -25,7 +25,7 @@ import {
 } from '@ethersproject/providers';
 import { priceToClosestUsableTick } from './tick';
 import { ApertureSupportedChainId, ChainInfo, getChainInfo } from './chain';
-import { getNativeEther } from './currency';
+import { getNativeCurrency } from './currency';
 import { getPoolFromBasicPositionInfo } from './pool';
 import {
   BasicPositionInfo,
@@ -81,7 +81,7 @@ export async function getCreatePositionTxForLimitOrder(
 ): Promise<TransactionRequest> {
   if (
     inputCurrencyAmount.currency.isNative &&
-    !getNativeEther(chainId).wrapped.equals(outerLimitPrice.baseCurrency)
+    !getNativeCurrency(chainId).wrapped.equals(outerLimitPrice.baseCurrency)
   ) {
     throw 'Input currency is native ether but base currency is not WETH';
   }
@@ -138,7 +138,7 @@ export async function getCreatePositionTxForLimitOrder(
       slippageTolerance: new Percent(0),
       deadline: deadlineEpochSeconds,
       useNative: inputCurrencyAmount.currency.isNative
-        ? getNativeEther(chainId)
+        ? getNativeCurrency(chainId)
         : undefined,
       recipient,
     },
@@ -245,7 +245,7 @@ function convertCollectableTokenAmountToExpectedCurrencyOwed(
     collectableTokenAmount.token0Amount;
   let expectedCurrencyOwed1: CurrencyAmount<Currency> =
     collectableTokenAmount.token1Amount;
-  const nativeEther = getNativeEther(chainId);
+  const nativeEther = getNativeCurrency(chainId);
   const weth = nativeEther.wrapped;
   if (receiveNativeEtherIfApplicable) {
     if (weth.equals(token0)) {

@@ -1,7 +1,7 @@
 import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
 import { ethers } from 'hardhat';
-import { getNativeEther, getToken } from '../currency';
+import { getNativeCurrency, getToken } from '../currency';
 import { ApertureSupportedChainId, getChainInfo } from '../chain';
 import { parsePrice } from '../price';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
@@ -317,7 +317,7 @@ describe('Limit order tests', function () {
 
     // Create another WETH -> WBTC limit order but provide native ether this time.
     const tenETH = getCurrencyAmount(
-      getNativeEther(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID),
+      getNativeCurrency(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID),
       '10',
     );
     const nativeEthTx = await getCreatePositionTxForLimitOrder(

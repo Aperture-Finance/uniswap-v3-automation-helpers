@@ -1,7 +1,6 @@
 import {
   Currency,
   CurrencyAmount,
-  Ether,
   NativeCurrency,
   Token,
 } from '@uniswap/sdk-core';
@@ -9,6 +8,7 @@ import { Provider } from '@ethersproject/abstract-provider';
 import { ERC20__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { parseFixed } from '@ethersproject/bignumber';
 import { ApertureSupportedChainId } from './chain';
+import { nativeOnChain } from './uniswap-constants';
 
 // The `Currency` type is defined as `Currency = NativeCurrency | Token`.
 // When a liquidity pool involves ETH, i.e. WETH is one of the two tokens in the pool, the
@@ -31,11 +31,12 @@ export async function getToken(
   return new Token(chainId, tokenAddress, decimals);
 }
 
-// TODO: `Ether` is only for Ethereum mainnet and all testnets. Arbitrum mainnet and testnet should use another NativeCurrency subclass.
-export function getNativeEther(
+export function getNativeCurrency(
   chainId: ApertureSupportedChainId,
 ): NativeCurrency {
-  return Ether.onChain(chainId);
+  // `nativeOnChain()` may only return a `Token` when `chainId` represents a Celo chain.
+  // Since `ApertureSupportedChainId` does not contain any Celo chains, `nativeOnChain()` will always return a `NativeCurrency`.
+  return nativeOnChain(chainId) as NativeCurrency;
 }
 
 /**
