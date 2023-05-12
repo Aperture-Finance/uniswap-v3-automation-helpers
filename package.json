@@ -27,7 +27,6 @@
     "@aperture_finance/uniswap-v3-automation-sdk": "^0.0.13",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
-    "@uniswap/conedison": "^1.6.0",
     "@uniswap/sdk-core": "^3.2.2",
     "@uniswap/v3-sdk": "^3.9.0",
     "axios": "^1.4.0",
