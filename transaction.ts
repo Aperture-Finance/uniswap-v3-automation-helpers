@@ -34,11 +34,20 @@ import {
 } from './position';
 import JSBI from 'jsbi';
 import {
+  INonfungiblePositionManager,
   INonfungiblePositionManager__factory,
+  IUniV3Automan__factory,
   IUniswapV3Factory__factory,
   IUniswapV3Pool__factory,
+  PermitInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { getBasicPositionInfo } from './position';
+import {
+  AutomanFragmentType,
+  AutomanParamTypes,
+  getAutomanRebalanceCallInfo,
+  getAutomanReinvestCallInfo,
+} from './automan';
 
 function getTxToNonfungiblePositionManager(
   chainInfo: ChainInfo,
@@ -379,6 +388,128 @@ export async function getCollectTx(
     calldata,
     value,
   );
+}
+
+async function getAmountMinFromSlippage(
+  automanAddress: string,
+  ownerAddress: string,
+  functionFragment: AutomanFragmentType,
+  functionParams: AutomanParamTypes,
+  slippageTolerance: Percent,
+  provider: Provider,
+): Promise<{
+  amount0Min: BigNumberish;
+  amount1Min: BigNumberish;
+}> {
+  const { amount0, amount1 } = await IUniV3Automan__factory.connect(
+    automanAddress,
+    provider,
+    // @ts-ignore
+  ).callStatic[functionFragment](...functionParams, {
+    from: ownerAddress,
+  });
+  const coefficient = new Percent(1).subtract(slippageTolerance);
+  return {
+    amount0Min: coefficient.multiply(amount0.toString()).quotient.toString(),
+    amount1Min: coefficient.multiply(amount1.toString()).quotient.toString(),
+  };
+}
+
+export async function getRebalanceTx(
+  chainId: ApertureSupportedChainId,
+  ownerAddress: string,
+  existingPositionId: BigNumberish,
+  newPosition: Position,
+  // How much the amount of either token0 or token1 in the new position is allowed to change unfavorably.
+  slippageTolerance: Percent,
+  deadlineEpochSeconds: BigNumberish,
+  provider: Provider,
+  permitInfo?: PermitInfo,
+): Promise<TransactionRequest> {
+  let mintParams: INonfungiblePositionManager.MintParamsStruct = {
+    token0: newPosition.amount0.currency.address,
+    token1: newPosition.amount1.currency.address,
+    fee: newPosition.pool.fee,
+    tickLower: newPosition.tickLower,
+    tickUpper: newPosition.tickLower,
+    amount0Desired: 0, // Param value ignored by Automan.
+    amount1Desired: 0, // Param value ignored by Automan.
+    amount0Min: 0, // Setting this to zero for tx simulation.
+    amount1Min: 0, // Setting this to zero for tx simulation.
+    recipient: ADDRESS_ZERO, // Param value ignored by Automan.
+    deadline: deadlineEpochSeconds,
+  };
+  const automanAddress = getChainInfo(chainId).aperture_uniswap_v3_automan;
+  const { functionFragment, values } = getAutomanRebalanceCallInfo(
+    mintParams,
+    existingPositionId,
+    permitInfo,
+  );
+  const amountMin = await getAmountMinFromSlippage(
+    automanAddress,
+    ownerAddress,
+    functionFragment,
+    values,
+    slippageTolerance,
+    provider,
+  );
+  mintParams.amount0Min = amountMin.amount0Min;
+  mintParams.amount1Min = amountMin.amount1Min;
+  return {
+    from: ownerAddress,
+    to: automanAddress,
+    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      // @ts-ignore
+      functionFragment,
+      getAutomanRebalanceCallInfo(mintParams, existingPositionId, permitInfo)
+        .values,
+    ),
+  };
+}
+
+export async function getReinvestTx(
+  chainId: ApertureSupportedChainId,
+  ownerAddress: string,
+  positionId: BigNumberish,
+  // How much the reinvested amount of either token0 or token1 is allowed to change unfavorably.
+  slippageTolerance: Percent,
+  deadlineEpochSeconds: BigNumberish,
+  provider: Provider,
+  permitInfo?: PermitInfo,
+): Promise<TransactionRequest> {
+  let increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
+    {
+      tokenId: positionId,
+      amount0Desired: 0, // Param value ignored by Automan.
+      amount1Desired: 0, // Param value ignored by Automan.
+      amount0Min: 0, // Setting this to zero for tx simulation.
+      amount1Min: 0, // Setting this to zero for tx simulation.
+      deadline: deadlineEpochSeconds,
+    };
+  const automanAddress = getChainInfo(chainId).aperture_uniswap_v3_automan;
+  const { functionFragment, values } = getAutomanReinvestCallInfo(
+    increaseLiquidityParams,
+    permitInfo,
+  );
+  const amountMin = await getAmountMinFromSlippage(
+    automanAddress,
+    ownerAddress,
+    functionFragment,
+    values,
+    slippageTolerance,
+    provider,
+  );
+  increaseLiquidityParams.amount0Min = amountMin.amount0Min;
+  increaseLiquidityParams.amount1Min = amountMin.amount1Min;
+  return {
+    from: ownerAddress,
+    to: automanAddress,
+    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      // @ts-ignore
+      functionFragment,
+      getAutomanReinvestCallInfo(increaseLiquidityParams, permitInfo).values,
+    ),
+  };
 }
 
 /**
