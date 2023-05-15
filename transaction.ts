@@ -43,8 +43,8 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { getBasicPositionInfo } from './position';
 import {
-  AutomanFragmentType,
-  AutomanParamTypes,
+  AutomanFragment,
+  AutomanParams,
   getAutomanRebalanceCallInfo,
   getAutomanReinvestCallInfo,
 } from './automan';
@@ -393,21 +393,24 @@ export async function getCollectTx(
 async function getAmountMinFromSlippage(
   automanAddress: string,
   ownerAddress: string,
-  functionFragment: AutomanFragmentType,
-  functionParams: AutomanParamTypes,
+  functionFragment: AutomanFragment,
+  functionParams: AutomanParams,
   slippageTolerance: Percent,
   provider: Provider,
 ): Promise<{
   amount0Min: BigNumberish;
   amount1Min: BigNumberish;
 }> {
-  const { amount0, amount1 } = await IUniV3Automan__factory.connect(
+  const { amount0, amount1 } = (await IUniV3Automan__factory.connect(
     automanAddress,
     provider,
     // @ts-ignore
   ).callStatic[functionFragment](...functionParams, {
     from: ownerAddress,
-  });
+  })) as {
+    amount0: BigNumber;
+    amount1: BigNumber;
+  };
   const coefficient = new Percent(1).subtract(slippageTolerance);
   return {
     amount0Min: coefficient.multiply(amount0.toString()).quotient.toString(),
@@ -440,7 +443,7 @@ export async function getRebalanceTx(
     deadline: deadlineEpochSeconds,
   };
   const automanAddress = getChainInfo(chainId).aperture_uniswap_v3_automan;
-  const { functionFragment, values } = getAutomanRebalanceCallInfo(
+  const { functionFragment, params } = getAutomanRebalanceCallInfo(
     mintParams,
     existingPositionId,
     permitInfo,
@@ -449,7 +452,7 @@ export async function getRebalanceTx(
     automanAddress,
     ownerAddress,
     functionFragment,
-    values,
+    params,
     slippageTolerance,
     provider,
   );
@@ -462,7 +465,7 @@ export async function getRebalanceTx(
       // @ts-ignore
       functionFragment,
       getAutomanRebalanceCallInfo(mintParams, existingPositionId, permitInfo)
-        .values,
+        .params,
     ),
   };
 }
@@ -487,7 +490,7 @@ export async function getReinvestTx(
       deadline: deadlineEpochSeconds,
     };
   const automanAddress = getChainInfo(chainId).aperture_uniswap_v3_automan;
-  const { functionFragment, values } = getAutomanReinvestCallInfo(
+  const { functionFragment, params } = getAutomanReinvestCallInfo(
     increaseLiquidityParams,
     permitInfo,
   );
@@ -495,7 +498,7 @@ export async function getReinvestTx(
     automanAddress,
     ownerAddress,
     functionFragment,
-    values,
+    params,
     slippageTolerance,
     provider,
   );
@@ -507,7 +510,7 @@ export async function getReinvestTx(
     data: IUniV3Automan__factory.createInterface().encodeFunctionData(
       // @ts-ignore
       functionFragment,
-      getAutomanReinvestCallInfo(increaseLiquidityParams, permitInfo).values,
+      getAutomanReinvestCallInfo(increaseLiquidityParams, permitInfo).params,
     ),
   };
 }
