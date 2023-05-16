@@ -5,8 +5,10 @@ import { getNativeCurrency, getToken } from '../currency';
 import { ApertureSupportedChainId, getChainInfo } from '../chain';
 import { parsePrice } from '../price';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
+import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
 import { getCurrencyAmount } from '../currency';
 import {
+  getCollectTx,
   getCreatePositionTxForLimitOrder,
   getMintedPositionIdFromTxReceipt,
 } from '../transaction';
@@ -22,17 +24,24 @@ import {
   IERC20__factory,
   INonfungiblePositionManager__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { getBasicPositionInfo, getPositionFromBasicInfo } from '../position';
+import {
+  getBasicPositionInfo,
+  getCollectableTokenAmounts,
+  getPositionFromBasicInfo,
+} from '../position';
 import {
   checkPositionApprovalStatus,
   generateTypedDataForPermit,
 } from '../permission';
 import { getWalletActivities } from '../activity';
 import { generateLimitOrderCloseRequestPayload } from '../payload';
+import { BigNumber } from 'ethers';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const hardhatForkProvider = ethers.provider;
+const WBTC_ADDRESS = '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599';
+const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 // Owner of position id 4 on Ethereum mainnet.
 const eoa = '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF';
 // A fixed epoch second value representing a moment in the year 2099.
@@ -44,18 +53,25 @@ const deadline = 4093484400;
 const TEST_WALLET_PRIVATE_KEY =
   '0x077646fb889571f9ce30e420c155812277271d4d914c799eef764f5709cafd5b';
 
+async function resetHardhatNetwork() {
+  hardhatReset(
+    `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    /*blockNumber=*/ 17188000,
+  );
+}
+
 describe('Limit order tests', function () {
   let WBTC: Token, WETH: Token;
   const poolFee = FeeAmount.MEDIUM;
 
   before(async function () {
     WBTC = await getToken(
-      '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
+      WBTC_ADDRESS,
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
     WETH = await getToken(
-      '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      WETH_ADDRESS,
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       hardhatForkProvider,
     );
@@ -196,7 +212,7 @@ describe('Limit order tests', function () {
         type: 'TokenAmount',
         zeroAmountToken: 0,
       },
-      nftId: 500511,
+      nftId: '500511',
       ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
     });
   });
@@ -311,7 +327,7 @@ describe('Limit order tests', function () {
         type: 'TokenAmount',
         zeroAmountToken: 1,
       },
-      nftId: 500512,
+      nftId: '500512',
       ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
     });
 
@@ -382,9 +398,71 @@ describe('Limit order tests', function () {
         type: 'TokenAmount',
         zeroAmountToken: 1,
       },
-      nftId: 500513,
+      nftId: '500513',
       ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
     });
+  });
+});
+
+describe('Position liquidity management tests', function () {
+  const chainId = ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID;
+  const positionId = 4;
+  const wbtcContract = IERC20__factory.connect(
+    WBTC_ADDRESS,
+    hardhatForkProvider,
+  );
+  const wethContract = IERC20__factory.connect(
+    WETH_ADDRESS,
+    hardhatForkProvider,
+  );
+  let wbtcBalanceBefore: BigNumber, wethBalanceBefore: BigNumber;
+
+  before(async function () {
+    await resetHardhatNetwork();
+    wbtcBalanceBefore = await wbtcContract.balanceOf(eoa);
+    wethBalanceBefore = await wethContract.balanceOf(eoa);
+  });
+
+  beforeEach(async function () {
+    await resetHardhatNetwork();
+  });
+
+  it('Collect fees', async function () {
+    const basicInfo = await getBasicPositionInfo(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    const colletableTokenAmounts = await getCollectableTokenAmounts(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+      basicInfo,
+    );
+    const txRequest = await getCollectTx(
+      positionId,
+      eoa,
+      chainId,
+      hardhatForkProvider,
+      false,
+      basicInfo,
+    );
+    const eoaSigner = await ethers.getImpersonatedSigner(eoa);
+    await (await eoaSigner.sendTransaction(txRequest)).wait();
+    expect(
+      (await wbtcContract.balanceOf(eoa)).eq(
+        wbtcBalanceBefore.add(
+          colletableTokenAmounts.token0Amount.quotient.toString(),
+        ),
+      ),
+    ).to.equal(true);
+    expect(
+      (await wethContract.balanceOf(eoa)).eq(
+        wethBalanceBefore.add(
+          colletableTokenAmounts.token1Amount.quotient.toString(),
+        ),
+      ),
+    ).to.equal(true);
   });
 });
 
