@@ -126,6 +126,18 @@ export async function getCollectableTokenAmounts(
 }
 
 /**
+ * Check whether the specified position is currently in range, i.e. pool price is within the position's price range.
+ * @param position The position to check.
+ * @returns A boolean indicating whether the position is in range.
+ */
+export function isPositionInRange(position: Position): boolean {
+  return (
+    position.pool.tickCurrent >= position.tickLower &&
+    position.pool.tickCurrent < position.tickUpper
+  );
+}
+
+/**
  * Lists all position ids owned by the specified owner.
  * @param owner The owner.
  * @param chainId Chain id.

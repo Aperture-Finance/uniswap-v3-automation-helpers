@@ -4,30 +4,47 @@ import { ethers } from 'hardhat';
 import { getNativeCurrency, getToken } from '../currency';
 import { ApertureSupportedChainId, getChainInfo } from '../chain';
 import { parsePrice } from '../price';
-import { CurrencyAmount, Token } from '@uniswap/sdk-core';
+import {
+  CurrencyAmount,
+  Fraction,
+  Percent,
+  Price,
+  Token,
+} from '@uniswap/sdk-core';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
 import { getCurrencyAmount } from '../currency';
 import {
+  getAddLiquidityTx,
   getCollectTx,
+  getCreatePositionTx,
   getCreatePositionTxForLimitOrder,
   getMintedPositionIdFromTxReceipt,
+  getRemoveLiquidityTx,
 } from '../transaction';
 import {
   FeeAmount,
+  Position,
   TICK_SPACINGS,
   priceToClosestTick,
   tickToPrice,
 } from '@uniswap/v3-sdk';
-import { alignPriceToClosestUsableTick } from '../tick';
+import {
+  alignPriceToClosestUsableTick,
+  priceToClosestUsableTick,
+} from '../tick';
 import { getPool } from '../pool';
 import {
   IERC20__factory,
   INonfungiblePositionManager__factory,
+  WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import {
+  BasicPositionInfo,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
+  getPosition,
   getPositionFromBasicInfo,
+  isPositionInRange,
 } from '../position';
 import {
   checkPositionApprovalStatus,
@@ -407,6 +424,7 @@ describe('Limit order tests', function () {
 describe('Position liquidity management tests', function () {
   const chainId = ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID;
   const positionId = 4;
+  let WBTC: Token, WETH: Token;
   const wbtcContract = IERC20__factory.connect(
     WBTC_ADDRESS,
     hardhatForkProvider,
@@ -415,12 +433,42 @@ describe('Position liquidity management tests', function () {
     WETH_ADDRESS,
     hardhatForkProvider,
   );
-  let wbtcBalanceBefore: BigNumber, wethBalanceBefore: BigNumber;
+  let wbtcBalanceBefore: BigNumber,
+    wethBalanceBefore: BigNumber,
+    nativeEtherBalanceBefore: BigNumber;
+  let position4BasicInfo: BasicPositionInfo;
+  let position4ColletableTokenAmounts: {
+    token0Amount: CurrencyAmount<Token>;
+    token1Amount: CurrencyAmount<Token>;
+  };
 
   before(async function () {
     await resetHardhatNetwork();
     wbtcBalanceBefore = await wbtcContract.balanceOf(eoa);
     wethBalanceBefore = await wethContract.balanceOf(eoa);
+    nativeEtherBalanceBefore = await hardhatForkProvider.getBalance(eoa);
+    position4BasicInfo = await getBasicPositionInfo(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    position4ColletableTokenAmounts = await getCollectableTokenAmounts(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+      position4BasicInfo,
+    );
+
+    WBTC = await getToken(
+      WBTC_ADDRESS,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      hardhatForkProvider,
+    );
+    WETH = await getToken(
+      WETH_ADDRESS,
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      hardhatForkProvider,
+    );
   });
 
   beforeEach(async function () {
@@ -428,45 +476,225 @@ describe('Position liquidity management tests', function () {
   });
 
   it('Collect fees', async function () {
-    const basicInfo = await getBasicPositionInfo(
-      chainId,
-      positionId,
-      hardhatForkProvider,
-    );
-    const colletableTokenAmounts = await getCollectableTokenAmounts(
-      chainId,
-      positionId,
-      hardhatForkProvider,
-      basicInfo,
-    );
     const txRequest = await getCollectTx(
       positionId,
       eoa,
       chainId,
       hardhatForkProvider,
       false,
-      basicInfo,
+      position4BasicInfo,
     );
     const eoaSigner = await ethers.getImpersonatedSigner(eoa);
     await (await eoaSigner.sendTransaction(txRequest)).wait();
     expect(
       (await wbtcContract.balanceOf(eoa)).eq(
         wbtcBalanceBefore.add(
-          colletableTokenAmounts.token0Amount.quotient.toString(),
+          position4ColletableTokenAmounts.token0Amount.quotient.toString(),
         ),
       ),
     ).to.equal(true);
     expect(
       (await wethContract.balanceOf(eoa)).eq(
         wethBalanceBefore.add(
-          colletableTokenAmounts.token1Amount.quotient.toString(),
+          position4ColletableTokenAmounts.token1Amount.quotient.toString(),
         ),
       ),
     ).to.equal(true);
   });
+
+  it('Decrease liquidity (receive native ether + WBTC), increase liquidity, and create position', async function () {
+    // ------- Decrease Liquidity -------
+    // Decrease liquidity from position id 4.
+    const position = await getPositionFromBasicInfo(
+      position4BasicInfo,
+      chainId,
+      hardhatForkProvider,
+    );
+    const liquidityPercentage = new Percent(1); // 100%
+    const removeLiquidityTxRequest = await getRemoveLiquidityTx(
+      {
+        tokenId: positionId,
+        liquidityPercentage,
+        slippageTolerance: new Percent(0),
+        deadline: Math.floor(Date.now() / 1000),
+      },
+      eoa,
+      chainId,
+      hardhatForkProvider,
+      /*receiveNativeEtherIfApplicable=*/ true,
+      position,
+    );
+    const eoaSigner = await ethers.getImpersonatedSigner(eoa);
+    const removeLiquidityTxReceipt = await (
+      await eoaSigner.sendTransaction(removeLiquidityTxRequest)
+    ).wait();
+    expect(
+      (await wbtcContract.balanceOf(eoa)).eq(
+        wbtcBalanceBefore
+          // Add collected WBTC fees.
+          .add(position4ColletableTokenAmounts.token0Amount.quotient.toString())
+          // Add withdrawn WBTC liquidity.
+          .add(position.amount0.quotient.toString()),
+      ),
+    ).to.equal(true);
+    expect(
+      (await hardhatForkProvider.getBalance(eoa)).eq(
+        nativeEtherBalanceBefore
+          // Add collected WETH fees.
+          .add(position4ColletableTokenAmounts.token1Amount.quotient.toString())
+          // Add withdrawn WETH liquidity.
+          .add(position.amount1.quotient.toString())
+          // Subtract gas paid in ETH.
+          .sub(
+            removeLiquidityTxReceipt.gasUsed.mul(
+              removeLiquidityTxReceipt.effectiveGasPrice,
+            ),
+          ),
+      ),
+    ).to.equal(true);
+
+    // ------- Add Liquidity -------
+    // We now start to add some liquidity to position id 4.
+    // This involves three steps:
+    // (1) Figure out the amount of liquidity that can be minted with the provided amounts of the two tokens.
+    // (2) Approve the two tokens for Uniswap NPM contract to spend, if necessary.
+    // (3) Send out the tx that adds liquidity.
+
+    // Here we want to provide 1 WETH along with the necessary WBTC amount.
+    const oneWETH = getCurrencyAmount(WETH, '1');
+    // We find the necessary amount of WBTC to pair with 1 WETH.
+    // Since WETH is token1 in the pool, we use `Position.fromAmount1()`.
+    const wbtcRawAmount = Position.fromAmount1({
+      pool: position.pool,
+      tickLower: position.tickLower,
+      tickUpper: position.tickUpper,
+      amount1: oneWETH.quotient,
+    }).mintAmounts.amount0;
+    // Now we find the liquidity amount that can be added by providing 1 WETH and `wbtcRawAmount` of WBTC.
+    const liquidityToAdd = Position.fromAmounts({
+      pool: position.pool,
+      tickLower: position.tickLower,
+      tickUpper: position.tickUpper,
+      amount0: oneWETH.quotient,
+      amount1: wbtcRawAmount,
+      useFullPrecision: true,
+    }).liquidity;
+
+    // Approve Uniswap NPM to spend WBTC. Since we are providing native ether in this example, we don't need to approve WETH.
+    await IERC20__factory.connect(WBTC_ADDRESS, eoaSigner).approve(
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+      wbtcRawAmount.toString(),
+    );
+
+    // We are now ready to generate and send out the add-liquidity tx.
+    const addLiquidityTxRequest = await getAddLiquidityTx(
+      {
+        slippageTolerance: new Percent(0),
+        deadline: Math.floor(Date.now() / 1000),
+        tokenId: positionId,
+        // Note that `useNative` can be set to true when WETH is one of the two tokens, and the user chooses to provide native ether. Otherwise, this field can be undefined.
+        useNative: getNativeCurrency(chainId),
+      },
+      chainId,
+      hardhatForkProvider,
+      liquidityToAdd,
+      position,
+    );
+    await (await eoaSigner.sendTransaction(addLiquidityTxRequest)).wait();
+    expect(
+      (await getBasicPositionInfo(chainId, positionId, hardhatForkProvider))
+        .liquidity!,
+    ).to.equal(liquidityToAdd.toString());
+
+    // ------- Create Position -------
+    // Now we create a new WBTC-WETH position.
+    // We wish to provide liquidity to the 12.5 ~ 27.5 WETH per WBTC price range, to the HIGH fee-tier pool.
+    // And we want to provide 0.1 WBTC paired with the necessary amount of WETH.
+
+    // First, we align the price range's endpoints.
+    const poolFee = FeeAmount.HIGH;
+    const alignedPriceLower = alignPriceToClosestUsableTick(
+      parsePrice(WBTC, WETH, '12.5'),
+      poolFee,
+    );
+    const alignedPriceUpper = alignPriceToClosestUsableTick(
+      parsePrice(WBTC, WETH, '27.5'),
+      poolFee,
+    );
+    expect(alignedPriceLower.toFixed(6)).to.equal('12.589601');
+    expect(alignedPriceUpper.toFixed(6)).to.equal('27.462794');
+
+    // Second, we construct the `Position` object for the position we want to create.
+    // We want to provide 0.1 WBTC and the necessary amount of WETH.
+    const wbtcAmount = getCurrencyAmount(WBTC, '0.1');
+    const tickLower = priceToClosestUsableTick(alignedPriceLower, poolFee);
+    const tickUpper = priceToClosestUsableTick(alignedPriceUpper, poolFee);
+    const pool = await getPool(
+      WBTC,
+      WETH,
+      poolFee,
+      chainId,
+      hardhatForkProvider,
+    );
+    // Since WBTC is token0, we use `Position.fromAmount0()`.
+    const positionToCreate = Position.fromAmount0({
+      pool,
+      tickLower,
+      tickUpper,
+      amount0: wbtcAmount.quotient,
+      useFullPrecision: true,
+    });
+    // Now we know that we need to provide 0.1 WBTC and 0.568256298587835347 WETH.
+    expect(
+      CurrencyAmount.fromRawAmount(
+        WBTC,
+        positionToCreate.mintAmounts.amount0,
+      ).toExact(),
+    ).to.equal('0.1');
+    expect(
+      CurrencyAmount.fromRawAmount(
+        WETH,
+        positionToCreate.mintAmounts.amount1,
+      ).toExact(),
+    ).to.equal('0.568256298587835347');
+
+    // Approve Uniswap NPM to spend WBTC.
+    await IERC20__factory.connect(WBTC_ADDRESS, eoaSigner).approve(
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+      positionToCreate.mintAmounts.amount0.toString(),
+    );
+
+    // Approve Uniswap NPM to spend WETH.
+    await WETH__factory.connect(WETH_ADDRESS, eoaSigner).deposit({
+      value: positionToCreate.mintAmounts.amount1.toString(),
+    });
+    await WETH__factory.connect(WETH_ADDRESS, eoaSigner).approve(
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+      positionToCreate.mintAmounts.amount1.toString(),
+    );
+
+    // We are now ready to generate and send out the create-position tx.
+    const createPositionTxRequest = await getCreatePositionTx(
+      positionToCreate,
+      {
+        slippageTolerance: new Percent(5, 100),
+        deadline: Math.floor(Date.now() / 1000),
+        recipient: eoa,
+      },
+      chainId,
+      hardhatForkProvider,
+    );
+    const createPositionTxReceipt = await (
+      await eoaSigner.sendTransaction(createPositionTxRequest)
+    ).wait();
+  });
 });
 
 describe('Util tests', function () {
+  beforeEach(async function () {
+    await resetHardhatNetwork();
+  });
+
   it('Position approval', async function () {
     const chainInfo = getChainInfo(
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
@@ -578,12 +806,50 @@ describe('Util tests', function () {
       reason: 'invalidSignedPermission',
     });
   });
+
+  it('Position in-range', async function () {
+    const inRangePosition = await getPosition(
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      4,
+      hardhatForkProvider,
+    );
+    expect(isPositionInRange(inRangePosition)).to.equal(true);
+    const outOfRangePosition = await getPosition(
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      7,
+      hardhatForkProvider,
+    );
+    expect(isPositionInRange(outOfRangePosition)).to.equal(false);
+  });
 });
 
 describe('Wallet activity tests', function () {
   it('Wallet activity', async function () {
-    console.log(
-      await getWalletActivities('0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5'),
-    );
+    expect(
+      (await getWalletActivities(
+        '0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5',
+      ))!['0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655'],
+    ).to.deep.equal({
+      hash: '0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655',
+      chainId: 1,
+      status: 'CONFIRMED',
+      timestamp: 1682628731,
+      logos: [
+        'https://raw.githubusercontent.com/Uniswap/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+      ],
+      title: 'Sent',
+      descriptor: '624.29 USDC to ',
+      receipt: {
+        id: 'VHJhbnNhY3Rpb246MHgzODQ5MzA5NjA0ZTllMWRkNjYxY2I5MmM4ZDY0YzZkY2Q1NmU0OTFjODRkZGRjMDMzY2U5MjRkYTJlMWM1NjU1XzB4OGIxODY4N2VkNGUzMmE1ZTFhM2RlZTkxYzA4ZjcwNmMxOTZiYjljNV8weGEwYjg2OTkxYzYyMThiMzZjMWQxOWQ0YTJlOWViMGNlMzYwNmViNDg=',
+        blockNumber: 17140004,
+        hash: '0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655',
+        status: 'CONFIRMED',
+        to: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        from: '0x8b18687ed4e32a5e1a3dee91c08f706c196bb9c5',
+        __typename: 'Transaction',
+      },
+      nonce: undefined,
+      otherAccount: '0x95E333ea9f678111ED30c8f7A002d8C3aDA1EC09',
+    });
   });
 });
