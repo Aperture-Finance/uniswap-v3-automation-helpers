@@ -17,18 +17,20 @@ export interface BasicPositionInfo {
   fee: FeeAmount;
 }
 
+function getNPM(chainId: ApertureSupportedChainId, provider: Provider) {
+  return INonfungiblePositionManager__factory.connect(
+    getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+    provider,
+  );
+}
+
 export async function getBasicPositionInfo(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
 ): Promise<BasicPositionInfo> {
-  const chainInfo = getChainInfo(chainId);
-  const nonfungiblePositionManager =
-    INonfungiblePositionManager__factory.connect(
-      chainInfo.uniswap_v3_nonfungible_position_manager,
-      provider,
-    );
-  const positionInfo = await nonfungiblePositionManager.positions(positionId);
+  const npm = getNPM(chainId, provider);
+  const positionInfo = await npm.positions(positionId);
   const [token0, token1] = await Promise.all([
     getToken(positionInfo.token0, chainId, provider),
     getToken(positionInfo.token1, chainId, provider),
@@ -96,11 +98,7 @@ export async function getCollectableTokenAmounts(
       provider,
     );
   }
-  const chainInfo = getChainInfo(chainId);
-  const npm = INonfungiblePositionManager__factory.connect(
-    chainInfo.uniswap_v3_nonfungible_position_manager,
-    provider,
-  );
+  const npm = getNPM(chainId, provider);
   const owner = await npm.ownerOf(positionId);
   const MAX_UINT128 = BigNumber.from(2).pow(128).sub(1);
   const { amount0, amount1 } = await npm.callStatic.collect(
@@ -127,6 +125,24 @@ export async function getCollectableTokenAmounts(
 }
 
 /**
+ * Get the collected fees in the position.
+ * @param chainId
+ * @param positionId
+ * @param provider
+ * @param blockNumber
+ */
+export async function getCollectedTokenAmounts(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  provider: Provider,
+  blockNumber: number,
+){
+  const npm = getNPM(chainId, provider);
+  await npm.queryFilter(npm.filters.DecreaseLiquidity(positionId), blockNumber, blockNumber);
+  await npm.queryFilter(npm.filters.Collect(positionId), blockNumber, blockNumber);
+}
+
+/**
  * Check whether the specified position is currently in range, i.e. pool price is within the position's price range.
  * @param position The position to check.
  * @returns A boolean indicating whether the position is in range.
@@ -150,13 +166,10 @@ export async function getPositionIdsByOwner(
   chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<BigNumber[]> {
-  const npmContract = INonfungiblePositionManager__factory.connect(
-    getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
-    provider,
-  );
-  const numPositions = (await npmContract.balanceOf(owner)).toNumber();
+  const npm = getNPM(chainId, provider);
+  const numPositions = (await npm.balanceOf(owner)).toNumber();
   const promises = [...Array(numPositions).keys()].map((index) =>
-    npmContract.tokenOfOwnerByIndex(owner, index),
+    npm.tokenOfOwnerByIndex(owner, index),
   );
   return Promise.all(promises);
 }
