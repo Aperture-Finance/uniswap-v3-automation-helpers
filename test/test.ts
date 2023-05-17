@@ -57,7 +57,7 @@ import { BigNumber } from 'ethers';
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const hardhatForkProvider = ethers.provider;
-const WBTC_ADDRESS = '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599';
+const WBTC_ADDRESS = '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599';
 const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 // Owner of position id 4 on Ethereum mainnet.
 const eoa = '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF';
@@ -687,6 +687,25 @@ describe('Position liquidity management tests', function () {
     const createPositionTxReceipt = await (
       await eoaSigner.sendTransaction(createPositionTxRequest)
     ).wait();
+    const createdPositionId = getMintedPositionIdFromTxReceipt(
+      createPositionTxReceipt,
+      eoa,
+      chainId,
+    )!;
+    expect(
+      await getBasicPositionInfo(
+        chainId,
+        createdPositionId,
+        hardhatForkProvider,
+      ),
+    ).to.deep.equal({
+      fee: positionToCreate.pool.fee,
+      liquidity: positionToCreate.liquidity.toString(),
+      tickLower: positionToCreate.tickLower,
+      tickUpper: positionToCreate.tickUpper,
+      token0: WBTC,
+      token1: WETH,
+    });
   });
 });
 
