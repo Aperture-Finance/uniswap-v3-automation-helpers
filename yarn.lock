@@ -144,10 +144,10 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@aperture_finance/uniswap-v3-automation-sdk@^0.0.14":
-  version "0.0.14"
-  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-0.0.14.tgz#1bc80ba6662d652b7cee8015d62c4884d6f907f0"
-  integrity sha512-SPZGSNjVErw0w2WNbzT9GkFPQmdk3/98Y/IXYjmq9uQyma5qX8ZXLV0GBGvbUZniOwdjOkBxr9+sxhYZlMPsPA==
+"@aperture_finance/uniswap-v3-automation-sdk@^0.0.15":
+  version "0.0.15"
+  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-0.0.15.tgz#68532f011bc719acda7078abc7310262abed5803"
+  integrity sha512-OHYRYjJDBGVdVRUb8Ch3f07goh9w7xggWsyuwEogyLtihglayxNNFpP4pAzKewp8YjeXhnyXL5qZliQemj4jrw==
   dependencies:
     axios "^1.4.0"
     ethers "^5.7.2"
