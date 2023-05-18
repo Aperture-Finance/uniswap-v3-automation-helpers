@@ -126,20 +126,34 @@ export async function getCollectableTokenAmounts(
 
 /**
  * Get the collected fees in the position.
- * @param chainId
- * @param positionId
- * @param provider
- * @param blockNumber
+ * @param chainId Chain id.
+ * @param positionId Position id.
+ * @param blockNumber Block number to query.
+ * @param provider Ethers provider.
  */
 export async function getCollectedTokenAmounts(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
-  provider: Provider,
   blockNumber: number,
-){
+  provider: Provider,
+) {
   const npm = getNPM(chainId, provider);
-  await npm.queryFilter(npm.filters.DecreaseLiquidity(positionId), blockNumber, blockNumber);
-  await npm.queryFilter(npm.filters.Collect(positionId), blockNumber, blockNumber);
+  const [decreaseLiquidityEvents, collectEvents] = await Promise.all([
+    npm.queryFilter(
+      npm.filters.DecreaseLiquidity(positionId),
+      blockNumber,
+      blockNumber,
+    ),
+    npm.queryFilter(npm.filters.Collect(positionId), blockNumber, blockNumber),
+  ]);
+  const principal0 = decreaseLiquidityEvents[0].args.amount0;
+  const principal1 = decreaseLiquidityEvents[0].args.amount1;
+  const total0 = collectEvents[0].args.amount0;
+  const total1 = collectEvents[0].args.amount1;
+  return {
+    token0Amount: total0.sub(principal0),
+    token1Amount: total1.sub(principal1),
+  };
 }
 
 /**
