@@ -2,15 +2,13 @@ import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
 import { ethers } from 'hardhat';
 import { getNativeCurrency, getToken } from '../currency';
-import { ApertureSupportedChainId, getChainInfo } from '../chain';
-import { parsePrice } from '../price';
 import {
-  CurrencyAmount,
-  Fraction,
-  Percent,
-  Price,
-  Token,
-} from '@uniswap/sdk-core';
+  ApertureSupportedChainId,
+  CHAIN_ID_TO_INFO,
+  getChainInfo,
+} from '../chain';
+import { parsePrice } from '../price';
+import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
 import { getCurrencyAmount } from '../currency';
 import {
@@ -19,6 +17,8 @@ import {
   getCreatePositionTx,
   getCreatePositionTxForLimitOrder,
   getMintedPositionIdFromTxReceipt,
+  getRebalanceTx,
+  getReinvestTx,
   getRemoveLiquidityTx,
 } from '../transaction';
 import {
@@ -36,6 +36,7 @@ import { getPool } from '../pool';
 import {
   IERC20__factory,
   INonfungiblePositionManager__factory,
+  UniV3Automan__factory,
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import {
@@ -52,11 +53,14 @@ import {
 } from '../permission';
 import { getWalletActivities } from '../activity';
 import { generateLimitOrderCloseRequestPayload } from '../payload';
-import { BigNumber } from 'ethers';
+import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const hardhatForkProvider = ethers.provider;
+const chainId = ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID;
+// A whale address (Avax bridge) on Ethereum mainnet with a lot of ether and token balances.
+const WHALE_ADDRESS = '0x8EB8a3b98659Cce290402893d0123abb75E3ab28';
 const WBTC_ADDRESS = '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599';
 const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 // Owner of position id 4 on Ethereum mainnet.
@@ -82,16 +86,8 @@ describe('Limit order tests', function () {
   const poolFee = FeeAmount.MEDIUM;
 
   before(async function () {
-    WBTC = await getToken(
-      WBTC_ADDRESS,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-      hardhatForkProvider,
-    );
-    WETH = await getToken(
-      WETH_ADDRESS,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-      hardhatForkProvider,
-    );
+    WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
+    WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
   });
 
   it('Selling WBTC for WETH', async function () {
@@ -109,7 +105,7 @@ describe('Limit order tests', function () {
         tenWBTC,
         poolFee,
         deadline,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.be.rejectedWith('Outer limit price not aligned');
@@ -122,7 +118,7 @@ describe('Limit order tests', function () {
         tenWBTC,
         poolFee,
         deadline,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.be.rejectedWith('Specified limit price lower than current price');
@@ -131,7 +127,7 @@ describe('Limit order tests', function () {
       WETH,
       WBTC,
       poolFee,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       hardhatForkProvider,
     );
     const currentPrice = tickToPrice(
@@ -151,22 +147,19 @@ describe('Limit order tests', function () {
       tenWBTC,
       poolFee,
       deadline,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       hardhatForkProvider,
     );
-    const npmAddress = getChainInfo(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-    ).uniswap_v3_nonfungible_position_manager;
+    const npmAddress =
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
     expect(tx).to.deep.equal({
       to: npmAddress,
       data: '0x883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000bb8000000000000000000000000000000000000000000000000000000000003f00c000000000000000000000000000000000000000000000000000000000003f048000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004bd047ca72fa05f0b89ad08fe5ba5ccdc07dffbf00000000000000000000000000000000000000000000000000000000f3fd9d70',
       value: '0x00',
     });
-    // Top up 10 WBTC to `eoa` from `impersonatedWBTCWhale`.
-    const impersonatedWBTCWhale = await ethers.getImpersonatedSigner(
-      '0x8EB8a3b98659Cce290402893d0123abb75E3ab28',
-    );
-    await IERC20__factory.connect(WBTC.address, impersonatedWBTCWhale).transfer(
+    // Top up 10 WBTC to `eoa` from `impersonatedWhale`.
+    const impersonatedWhale = await ethers.getImpersonatedSigner(WHALE_ADDRESS);
+    await IERC20__factory.connect(WBTC.address, impersonatedWhale).transfer(
       eoa,
       tenWBTC.quotient.toString(),
     );
@@ -180,10 +173,10 @@ describe('Limit order tests', function () {
     const positionId = getMintedPositionIdFromTxReceipt(
       txReceipt,
       eoa,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
     )!;
     const basicPositionInfo = await getBasicPositionInfo(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       positionId,
       hardhatForkProvider,
     );
@@ -197,7 +190,7 @@ describe('Limit order tests', function () {
     });
     const position = await getPositionFromBasicInfo(
       basicPositionInfo,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       hardhatForkProvider,
     );
     // The user actually provided 9.99999999 WBTC due to liquidity precision, i.e. 10 WBTC would have yielded the exact same liquidity amount of 133959413978504760.
@@ -206,7 +199,7 @@ describe('Limit order tests', function () {
     expect(
       generateLimitOrderCloseRequestPayload(
         eoa,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         positionId,
         alignedLimitPrice,
         tenWBTC,
@@ -248,7 +241,7 @@ describe('Limit order tests', function () {
         tenWETH,
         poolFee,
         deadline,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.be.rejectedWith('Specified limit price lower than current price');
@@ -264,22 +257,19 @@ describe('Limit order tests', function () {
       tenWETH,
       poolFee,
       deadline,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       hardhatForkProvider,
     );
-    const npmAddress = getChainInfo(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-    ).uniswap_v3_nonfungible_position_manager;
+    const npmAddress =
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
     expect(tx).to.deep.equal({
       to: npmAddress,
       data: '0x883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000bb8000000000000000000000000000000000000000000000000000000000003e508000000000000000000000000000000000000000000000000000000000003e54400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ac7230489e7fe5900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ac7230489e7fe590000000000000000000000004bd047ca72fa05f0b89ad08fe5ba5ccdc07dffbf00000000000000000000000000000000000000000000000000000000f3fd9d70',
       value: '0x00',
     });
-    // Top up 10 WETH to `eoa` from `impersonatedWBTCWhale`.
-    const impersonatedWETHWhale = await ethers.getImpersonatedSigner(
-      '0x8EB8a3b98659Cce290402893d0123abb75E3ab28',
-    );
-    await IERC20__factory.connect(WETH.address, impersonatedWETHWhale).transfer(
+    // Top up 10 WETH to `eoa` from `impersonatedWhale`.
+    const impersonatedWhale = await ethers.getImpersonatedSigner(WHALE_ADDRESS);
+    await IERC20__factory.connect(WETH.address, impersonatedWhale).transfer(
       eoa,
       tenWETH.quotient.toString(),
     );
@@ -293,10 +283,10 @@ describe('Limit order tests', function () {
     const positionId = getMintedPositionIdFromTxReceipt(
       txReceipt,
       eoa,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
     )!;
     const basicPositionInfo = await getBasicPositionInfo(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       positionId,
       hardhatForkProvider,
     );
@@ -310,7 +300,7 @@ describe('Limit order tests', function () {
     });
     const position = await getPositionFromBasicInfo(
       basicPositionInfo,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       hardhatForkProvider,
     );
     // The user actually provided 9.999999999999999576 WETH due to liquidity precision, i.e. 10 WETH would have yielded the exact same liquidity amount of 9551241229311572.
@@ -321,7 +311,7 @@ describe('Limit order tests', function () {
     expect(
       generateLimitOrderCloseRequestPayload(
         eoa,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         positionId,
         alignedLimitPrice,
         tenWETH,
@@ -349,17 +339,14 @@ describe('Limit order tests', function () {
     });
 
     // Create another WETH -> WBTC limit order but provide native ether this time.
-    const tenETH = getCurrencyAmount(
-      getNativeCurrency(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID),
-      '10',
-    );
+    const tenETH = getCurrencyAmount(getNativeCurrency(chainId), '10');
     const nativeEthTx = await getCreatePositionTxForLimitOrder(
       eoa,
       alignedLimitPrice,
       tenETH,
       poolFee,
       deadline,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       hardhatForkProvider,
     );
     expect(nativeEthTx).to.deep.equal({
@@ -373,11 +360,11 @@ describe('Limit order tests', function () {
     const nativeEthPositionId = getMintedPositionIdFromTxReceipt(
       nativeEthTxReceipt,
       eoa,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
     )!;
     expect(
       await getBasicPositionInfo(
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         nativeEthPositionId,
         hardhatForkProvider,
       ),
@@ -392,7 +379,7 @@ describe('Limit order tests', function () {
     expect(
       generateLimitOrderCloseRequestPayload(
         eoa,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         nativeEthPositionId,
         alignedLimitPrice,
         tenETH,
@@ -422,7 +409,6 @@ describe('Limit order tests', function () {
 });
 
 describe('Position liquidity management tests', function () {
-  const chainId = ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID;
   const positionId = 4;
   let WBTC: Token, WETH: Token;
   const wbtcContract = IERC20__factory.connect(
@@ -459,16 +445,8 @@ describe('Position liquidity management tests', function () {
       position4BasicInfo,
     );
 
-    WBTC = await getToken(
-      WBTC_ADDRESS,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-      hardhatForkProvider,
-    );
-    WETH = await getToken(
-      WETH_ADDRESS,
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-      hardhatForkProvider,
-    );
+    WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
+    WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
   });
 
   beforeEach(async function () {
@@ -709,15 +687,109 @@ describe('Position liquidity management tests', function () {
   });
 });
 
+describe('Automan transaction tests', function () {
+  const positionId = 4;
+  let automanContract: Contract;
+  let impersonatedOwnerSigner: Signer;
+
+  beforeEach(async function () {
+    await resetHardhatNetwork();
+
+    // Without this, Hardhat throws an InvalidInputError saying that WHALE_ADDRESS is an unknown account.
+    // Likely a Hardhat bug.
+    await hardhatForkProvider.getBalance(WHALE_ADDRESS);
+
+    // Deploy Automan.
+    const automanFactory = new ContractFactory(
+      UniV3Automan__factory.createInterface(),
+      UniV3Automan__factory.bytecode,
+      await ethers.getImpersonatedSigner(WHALE_ADDRESS),
+    );
+    automanContract = await automanFactory.deploy(
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+      /*owner=*/ WHALE_ADDRESS,
+      /*feeCollector=*/ WHALE_ADDRESS,
+      /*controller=*/ WHALE_ADDRESS,
+    );
+    await automanContract.deployed();
+
+    // Set Automan address in CHAIN_ID_TO_INFO.
+    CHAIN_ID_TO_INFO[chainId].aperture_uniswap_v3_automan =
+      automanContract.address;
+
+    // Owner of position id 4 sets Automan as operator.
+    impersonatedOwnerSigner = await ethers.getImpersonatedSigner(eoa);
+    await INonfungiblePositionManager__factory.connect(
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+      impersonatedOwnerSigner,
+    ).setApprovalForAll(automanContract.address, true);
+  });
+
+  it('Rebalance', async function () {
+    const existingPosition = await getPosition(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    const txRequest = await getRebalanceTx(
+      chainId,
+      eoa,
+      positionId,
+      240000,
+      300000,
+      /*slippageTolerance=*/ new Percent(0),
+      /*deadlineEpochSeconds=*/ Math.floor(Date.now() / 1000),
+      hardhatForkProvider,
+      existingPosition,
+    );
+    const txReceipt = await (
+      await impersonatedOwnerSigner.sendTransaction(txRequest)
+    ).wait();
+    const newPositionId = getMintedPositionIdFromTxReceipt(
+      txReceipt,
+      eoa,
+      chainId,
+    )!;
+    expect(
+      await getBasicPositionInfo(chainId, newPositionId, hardhatForkProvider),
+    ).to.deep.equal({
+      fee: existingPosition.pool.fee,
+      liquidity: '13291499353879',
+      tickLower: 240000,
+      tickUpper: 300000,
+      token0: existingPosition.pool.token0,
+      token1: existingPosition.pool.token1,
+    });
+  });
+
+  it('Reinvest', async function () {
+    const liquidityBeforeReinvest = (
+      await getBasicPositionInfo(chainId, positionId, hardhatForkProvider)
+    ).liquidity!;
+    const txRequest = await getReinvestTx(
+      chainId,
+      eoa,
+      positionId,
+      /*slippageTolerance=*/ new Percent(0),
+      /*deadlineEpochSeconds=*/ Math.floor(Date.now() / 1000),
+      hardhatForkProvider,
+    );
+    await (await impersonatedOwnerSigner.sendTransaction(txRequest)).wait();
+    const liquidityAfterReinvest = (
+      await getBasicPositionInfo(chainId, positionId, hardhatForkProvider)
+    ).liquidity!;
+    expect(liquidityBeforeReinvest.toString()).to.equal('34399999543676');
+    expect(liquidityAfterReinvest.toString()).to.equal('39910988755092');
+  });
+});
+
 describe('Util tests', function () {
   beforeEach(async function () {
     await resetHardhatNetwork();
   });
 
   it('Position approval', async function () {
-    const chainInfo = getChainInfo(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-    );
+    const chainInfo = getChainInfo(chainId);
     const automanAddress = chainInfo.aperture_uniswap_v3_automan;
     // This position is owned by `eoa`.
     const positionId = 4;
@@ -725,7 +797,7 @@ describe('Util tests', function () {
       await checkPositionApprovalStatus(
         positionId,
         undefined,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -744,7 +816,7 @@ describe('Util tests', function () {
       await checkPositionApprovalStatus(
         positionId,
         undefined,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -757,7 +829,7 @@ describe('Util tests', function () {
       await checkPositionApprovalStatus(
         positionId,
         undefined,
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -768,7 +840,7 @@ describe('Util tests', function () {
     // Construct and sign a permit message approving position id 4.
     const wallet = new ethers.Wallet(TEST_WALLET_PRIVATE_KEY);
     const permitTypedData = await generateTypedDataForPermit(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       positionId,
       deadline,
       hardhatForkProvider,
@@ -790,7 +862,7 @@ describe('Util tests', function () {
           deadline,
           signature,
         },
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.deep.equal({
@@ -800,7 +872,7 @@ describe('Util tests', function () {
 
     // Test permit message with an incorrect position id.
     const anotherPermitTypedData = await generateTypedDataForPermit(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       positionId + 1,
       deadline,
       hardhatForkProvider,
@@ -817,7 +889,7 @@ describe('Util tests', function () {
           deadline,
           signature: anotherSignature,
         },
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        chainId,
         hardhatForkProvider,
       ),
     ).to.deep.include({
@@ -827,14 +899,10 @@ describe('Util tests', function () {
   });
 
   it('Position in-range', async function () {
-    const inRangePosition = await getPosition(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-      4,
-      hardhatForkProvider,
-    );
+    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     expect(isPositionInRange(inRangePosition)).to.equal(true);
     const outOfRangePosition = await getPosition(
-      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      chainId,
       7,
       hardhatForkProvider,
     );

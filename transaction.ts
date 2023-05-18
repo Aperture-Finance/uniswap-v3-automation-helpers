@@ -418,23 +418,41 @@ async function getAmountMinFromSlippage(
   };
 }
 
+/**
+ * Generates an unsigned transaction that rebalances an existing position into a new one with the specified price range using Aperture's Automan contract.
+ * @param chainId Chain id.
+ * @param ownerAddress Owner of the existing position.
+ * @param existingPositionId Existing position token id.
+ * @param newPositionTickLower The lower tick of the new position.
+ * @param newPositionTickUpper The upper tick of the new position.
+ * @param slippageTolerance How much the amount of either token0 or token1 in the new position is allowed to change unfavorably.
+ * @param deadlineEpochSeconds Timestamp when the tx expires (in seconds since epoch).
+ * @param provider Ethers provider.
+ * @param existingPosition Optional, the existing position.
+ * @param permitInfo Optional. If Automan doesn't already has authority over the existing position, this should be populated with a valid owner-signed permit info.
+ * @returns The generated transaction request.
+ */
 export async function getRebalanceTx(
   chainId: ApertureSupportedChainId,
   ownerAddress: string,
   existingPositionId: BigNumberish,
-  newPosition: Position,
-  // How much the amount of either token0 or token1 in the new position is allowed to change unfavorably.
+  newPositionTickLower: BigNumberish,
+  newPositionTickUpper: BigNumberish,
   slippageTolerance: Percent,
   deadlineEpochSeconds: BigNumberish,
   provider: Provider,
+  existingPosition?: Position,
   permitInfo?: PermitInfo,
 ): Promise<TransactionRequest> {
+  if (existingPosition === undefined) {
+    existingPosition = await getPosition(chainId, existingPositionId, provider);
+  }
   let mintParams: INonfungiblePositionManager.MintParamsStruct = {
-    token0: newPosition.amount0.currency.address,
-    token1: newPosition.amount1.currency.address,
-    fee: newPosition.pool.fee,
-    tickLower: newPosition.tickLower,
-    tickUpper: newPosition.tickLower,
+    token0: existingPosition.amount0.currency.address,
+    token1: existingPosition.amount1.currency.address,
+    fee: existingPosition.pool.fee,
+    tickLower: newPositionTickLower,
+    tickUpper: newPositionTickUpper,
     amount0Desired: 0, // Param value ignored by Automan.
     amount1Desired: 0, // Param value ignored by Automan.
     amount0Min: 0, // Setting this to zero for tx simulation.
@@ -470,11 +488,21 @@ export async function getRebalanceTx(
   };
 }
 
+/**
+ * Generates an unsigned tx that collects fees and reinvests into the specified position.
+ * @param chainId Chain id.
+ * @param ownerAddress Owner of the specified position.
+ * @param positionId Position id.
+ * @param slippageTolerance How much the reinvested amount of either token0 or token1 is allowed to change unfavorably.
+ * @param deadlineEpochSeconds Timestamp when the tx expires (in seconds since epoch).
+ * @param provider Ethers provider.
+ * @param permitInfo Optional. If Automan doesn't already has authority over the existing position, this should be populated with a valid owner-signed permit info.
+ * @returns The generated transaction request.
+ */
 export async function getReinvestTx(
   chainId: ApertureSupportedChainId,
   ownerAddress: string,
   positionId: BigNumberish,
-  // How much the reinvested amount of either token0 or token1 is allowed to change unfavorably.
   slippageTolerance: Percent,
   deadlineEpochSeconds: BigNumberish,
   provider: Provider,
