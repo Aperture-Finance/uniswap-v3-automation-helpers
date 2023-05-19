@@ -7,6 +7,11 @@ import { getPoolFromBasicPositionInfo } from './pool';
 import { getToken } from './currency';
 import { BigNumber, BigNumberish } from 'ethers';
 import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
+import { TransactionReceipt } from '@ethersproject/abstract-provider/src.ts';
+import {
+  CollectEventObject,
+  DecreaseLiquidityEventObject,
+} from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types/src/interfaces/INonfungiblePositionManager';
 
 export interface BasicPositionInfo {
   token0: Token;
@@ -73,6 +78,11 @@ export async function getPosition(
   );
 }
 
+export interface CollectableTokenAmounts {
+  token0Amount: CurrencyAmount<Token>;
+  token1Amount: CurrencyAmount<Token>;
+}
+
 /**
  * Finds the amount of collectable tokens in the position.
  * The collectable amount is most likely accrued fees accumulated in the position, but can be from a prior decreaseLiquidity() call which has not been collected.
@@ -87,10 +97,7 @@ export async function getCollectableTokenAmounts(
   positionId: BigNumberish,
   provider: Provider,
   basicPositionInfo?: BasicPositionInfo,
-): Promise<{
-  token0Amount: CurrencyAmount<Token>;
-  token1Amount: CurrencyAmount<Token>;
-}> {
+): Promise<CollectableTokenAmounts> {
   if (basicPositionInfo === undefined) {
     basicPositionInfo = await getBasicPositionInfo(
       chainId,
@@ -125,34 +132,55 @@ export async function getCollectableTokenAmounts(
 }
 
 /**
- * Get the collected fees in the position.
+ * Get the collected fees in the position from a transaction receipt.
  * @param chainId Chain id.
  * @param positionId Position id.
- * @param blockNumber Block number to query.
+ * @param receipt Transaction receipt.
  * @param provider Ethers provider.
+ * @param basicPositionInfo Basic position info, optional; if undefined, one will be constructed.
+ * @returns A promise that resolves to the collected amount of the two tokens in the position.
  */
-export async function getCollectedTokenAmounts(
+export async function getCollectedFeesFromReceipt(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
-  blockNumber: number,
+  receipt: TransactionReceipt,
   provider: Provider,
-) {
-  const npm = getNPM(chainId, provider);
-  const [decreaseLiquidityEvents, collectEvents] = await Promise.all([
-    npm.queryFilter(
-      npm.filters.DecreaseLiquidity(positionId),
-      blockNumber,
-      blockNumber,
-    ),
-    npm.queryFilter(npm.filters.Collect(positionId), blockNumber, blockNumber),
-  ]);
-  const principal0 = decreaseLiquidityEvents[0].args.amount0;
-  const principal1 = decreaseLiquidityEvents[0].args.amount1;
-  const total0 = collectEvents[0].args.amount0;
-  const total1 = collectEvents[0].args.amount1;
+  basicPositionInfo?: BasicPositionInfo,
+): Promise<CollectableTokenAmounts> {
+  if (basicPositionInfo === undefined) {
+    basicPositionInfo = await getBasicPositionInfo(
+      chainId,
+      positionId,
+      provider,
+    );
+  }
+  const npmInterface = INonfungiblePositionManager__factory.createInterface();
+  let collectArgs: CollectEventObject;
+  let decreaseLiquidityArgs: DecreaseLiquidityEventObject | undefined;
+  for (const log of receipt.logs) {
+    try {
+      const event = npmInterface.parseLog(log);
+      if (event.name === 'Collect') {
+        collectArgs = event.args as unknown as CollectEventObject;
+      } else if (event.name === 'DecreaseLiquidity') {
+        decreaseLiquidityArgs =
+          event.args as unknown as DecreaseLiquidityEventObject;
+      }
+    } catch (e) {}
+  }
+  const principal0 = decreaseLiquidityArgs?.amount0 ?? 0;
+  const principal1 = decreaseLiquidityArgs?.amount1 ?? 0;
+  const total0 = collectArgs!.amount0;
+  const total1 = collectArgs!.amount1;
   return {
-    token0Amount: total0.sub(principal0),
-    token1Amount: total1.sub(principal1),
+    token0Amount: CurrencyAmount.fromRawAmount(
+      basicPositionInfo.token0,
+      total0.sub(principal0).toString(),
+    ),
+    token1Amount: CurrencyAmount.fromRawAmount(
+      basicPositionInfo.token1,
+      total1.sub(principal1).toString(),
+    ),
   };
 }
 
