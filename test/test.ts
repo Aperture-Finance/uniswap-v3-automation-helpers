@@ -40,6 +40,7 @@ import {
   BasicPositionInfo,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
+  getCollectedFeesFromReceipt,
   getPosition,
   getPositionFromBasicInfo,
   isPositionInRange,
@@ -460,7 +461,15 @@ describe('Position liquidity management tests', function () {
       position4BasicInfo,
     );
     const eoaSigner = await ethers.getImpersonatedSigner(eoa);
-    await (await eoaSigner.sendTransaction(txRequest)).wait();
+    const txReceipt = await (await eoaSigner.sendTransaction(txRequest)).wait();
+    const collectedFees = await getCollectedFeesFromReceipt(
+      chainId,
+      positionId,
+      txReceipt,
+      hardhatForkProvider,
+      position4BasicInfo,
+    );
+    expect(collectedFees).deep.equal(position4ColletableTokenAmounts);
     expect(
       (await wbtcContract.balanceOf(eoa)).eq(
         wbtcBalanceBefore.add(
@@ -503,6 +512,14 @@ describe('Position liquidity management tests', function () {
     const removeLiquidityTxReceipt = await (
       await eoaSigner.sendTransaction(removeLiquidityTxRequest)
     ).wait();
+    const collectedFees = await getCollectedFeesFromReceipt(
+      chainId,
+      positionId,
+      removeLiquidityTxReceipt,
+      hardhatForkProvider,
+      position4BasicInfo,
+    );
+    expect(collectedFees).deep.equal(position4ColletableTokenAmounts);
     expect(
       (await wbtcContract.balanceOf(eoa)).eq(
         wbtcBalanceBefore
