@@ -1,5 +1,7 @@
-import { Payload } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { ApertureSupportedChainId } from './chain';
+import {
+  ApertureSupportedChainId,
+  Payload,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import { BigNumberish } from 'ethers';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import { Currency, CurrencyAmount, Price, Token } from '@uniswap/sdk-core';

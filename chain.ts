@@ -2,13 +2,7 @@ import { getAddress } from 'ethers/lib/utils';
 import whitelistedPoolsEthereum from './data/whitelistedPools-1.json';
 import whitelistedPoolsArbitrum from './data/whitelistedPools-42161.json';
 import { WhitelistedPool, getWhitelistedPools } from './whitelist';
-
-export enum ApertureSupportedChainId {
-  ETHEREUM_MAINNET_CHAIN_ID = 1,
-  ARBITRUM_MAINNET_CHAIN_ID = 42161,
-  GOERLI_TESTNET_CHAIN_ID = 5,
-  ARBITRUM_GOERLI_TESTNET_CHAIN_ID = 421613,
-}
+import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 
 export interface ChainInfo {
   uniswap_v3_factory: string;

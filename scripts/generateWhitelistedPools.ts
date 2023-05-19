@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { writeFileSync } from 'fs';
-import {
-  ApertureSupportedChainId,
-  getChainInfo,
-} from '../chain';
+import { getChainInfo } from '../chain';
 import { config as dotenvConfig } from 'dotenv';
+import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 
 dotenvConfig();
 
@@ -85,7 +83,9 @@ async function generateWhitelistedPools(chainId: number) {
       `https://pro-api.coingecko.com/api/v3/simple/token_price/${getChainInfo(
         chainId,
       )
-        .coingecko_asset_platform_id!}?contract_addresses=${token}&vs_currencies=usd&x_cg_pro_api_key=${process.env.COINGECKO_API_KEY}`,
+        .coingecko_asset_platform_id!}?contract_addresses=${token}&vs_currencies=usd&x_cg_pro_api_key=${
+        process.env.COINGECKO_API_KEY
+      }`,
     );
     if (token in priceResponse.data) {
       console.log(

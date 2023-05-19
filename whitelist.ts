@@ -1,7 +1,7 @@
+import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import { getAddress } from 'ethers/lib/utils';
-import { ApertureSupportedChainId } from './chain';
 
 export interface WhitelistedPool {
   token0: Token;

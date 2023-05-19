@@ -2,11 +2,7 @@ import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
 import { ethers } from 'hardhat';
 import { getNativeCurrency, getToken } from '../currency';
-import {
-  ApertureSupportedChainId,
-  CHAIN_ID_TO_INFO,
-  getChainInfo,
-} from '../chain';
+import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
 import { parsePrice } from '../price';
 import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
@@ -34,6 +30,7 @@ import {
 } from '../tick';
 import { getPool } from '../pool';
 import {
+  ApertureSupportedChainId,
   IERC20__factory,
   INonfungiblePositionManager__factory,
   UniV3Automan__factory,
