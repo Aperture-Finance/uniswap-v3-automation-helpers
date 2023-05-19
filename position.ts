@@ -1,11 +1,12 @@
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount, Position } from '@uniswap/v3-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
-import { ApertureSupportedChainId, getChainInfo } from './chain';
+import { getChainInfo } from './chain';
 import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
 import { getPoolFromBasicPositionInfo } from './pool';
 import { getToken } from './currency';
 import { BigNumber, BigNumberish } from 'ethers';
+import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 
 export interface BasicPositionInfo {
   token0: Token;

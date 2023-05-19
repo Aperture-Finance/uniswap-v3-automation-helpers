@@ -1,8 +1,11 @@
 import { Provider } from '@ethersproject/abstract-provider';
 import { FeeAmount, Pool, computePoolAddress } from '@uniswap/v3-sdk';
 import { BasicPositionInfo } from './position';
-import { IUniswapV3Pool__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { ApertureSupportedChainId, getChainInfo } from './chain';
+import {
+  ApertureSupportedChainId,
+  IUniswapV3Pool__factory,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
+import { getChainInfo } from './chain';
 import { Token } from '@uniswap/sdk-core';
 
 /**

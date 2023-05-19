@@ -5,9 +5,11 @@ import {
   Token,
 } from '@uniswap/sdk-core';
 import { Provider } from '@ethersproject/abstract-provider';
-import { ERC20__factory } from '@aperture_finance/uniswap-v3-automation-sdk';
+import {
+  ApertureSupportedChainId,
+  ERC20__factory,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import { parseFixed } from '@ethersproject/bignumber';
-import { ApertureSupportedChainId } from './chain';
 import { nativeOnChain } from './uniswap-constants';
 
 // The `Currency` type is defined as `Currency = NativeCurrency | Token`.

@@ -24,7 +24,7 @@ import {
   TransactionRequest,
 } from '@ethersproject/providers';
 import { priceToClosestUsableTick } from './tick';
-import { ApertureSupportedChainId, ChainInfo, getChainInfo } from './chain';
+import { ChainInfo, getChainInfo } from './chain';
 import { getNativeCurrency } from './currency';
 import { getPoolFromBasicPositionInfo } from './pool';
 import {
@@ -34,6 +34,7 @@ import {
 } from './position';
 import JSBI from 'jsbi';
 import {
+  ApertureSupportedChainId,
   INonfungiblePositionManager,
   INonfungiblePositionManager__factory,
   IUniV3Automan__factory,
