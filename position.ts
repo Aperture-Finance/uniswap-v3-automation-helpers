@@ -238,3 +238,24 @@ export async function getAllPositionBasicInfoByOwner(
     positionIds.map((positionId, index) => [positionId, positionInfos[index]]),
   );
 }
+
+/**
+ * Get the token SVG URL of the specified position.
+ * @param chainId Chain id.
+ * @param positionId Position id.
+ * @param provider Ethers provider.
+ * @returns A promise that resolves to the token SVG URL.
+ */
+export async function getTokenSvg(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  provider: Provider,
+): Promise<URL> {
+  const npm = getNPM(chainId, provider);
+  const uri = await npm.tokenURI(positionId);
+  const json_uri = Buffer.from(
+    uri.replace('data:application/json;base64,', ''),
+    'base64',
+  ).toString('utf-8');
+  return new URL(JSON.parse(json_uri).image);
+}
