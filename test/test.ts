@@ -30,7 +30,9 @@ import {
 } from '../tick';
 import { getPool } from '../pool';
 import {
+  ActionTypeString,
   ApertureSupportedChainId,
+  ConditionTypeString,
   IERC20__factory,
   INonfungiblePositionManager__factory,
   UniV3Automan__factory,
@@ -49,7 +51,10 @@ import {
   generateTypedDataForPermit,
 } from '../permission';
 import { getWalletActivities } from '../activity';
-import { generateLimitOrderCloseRequestPayload } from '../payload';
+import {
+  generateAutoCompoundRequestPayload,
+  generateLimitOrderCloseRequestPayload,
+} from '../payload';
 import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
 
 chai.use(chaiAsPromised);
@@ -777,6 +782,29 @@ describe('Automan transaction tests', function () {
     ).liquidity!;
     expect(liquidityBeforeReinvest.toString()).to.equal('34399999543676');
     expect(liquidityAfterReinvest.toString()).to.equal('39910988755092');
+    expect(
+      generateAutoCompoundRequestPayload(
+        eoa,
+        chainId,
+        positionId,
+        /*feeToPrincipalRatioThreshold=*/ 0.1,
+        /*slippage=*/ 0.05,
+        /*maxGasProportion=*/ 0.01,
+      ),
+    ).to.deep.equal({
+      action: {
+        maxGasProportion: 0.01,
+        slippage: 0.05,
+        type: ActionTypeString.Reinvest,
+      },
+      chainId: 1,
+      condition: {
+        feeToPrincipalRatioThreshold: 0.1,
+        type: ConditionTypeString.AccruedFees,
+      },
+      nftId: positionId.toString(),
+      ownerAddr: eoa,
+    });
   });
 });
 
