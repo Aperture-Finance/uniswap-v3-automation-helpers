@@ -1,5 +1,7 @@
 import {
+  ActionTypeString,
   ApertureSupportedChainId,
+  ConditionTypeString,
   Payload,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { BigNumberish } from 'ethers';
@@ -24,17 +26,41 @@ export function generateLimitOrderCloseRequestPayload(
     chainId,
     nftId: positionId.toString(),
     condition: {
-      type: 'TokenAmount',
+      type: ConditionTypeString.TokenAmount,
       zeroAmountToken: outerLimitPrice.baseCurrency.address === token0 ? 0 : 1,
     },
     action: {
-      type: 'LimitOrderClose',
+      type: ActionTypeString.LimitOrderClose,
       inputTokenAmount: {
         address: outerLimitPrice.baseCurrency.address,
         rawAmount: inputCurrencyAmount.quotient.toString(),
       },
       outputTokenAddr: outerLimitPrice.quoteCurrency.address,
       feeTier,
+      maxGasProportion,
+    },
+  };
+}
+
+export function generateAutoCompoundRequestPayload(
+  ownerAddr: string,
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  feeToPrincipalRatioThreshold: number,
+  slippage: number,
+  maxGasProportion: number,
+): Payload {
+  return {
+    ownerAddr,
+    chainId,
+    nftId: positionId.toString(),
+    condition: {
+      type: ConditionTypeString.AccruedFees,
+      feeToPrincipalRatioThreshold,
+    },
+    action: {
+      type: ActionTypeString.Reinvest,
+      slippage,
       maxGasProportion,
     },
   };
