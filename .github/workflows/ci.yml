@@ -14,7 +14,6 @@ jobs: # each workflow consists of 1+ jobs; by default, all jobs run in parallel
         with:
           node-version: 16.x
           cache: 'yarn'
-          cache-dependency-path: 'src/yarn.lock'
 
       - name: Install dependencies 📦
         run: yarn install
@@ -33,7 +32,6 @@ jobs: # each workflow consists of 1+ jobs; by default, all jobs run in parallel
         with:
           node-version: 16.x
           cache: 'yarn'
-          cache-dependency-path: 'src/yarn.lock'
 
       - name: Install dependencies 📦
         run: yarn install
@@ -52,7 +50,6 @@ jobs: # each workflow consists of 1+ jobs; by default, all jobs run in parallel
         with:
           node-version: 16.x
           cache: 'yarn'
-          cache-dependency-path: 'src/yarn.lock'
 
       - name: Install dependencies 📦
         run: yarn install
