@@ -20,6 +20,4 @@ const config: CodegenConfig = {
   },
 };
 
-// This is used in package.json when generating apollo schemas however the linter stills flags this as unused
-// eslint-disable-next-line import/no-unused-modules
 export default config;

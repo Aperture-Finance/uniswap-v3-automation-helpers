@@ -96,6 +96,7 @@ export async function generateTypedDataForPermit(
 ): Promise<{
   domain: TypedDataDomain;
   types: Record<string, Array<TypedDataField>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: Record<string, any>;
 }> {
   const chainInfo = getChainInfo(chainId);

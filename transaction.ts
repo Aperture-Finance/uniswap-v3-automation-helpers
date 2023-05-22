@@ -405,6 +405,7 @@ async function getAmountMinFromSlippage(
   const { amount0, amount1 } = (await IUniV3Automan__factory.connect(
     automanAddress,
     provider,
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
   ).callStatic[functionFragment](...functionParams, {
     from: ownerAddress,
@@ -448,7 +449,7 @@ export async function getRebalanceTx(
   if (existingPosition === undefined) {
     existingPosition = await getPosition(chainId, existingPositionId, provider);
   }
-  let mintParams: INonfungiblePositionManager.MintParamsStruct = {
+  const mintParams: INonfungiblePositionManager.MintParamsStruct = {
     token0: existingPosition.amount0.currency.address,
     token1: existingPosition.amount1.currency.address,
     fee: existingPosition.pool.fee,
@@ -481,6 +482,7 @@ export async function getRebalanceTx(
     from: ownerAddress,
     to: automanAddress,
     data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       functionFragment,
       getAutomanRebalanceCallInfo(mintParams, existingPositionId, permitInfo)
@@ -509,7 +511,7 @@ export async function getReinvestTx(
   provider: Provider,
   permitInfo?: PermitInfo,
 ): Promise<TransactionRequest> {
-  let increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
+  const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
     {
       tokenId: positionId,
       amount0Desired: 0, // Param value ignored by Automan.
@@ -537,6 +539,7 @@ export async function getReinvestTx(
     from: ownerAddress,
     to: automanAddress,
     data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       functionFragment,
       getAutomanReinvestCallInfo(increaseLiquidityParams, permitInfo).params,
