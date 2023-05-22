@@ -400,6 +400,7 @@ function parseActivity(
  * @param address The wallet address to fetch activities for.
  * @param pageSize Pagination param, size of a page. Default: 50.
  * @param pageNumber Pagination param, which page to request, starting from 1. Default: 1.
+ * @param userAgent Optional user agent to use for the request. Default: undefined. This only needs to be set in Node unit tests.
  */
 export async function getWalletActivities(
   address: string,
