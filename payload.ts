@@ -1,7 +1,7 @@
 import {
-  ActionTypeString,
+  ActionTypeEnum,
   ApertureSupportedChainId,
-  ConditionTypeString,
+  ConditionTypeEnum,
   Payload,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { BigNumberish } from 'ethers';
@@ -26,11 +26,11 @@ export function generateLimitOrderCloseRequestPayload(
     chainId,
     nftId: positionId.toString(),
     condition: {
-      type: ConditionTypeString.TokenAmount,
+      type: ConditionTypeEnum.enum.TokenAmount,
       zeroAmountToken: outerLimitPrice.baseCurrency.address === token0 ? 0 : 1,
     },
     action: {
-      type: ActionTypeString.LimitOrderClose,
+      type: ActionTypeEnum.enum.LimitOrderClose,
       inputTokenAmount: {
         address: outerLimitPrice.baseCurrency.address,
         rawAmount: inputCurrencyAmount.quotient.toString(),
@@ -55,11 +55,11 @@ export function generateAutoCompoundRequestPayload(
     chainId,
     nftId: positionId.toString(),
     condition: {
-      type: ConditionTypeString.AccruedFees,
+      type: ConditionTypeEnum.enum.AccruedFees,
       feeToPrincipalRatioThreshold,
     },
     action: {
-      type: ActionTypeString.Reinvest,
+      type: ActionTypeEnum.enum.Reinvest,
       slippage,
       maxGasProportion,
     },

@@ -30,9 +30,9 @@ import {
 } from '../tick';
 import { getPool } from '../pool';
 import {
-  ActionTypeString,
+  ActionTypeEnum,
   ApertureSupportedChainId,
-  ConditionTypeString,
+  ConditionTypeEnum,
   IERC20__factory,
   INonfungiblePositionManager__factory,
   UniV3Automan__factory,
@@ -812,12 +812,12 @@ describe('Automan transaction tests', function () {
       action: {
         maxGasProportion: 0.01,
         slippage: 0.05,
-        type: ActionTypeString.Reinvest,
+        type: ActionTypeEnum.enum.Reinvest,
       },
       chainId: 1,
       condition: {
         feeToPrincipalRatioThreshold: 0.1,
-        type: ConditionTypeString.AccruedFees,
+        type: ConditionTypeEnum.enum.AccruedFees,
       },
       nftId: positionId.toString(),
       ownerAddr: eoa,
@@ -957,6 +957,10 @@ describe('Wallet activity tests', function () {
     expect(
       (await getWalletActivities(
         '0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5',
+        /*pageSize=*/ 50,
+        /*pageNumber=*/ 1,
+        // Uniswap graphql endpoint recently started to check user-agent against a whitelist which doesn't include Axios, so we need to spoof it in unit test.
+        /*userAgent=*/ 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
       ))!['0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655'],
     ).to.deep.equal({
       hash: '0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655',

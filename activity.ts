@@ -71,6 +71,7 @@ const GRAPHQL_CHAIN_NAME_TO_CHAIN_ID: {
   [Chain.Bnb]: UniswapSupportedChainId.BNB,
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isAddress(value: any): string | false {
   try {
     // Alphabetical letters must be made lowercase for getAddress to work.
@@ -402,8 +403,9 @@ function parseActivity(
  */
 export async function getWalletActivities(
   address: string,
-  pageSize: number = 50,
-  pageNumber: number = 1,
+  pageSize = 50,
+  pageNumber = 1,
+  userAgent?: string,
 ) {
   const assetActivities: AssetActivityPartsFragment[] | undefined = (
     await axios.post(
@@ -582,6 +584,11 @@ export async function getWalletActivities(
                 __typename
               }
             `,
+      },
+      {
+        headers: {
+          'User-Agent': userAgent,
+        },
       },
     )
   ).data.data?.portfolios?.[0].assetActivities;

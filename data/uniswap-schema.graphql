@@ -1,4 +1,6 @@
-"""This directive allows results to be deferred during execution"""
+"""
+This directive allows results to be deferred during execution
+"""
 directive @defer on FIELD
 
 """
@@ -17,7 +19,9 @@ Tells the service this field/object has access authorized by sigv4 signing.
 """
 directive @aws_iam on OBJECT | FIELD_DEFINITION
 
-"""Tells the service which mutation triggers this subscription."""
+"""
+Tells the service which mutation triggers this subscription.
+"""
 directive @aws_subscribe(
   """
   List of mutations which will trigger this subscription when they are called.
@@ -44,13 +48,19 @@ directive @aws_api_key on OBJECT | FIELD_DEFINITION
 Tells the service this field/object has access authorized by a Cognito User Pools token.
 """
 directive @aws_cognito_user_pools(
-  """List of cognito user pool groups which have access on this field"""
+  """
+  List of cognito user pool groups which have access on this field
+  """
   cognito_groups: [String]
 ) on OBJECT | FIELD_DEFINITION
 
-"""Directs the schema to enforce authorization on a field"""
+"""
+Directs the schema to enforce authorization on a field
+"""
 directive @aws_auth(
-  """List of cognito user pool groups which have access on this field"""
+  """
+  List of cognito user pool groups which have access on this field
+  """
   cognito_groups: [String]
 ) on FIELD_DEFINITION
 
@@ -99,7 +109,12 @@ type AssetActivity {
   assetChanges: [AssetChange]!
 }
 
-union AssetChange = TokenTransfer | NftTransfer | TokenApproval | NftApproval | NftApproveForAll
+union AssetChange =
+    TokenTransfer
+  | NftTransfer
+  | TokenApproval
+  | NftApproval
+  | NftApproveForAll
 
 """
 The `AWSJSON` scalar type provided by AWS AppSync, represents a JSON string that
@@ -181,7 +196,9 @@ type Image {
   dimensions: Dimensions
 }
 
-"""  TODO: deprecate this enum"""
+"""
+TODO: deprecate this enum
+"""
 enum MarketSortableField {
   MARKET_CAP
   VOLUME
@@ -238,7 +255,9 @@ type NftApproval {
   id: ID!
   nftStandard: NftStandard!
 
-  """  can be erc721, erc1155, noncompliant"""
+  """
+  can be erc721, erc1155, noncompliant
+  """
   asset: NftAsset!
   approvedAddress: String!
 }
@@ -247,7 +266,9 @@ type NftApproveForAll {
   id: ID!
   nftStandard: NftStandard!
 
-  """  can be erc721, erc1155, noncompliant"""
+  """
+  can be erc721, erc1155, noncompliant
+  """
   asset: NftAsset!
   operatorAddress: String!
   approved: Boolean!
@@ -268,13 +289,22 @@ type NftAsset {
   name: String
   nftContract: NftContract
 
-  """  TODO: may need to be array to support erc1155 cases. not needed at the moment so will revisit.
+  """
+  TODO: may need to be array to support erc1155 cases. not needed at the moment so will revisit.
   """
   ownerAddress: String
   tokenId: String!
   traits: [NftAssetTrait!]
   rarities: [NftAssetRarity!]
-  listings(chain: Chain, asc: Boolean, first: Int, last: Int, after: String, before: String, _fs: String): NftOrderConnection
+  listings(
+    chain: Chain
+    asc: Boolean
+    first: Int
+    last: Int
+    after: String
+    before: String
+    _fs: String
+  ): NftOrderConnection
   suspiciousFlag: Boolean
   flaggedBy: String
   metadataUrl: String
@@ -361,8 +391,8 @@ type NftCollection {
   collectionId: String!
 
   """
-    TODO: support querying for collection assets here
-   assets(page: Int, pageSize: Int, orderBy: NftAssetSortableField): [NftAsset]
+   TODO: support querying for collection assets here
+  assets(page: Int, pageSize: Int, orderBy: NftAssetSortableField): [NftAsset]
   """
   bannerImageUrl: String
   bannerImage: Image
@@ -402,7 +432,10 @@ type NftCollectionMarket {
   totalVolume: TimestampedAmount
   volume(duration: HistoryDuration, _fs: String): TimestampedAmount
   volumePercentChange(duration: HistoryDuration, _fs: String): TimestampedAmount
-  floorPricePercentChange(duration: HistoryDuration, _fs: String): TimestampedAmount
+  floorPricePercentChange(
+    duration: HistoryDuration
+    _fs: String
+  ): TimestampedAmount
   sales(duration: HistoryDuration): TimestampedAmount
   listings: TimestampedAmount
   marketplaces(marketplaces: [NftMarketplace!]): [NftCollectionMarketplace!]
@@ -533,10 +566,13 @@ type NftTrade {
   marketplace: NftMarketplace!
   amount: Int!
 
-  """  quotePrice represents the last quoted price of the NFT"""
+  """
+  quotePrice represents the last quoted price of the NFT
+  """
   quotePrice: TokenAmount
 
-  """  price represents the current price of the NFT, which can be different from quotePrice
+  """
+  price represents the current price of the NFT, which can be different from quotePrice
   """
   price: TokenAmount!
 }
@@ -579,7 +615,8 @@ type PageInfo {
   endCursor: String
 }
 
-"""  v2 pool parameters as defined by https://github.com/Uniswap/v2-sdk/blob/main/src/entities/pair.ts
+"""
+v2 pool parameters as defined by https://github.com/Uniswap/v2-sdk/blob/main/src/entities/pair.ts
 """
 input PairInput {
   tokenAmountA: TokenAmountInput!
@@ -600,7 +637,8 @@ input PermitInput {
   sigDeadline: String!
 }
 
-"""  v3 pool parameters as defined by https://github.com/Uniswap/v3-sdk/blob/main/src/entities/pool.ts
+"""
+v3 pool parameters as defined by https://github.com/Uniswap/v3-sdk/blob/main/src/entities/pool.ts
 """
 input PoolInput {
   tokenA: TokenInput!
@@ -618,9 +656,16 @@ type Portfolio {
   tokensTotalDenominatedValueChange(duration: HistoryDuration): AmountChange
   tokenBalances: [TokenBalance]
 
-  """  TODO: (michael.zhang) replace with paginated query"""
+  """
+  TODO: (michael.zhang) replace with paginated query
+  """
   nftBalances: [NftBalance]
-  assetActivities(page: Int, pageSize: Int, includeOffChain: Boolean, _fs: String): [AssetActivity]
+  assetActivities(
+    page: Int
+    pageSize: Int
+    includeOffChain: Boolean
+    _fs: String
+  ): [AssetActivity]
 }
 
 type Query {
@@ -629,16 +674,72 @@ type Query {
   ensEntry(ensDomainName: String!, chain: Chain!): EnsEntry
   tokenProjects(contracts: [ContractInput!]!, _fs: String): [TokenProject]
   searchTokens(searchQuery: String!, _fs: String): [Token]
-  searchTokenProjects(searchQuery: String!): [TokenProject] @deprecated(reason: "Use searchTokens")
-  portfolios(ownerAddresses: [String!]!, chains: [Chain!], _fs: String): [Portfolio]
+  searchTokenProjects(searchQuery: String!): [TokenProject]
+    @deprecated(reason: "Use searchTokens")
+  portfolios(
+    ownerAddresses: [String!]!
+    chains: [Chain!]
+    _fs: String
+  ): [Portfolio]
   nftCollectionsById(collectionIds: [String]): [NftCollection]
-  topTokens(chain: Chain, page: Int, pageSize: Int, orderBy: TokenSortableField): [Token]
-  topCollections(chains: [Chain!], orderBy: CollectionSortableField, duration: HistoryDuration, after: String, first: Int, cursor: String, limit: Int, _fs: String): NftCollectionConnection
-  nftAssets(chain: Chain, address: String!, orderBy: NftAssetSortableField, asc: Boolean, filter: NftAssetsFilterInput, after: String, first: Int, before: String, last: Int, _fs: String): NftAssetConnection
-  nftCollections(chain: Chain, filter: NftCollectionsFilterInput, after: String, first: Int, _fs: String): NftCollectionConnection
-  nftBalances(chain: Chain, ownerAddress: String!, filter: NftBalancesFilterInput, after: String, first: Int, before: String, last: Int, _fs: String): NftBalanceConnection
-  nftRoute(chain: Chain, senderAddress: String!, nftTrades: [NftTradeInput!]!, tokenTrades: [TokenTradeInput!]): NftRouteResponse
-  nftActivity(chain: Chain, filter: NftActivityFilterInput, after: String, first: Int, _fs: String): NftActivityConnection
+  topTokens(
+    chain: Chain
+    page: Int
+    pageSize: Int
+    orderBy: TokenSortableField
+  ): [Token]
+  topCollections(
+    chains: [Chain!]
+    orderBy: CollectionSortableField
+    duration: HistoryDuration
+    after: String
+    first: Int
+    cursor: String
+    limit: Int
+    _fs: String
+  ): NftCollectionConnection
+  nftAssets(
+    chain: Chain
+    address: String!
+    orderBy: NftAssetSortableField
+    asc: Boolean
+    filter: NftAssetsFilterInput
+    after: String
+    first: Int
+    before: String
+    last: Int
+    _fs: String
+  ): NftAssetConnection
+  nftCollections(
+    chain: Chain
+    filter: NftCollectionsFilterInput
+    after: String
+    first: Int
+    _fs: String
+  ): NftCollectionConnection
+  nftBalances(
+    chain: Chain
+    ownerAddress: String!
+    filter: NftBalancesFilterInput
+    after: String
+    first: Int
+    before: String
+    last: Int
+    _fs: String
+  ): NftBalanceConnection
+  nftRoute(
+    chain: Chain
+    senderAddress: String!
+    nftTrades: [NftTradeInput!]!
+    tokenTrades: [TokenTradeInput!]
+  ): NftRouteResponse
+  nftActivity(
+    chain: Chain
+    filter: NftActivityFilterInput
+    after: String
+    first: Int
+    _fs: String
+  ): NftActivityConnection
 }
 
 enum SafetyLevel {
@@ -682,7 +783,9 @@ type TokenApproval {
   id: ID!
   tokenStandard: TokenStandard!
 
-  """  can be erc20 or native"""
+  """
+  can be erc20 or native
+  """
   asset: Token!
   approvedAddress: String!
   quantity: String!
@@ -738,12 +841,16 @@ type TokenProjectMarket {
   tokenProject: TokenProject!
   currency: Currency!
   price: Amount
-  volume24h: Amount @deprecated(reason: "Use TokenMarket.volume with duration DAY for Uniswap volume")
+  volume24h: Amount
+    @deprecated(
+      reason: "Use TokenMarket.volume with duration DAY for Uniswap volume"
+    )
   pricePercentChange24h: Amount @deprecated(reason: "Use pricePercentChange")
   marketCap: Amount
   fullyDilutedMarketCap: Amount @deprecated(reason: "Use marketCap")
   priceHistory(duration: HistoryDuration!): [TimestampedAmount]
-  volume(duration: HistoryDuration!): Amount @deprecated(reason: "Use TokenMarket.volume for Uniswap volume")
+  volume(duration: HistoryDuration!): Amount
+    @deprecated(reason: "Use TokenMarket.volume for Uniswap volume")
   pricePercentChange(duration: HistoryDuration!): Amount
   priceHighLow(duration: HistoryDuration!, highLow: HighLow!): Amount
 }

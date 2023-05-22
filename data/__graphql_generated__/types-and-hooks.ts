@@ -1,8 +1,14 @@
 export type Maybe<T> = T;
 export type InputMaybe<T> = T;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type Exact<T extends { [key: string]: unknown }> = {
+  [K in keyof T]: T[K];
+};
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
+  [SubKey in K]?: Maybe<T[SubKey]>;
+};
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
+  [SubKey in K]: Maybe<T[SubKey]>;
+};
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: string;
@@ -20,6 +26,7 @@ export type Scalars = {
    * strings.  Invalid JSON strings like "**{a: 1}**", "**{'a': 1}**" and "**Unquoted
    * string**" will throw GraphQL validation errors.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   AWSJSON: any;
 };
 
@@ -43,7 +50,7 @@ export enum ActivityType {
   Unstake = 'UNSTAKE',
   Withdraw = 'WITHDRAW',
   Market = 'market',
-  Money = 'money'
+  Money = 'money',
 }
 
 export type Amount = IAmount & {
@@ -71,7 +78,12 @@ export type AssetActivity = {
   type: ActivityType;
 };
 
-export type AssetChange = NftApproval | NftApproveForAll | NftTransfer | TokenApproval | TokenTransfer;
+export type AssetChange =
+  | NftApproval
+  | NftApproveForAll
+  | NftTransfer
+  | TokenApproval
+  | TokenTransfer;
 
 export enum Chain {
   Arbitrum = 'ARBITRUM',
@@ -81,11 +93,11 @@ export enum Chain {
   EthereumGoerli = 'ETHEREUM_GOERLI',
   Optimism = 'OPTIMISM',
   Polygon = 'POLYGON',
-  UnknownChain = 'UNKNOWN_CHAIN'
+  UnknownChain = 'UNKNOWN_CHAIN',
 }
 
 export enum CollectionSortableField {
-  Volume = 'VOLUME'
+  Volume = 'VOLUME',
 }
 
 export type ContractInput = {
@@ -96,7 +108,7 @@ export type ContractInput = {
 export enum Currency {
   Eth = 'ETH',
   Matic = 'MATIC',
-  Usd = 'USD'
+  Usd = 'USD',
 }
 
 export type Dimensions = {
@@ -115,7 +127,7 @@ export type EnsEntry = {
 
 export enum HighLow {
   High = 'HIGH',
-  Low = 'LOW'
+  Low = 'LOW',
 }
 
 export enum HistoryDuration {
@@ -124,7 +136,7 @@ export enum HistoryDuration {
   Max = 'MAX',
   Month = 'MONTH',
   Week = 'WEEK',
-  Year = 'YEAR'
+  Year = 'YEAR',
 }
 
 export type IAmount = {
@@ -147,14 +159,14 @@ export type Image = {
 /**   TODO: deprecate this enum */
 export enum MarketSortableField {
   MarketCap = 'MARKET_CAP',
-  Volume = 'VOLUME'
+  Volume = 'VOLUME',
 }
 
 export enum MediaType {
   Audio = 'AUDIO',
   Image = 'IMAGE',
   Raw = 'RAW',
-  Video = 'VIDEO'
+  Video = 'VIDEO',
 }
 
 export type NftActivity = {
@@ -197,7 +209,7 @@ export enum NftActivityType {
   CancelListing = 'CANCEL_LISTING',
   Listing = 'LISTING',
   Sale = 'SALE',
-  Transfer = 'TRANSFER'
+  Transfer = 'TRANSFER',
 }
 
 export type NftApproval = {
@@ -247,7 +259,6 @@ export type NftAsset = {
   traits?: Maybe<Array<NftAssetTrait>>;
 };
 
-
 export type NftAssetListingsArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   after?: InputMaybe<Scalars['String']>;
@@ -286,7 +297,7 @@ export type NftAssetRarity = {
 
 export enum NftAssetSortableField {
   Price = 'PRICE',
-  Rarity = 'RARITY'
+  Rarity = 'RARITY',
 }
 
 export type NftAssetTrait = {
@@ -366,7 +377,6 @@ export type NftCollection = {
   twitterName?: Maybe<Scalars['String']>;
 };
 
-
 export type NftCollectionMarketsArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   currencies: Array<Currency>;
@@ -402,33 +412,27 @@ export type NftCollectionMarket = {
   volumePercentChange?: Maybe<TimestampedAmount>;
 };
 
-
 export type NftCollectionMarketFloorPriceArgs = {
   _fs?: InputMaybe<Scalars['String']>;
 };
-
 
 export type NftCollectionMarketFloorPricePercentChangeArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   duration?: InputMaybe<HistoryDuration>;
 };
 
-
 export type NftCollectionMarketMarketplacesArgs = {
   marketplaces?: InputMaybe<Array<NftMarketplace>>;
 };
-
 
 export type NftCollectionMarketSalesArgs = {
   duration?: InputMaybe<HistoryDuration>;
 };
 
-
 export type NftCollectionMarketVolumeArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   duration?: InputMaybe<HistoryDuration>;
 };
-
 
 export type NftCollectionMarketVolumePercentChangeArgs = {
   _fs?: InputMaybe<Scalars['String']>;
@@ -485,7 +489,7 @@ export type NftFee = {
 
 export enum NftMarketSortableField {
   FloorPrice = 'FLOOR_PRICE',
-  Volume = 'VOLUME'
+  Volume = 'VOLUME',
 }
 
 export enum NftMarketplace {
@@ -496,7 +500,7 @@ export enum NftMarketplace {
   Nftx = 'NFTX',
   Opensea = 'OPENSEA',
   Sudoswap = 'SUDOSWAP',
-  X2Y2 = 'X2Y2'
+  X2Y2 = 'X2Y2',
 }
 
 export type NftOrder = {
@@ -542,7 +546,7 @@ export type NftProfile = {
 };
 
 export enum NftRarityProvider {
-  RaritySniper = 'RARITY_SNIPER'
+  RaritySniper = 'RARITY_SNIPER',
 }
 
 export type NftRouteResponse = {
@@ -557,7 +561,7 @@ export type NftRouteResponse = {
 export enum NftStandard {
   Erc721 = 'ERC721',
   Erc1155 = 'ERC1155',
-  Noncompliant = 'NONCOMPLIANT'
+  Noncompliant = 'NONCOMPLIANT',
 }
 
 export type NftTrade = {
@@ -598,12 +602,12 @@ export enum OrderStatus {
   Cancelled = 'CANCELLED',
   Executed = 'EXECUTED',
   Expired = 'EXPIRED',
-  Valid = 'VALID'
+  Valid = 'VALID',
 }
 
 export enum OrderType {
   Listing = 'LISTING',
-  Offer = 'OFFER'
+  Offer = 'OFFER',
 }
 
 export type PageInfo = {
@@ -656,14 +660,12 @@ export type Portfolio = {
   tokensTotalDenominatedValueChange?: Maybe<AmountChange>;
 };
 
-
 export type PortfolioAssetActivitiesArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   includeOffChain?: InputMaybe<Scalars['Boolean']>;
   page?: InputMaybe<Scalars['Int']>;
   pageSize?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type PortfolioTokensTotalDenominatedValueChangeArgs = {
   duration?: InputMaybe<HistoryDuration>;
@@ -689,12 +691,10 @@ export type Query = {
   topTokens?: Maybe<Array<Maybe<Token>>>;
 };
 
-
 export type QueryEnsEntryArgs = {
   chain: Chain;
   ensDomainName: Scalars['String'];
 };
-
 
 export type QueryNftActivityArgs = {
   _fs?: InputMaybe<Scalars['String']>;
@@ -703,7 +703,6 @@ export type QueryNftActivityArgs = {
   filter?: InputMaybe<NftActivityFilterInput>;
   first?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryNftAssetsArgs = {
   _fs?: InputMaybe<Scalars['String']>;
@@ -718,7 +717,6 @@ export type QueryNftAssetsArgs = {
   orderBy?: InputMaybe<NftAssetSortableField>;
 };
 
-
 export type QueryNftBalancesArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   after?: InputMaybe<Scalars['String']>;
@@ -730,7 +728,6 @@ export type QueryNftBalancesArgs = {
   ownerAddress: Scalars['String'];
 };
 
-
 export type QueryNftCollectionsArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   after?: InputMaybe<Scalars['String']>;
@@ -739,11 +736,9 @@ export type QueryNftCollectionsArgs = {
   first?: InputMaybe<Scalars['Int']>;
 };
 
-
 export type QueryNftCollectionsByIdArgs = {
   collectionIds?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
 };
-
 
 export type QueryNftRouteArgs = {
   chain?: InputMaybe<Chain>;
@@ -752,24 +747,20 @@ export type QueryNftRouteArgs = {
   tokenTrades?: InputMaybe<Array<TokenTradeInput>>;
 };
 
-
 export type QueryPortfoliosArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   chains?: InputMaybe<Array<Chain>>;
   ownerAddresses: Array<Scalars['String']>;
 };
 
-
 export type QuerySearchTokenProjectsArgs = {
   searchQuery: Scalars['String'];
 };
-
 
 export type QuerySearchTokensArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   searchQuery: Scalars['String'];
 };
-
 
 export type QueryTokenArgs = {
   _fs?: InputMaybe<Scalars['String']>;
@@ -777,18 +768,15 @@ export type QueryTokenArgs = {
   chain: Chain;
 };
 
-
 export type QueryTokenProjectsArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   contracts: Array<ContractInput>;
 };
 
-
 export type QueryTokensArgs = {
   _fs?: InputMaybe<Scalars['String']>;
   contracts: Array<ContractInput>;
 };
-
 
 export type QueryTopCollectionsArgs = {
   _fs?: InputMaybe<Scalars['String']>;
@@ -801,7 +789,6 @@ export type QueryTopCollectionsArgs = {
   orderBy?: InputMaybe<CollectionSortableField>;
 };
 
-
 export type QueryTopTokensArgs = {
   chain?: InputMaybe<Chain>;
   orderBy?: InputMaybe<TokenSortableField>;
@@ -813,7 +800,7 @@ export enum SafetyLevel {
   Blocked = 'BLOCKED',
   MediumWarning = 'MEDIUM_WARNING',
   StrongWarning = 'STRONG_WARNING',
-  Verified = 'VERIFIED'
+  Verified = 'VERIFIED',
 }
 
 export type TimestampedAmount = IAmount & {
@@ -837,11 +824,9 @@ export type Token = IContract & {
   symbol?: Maybe<Scalars['String']>;
 };
 
-
 export type TokenMarketArgs = {
   currency?: InputMaybe<Currency>;
 };
-
 
 export type TokenProjectArgs = {
   _fs?: InputMaybe<Scalars['String']>;
@@ -900,22 +885,18 @@ export type TokenMarket = {
   volume?: Maybe<Amount>;
 };
 
-
 export type TokenMarketPriceHighLowArgs = {
   duration: HistoryDuration;
   highLow: HighLow;
 };
 
-
 export type TokenMarketPriceHistoryArgs = {
   duration: HistoryDuration;
 };
 
-
 export type TokenMarketPricePercentChangeArgs = {
   duration: HistoryDuration;
 };
-
 
 export type TokenMarketVolumeArgs = {
   duration: HistoryDuration;
@@ -939,7 +920,6 @@ export type TokenProject = {
   tokens: Array<Token>;
   twitterName?: Maybe<Scalars['String']>;
 };
-
 
 export type TokenProjectMarketsArgs = {
   currencies: Array<Currency>;
@@ -965,22 +945,18 @@ export type TokenProjectMarket = {
   volume24h?: Maybe<Amount>;
 };
 
-
 export type TokenProjectMarketPriceHighLowArgs = {
   duration: HistoryDuration;
   highLow: HighLow;
 };
 
-
 export type TokenProjectMarketPriceHistoryArgs = {
   duration: HistoryDuration;
 };
 
-
 export type TokenProjectMarketPricePercentChangeArgs = {
   duration: HistoryDuration;
 };
-
 
 export type TokenProjectMarketVolumeArgs = {
   duration: HistoryDuration;
@@ -990,12 +966,12 @@ export enum TokenSortableField {
   MarketCap = 'MARKET_CAP',
   Popularity = 'POPULARITY',
   TotalValueLocked = 'TOTAL_VALUE_LOCKED',
-  Volume = 'VOLUME'
+  Volume = 'VOLUME',
 }
 
 export enum TokenStandard {
   Erc20 = 'ERC20',
-  Native = 'NATIVE'
+  Native = 'NATIVE',
 }
 
 export type TokenTradeInput = {
@@ -1020,7 +996,7 @@ export type TokenTradeRoutesInput = {
 
 export enum TokenTradeType {
   ExactInput = 'EXACT_INPUT',
-  ExactOutput = 'EXACT_OUTPUT'
+  ExactOutput = 'EXACT_OUTPUT',
 }
 
 export type TokenTransfer = {
@@ -1056,36 +1032,485 @@ export type Transaction = {
 export enum TransactionDirection {
   In = 'IN',
   Out = 'OUT',
-  Self = 'SELF'
+  Self = 'SELF',
 }
 
 export enum TransactionStatus {
   Confirmed = 'CONFIRMED',
   Failed = 'FAILED',
-  Pending = 'PENDING'
+  Pending = 'PENDING',
 }
 
-export type NftAssetPartsFragment = { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } };
+export type NftAssetPartsFragment = {
+  __typename?: 'NftAsset';
+  id: string;
+  name?: string;
+  tokenId: string;
+  nftContract?: {
+    __typename?: 'NftContract';
+    id: string;
+    chain: Chain;
+    address: string;
+  };
+  image?: { __typename?: 'Image'; id: string; url: string };
+  collection?: { __typename?: 'NftCollection'; id: string; name?: string };
+};
 
-export type NftTransferPartsFragment = { __typename?: 'NftTransfer', id: string, nftStandard: NftStandard, sender: string, recipient: string, direction: TransactionDirection, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } };
+export type NftTransferPartsFragment = {
+  __typename?: 'NftTransfer';
+  id: string;
+  nftStandard: NftStandard;
+  sender: string;
+  recipient: string;
+  direction: TransactionDirection;
+  asset: {
+    __typename?: 'NftAsset';
+    id: string;
+    name?: string;
+    tokenId: string;
+    nftContract?: {
+      __typename?: 'NftContract';
+      id: string;
+      chain: Chain;
+      address: string;
+    };
+    image?: { __typename?: 'Image'; id: string; url: string };
+    collection?: { __typename?: 'NftCollection'; id: string; name?: string };
+  };
+};
 
-export type TokenAssetPartsFragment = { __typename?: 'Token', id: string, name?: string, symbol?: string, address?: string, decimals?: number, chain: Chain, standard?: TokenStandard, project?: { __typename?: 'TokenProject', id: string, isSpam?: boolean, logo?: { __typename?: 'Image', id: string, url: string } } };
+export type TokenAssetPartsFragment = {
+  __typename?: 'Token';
+  id: string;
+  name?: string;
+  symbol?: string;
+  address?: string;
+  decimals?: number;
+  chain: Chain;
+  standard?: TokenStandard;
+  project?: {
+    __typename?: 'TokenProject';
+    id: string;
+    isSpam?: boolean;
+    logo?: { __typename?: 'Image'; id: string; url: string };
+  };
+};
 
-export type TokenTransferPartsFragment = { __typename?: 'TokenTransfer', id: string, tokenStandard: TokenStandard, quantity: string, sender: string, recipient: string, direction: TransactionDirection, asset: { __typename?: 'Token', id: string, name?: string, symbol?: string, address?: string, decimals?: number, chain: Chain, standard?: TokenStandard, project?: { __typename?: 'TokenProject', id: string, isSpam?: boolean, logo?: { __typename?: 'Image', id: string, url: string } } }, transactedValue?: { __typename?: 'Amount', id: string, currency?: Currency, value: number } };
+export type TokenTransferPartsFragment = {
+  __typename?: 'TokenTransfer';
+  id: string;
+  tokenStandard: TokenStandard;
+  quantity: string;
+  sender: string;
+  recipient: string;
+  direction: TransactionDirection;
+  asset: {
+    __typename?: 'Token';
+    id: string;
+    name?: string;
+    symbol?: string;
+    address?: string;
+    decimals?: number;
+    chain: Chain;
+    standard?: TokenStandard;
+    project?: {
+      __typename?: 'TokenProject';
+      id: string;
+      isSpam?: boolean;
+      logo?: { __typename?: 'Image'; id: string; url: string };
+    };
+  };
+  transactedValue?: {
+    __typename?: 'Amount';
+    id: string;
+    currency?: Currency;
+    value: number;
+  };
+};
 
-export type TokenApprovalPartsFragment = { __typename?: 'TokenApproval', id: string, tokenStandard: TokenStandard, approvedAddress: string, quantity: string, asset: { __typename?: 'Token', id: string, name?: string, symbol?: string, address?: string, decimals?: number, chain: Chain, standard?: TokenStandard, project?: { __typename?: 'TokenProject', id: string, isSpam?: boolean, logo?: { __typename?: 'Image', id: string, url: string } } } };
+export type TokenApprovalPartsFragment = {
+  __typename?: 'TokenApproval';
+  id: string;
+  tokenStandard: TokenStandard;
+  approvedAddress: string;
+  quantity: string;
+  asset: {
+    __typename?: 'Token';
+    id: string;
+    name?: string;
+    symbol?: string;
+    address?: string;
+    decimals?: number;
+    chain: Chain;
+    standard?: TokenStandard;
+    project?: {
+      __typename?: 'TokenProject';
+      id: string;
+      isSpam?: boolean;
+      logo?: { __typename?: 'Image'; id: string; url: string };
+    };
+  };
+};
 
-export type NftApprovalPartsFragment = { __typename?: 'NftApproval', id: string, nftStandard: NftStandard, approvedAddress: string, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } };
+export type NftApprovalPartsFragment = {
+  __typename?: 'NftApproval';
+  id: string;
+  nftStandard: NftStandard;
+  approvedAddress: string;
+  asset: {
+    __typename?: 'NftAsset';
+    id: string;
+    name?: string;
+    tokenId: string;
+    nftContract?: {
+      __typename?: 'NftContract';
+      id: string;
+      chain: Chain;
+      address: string;
+    };
+    image?: { __typename?: 'Image'; id: string; url: string };
+    collection?: { __typename?: 'NftCollection'; id: string; name?: string };
+  };
+};
 
-export type NftApproveForAllPartsFragment = { __typename?: 'NftApproveForAll', id: string, nftStandard: NftStandard, operatorAddress: string, approved: boolean, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } };
+export type NftApproveForAllPartsFragment = {
+  __typename?: 'NftApproveForAll';
+  id: string;
+  nftStandard: NftStandard;
+  operatorAddress: string;
+  approved: boolean;
+  asset: {
+    __typename?: 'NftAsset';
+    id: string;
+    name?: string;
+    tokenId: string;
+    nftContract?: {
+      __typename?: 'NftContract';
+      id: string;
+      chain: Chain;
+      address: string;
+    };
+    image?: { __typename?: 'Image'; id: string; url: string };
+    collection?: { __typename?: 'NftCollection'; id: string; name?: string };
+  };
+};
 
-export type TransactionPartsFragment = { __typename?: 'Transaction', id: string, blockNumber: number, hash: string, status: TransactionStatus, to: string, from: string, nonce: number };
+export type TransactionPartsFragment = {
+  __typename?: 'Transaction';
+  id: string;
+  blockNumber: number;
+  hash: string;
+  status: TransactionStatus;
+  to: string;
+  from: string;
+  nonce: number;
+};
 
-export type AssetActivityPartsFragment = { __typename?: 'AssetActivity', id: string, timestamp: number, type: ActivityType, chain: Chain, transaction: { __typename?: 'Transaction', id: string, blockNumber: number, hash: string, status: TransactionStatus, to: string, from: string, nonce: number }, assetChanges: Array<{ __typename: 'NftApproval', id: string, nftStandard: NftStandard, approvedAddress: string, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } } | { __typename: 'NftApproveForAll', id: string, nftStandard: NftStandard, operatorAddress: string, approved: boolean, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } } | { __typename: 'NftTransfer', id: string, nftStandard: NftStandard, sender: string, recipient: string, direction: TransactionDirection, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } } | { __typename: 'TokenApproval', id: string, tokenStandard: TokenStandard, approvedAddress: string, quantity: string, asset: { __typename?: 'Token', id: string, name?: string, symbol?: string, address?: string, decimals?: number, chain: Chain, standard?: TokenStandard, project?: { __typename?: 'TokenProject', id: string, isSpam?: boolean, logo?: { __typename?: 'Image', id: string, url: string } } } } | { __typename: 'TokenTransfer', id: string, tokenStandard: TokenStandard, quantity: string, sender: string, recipient: string, direction: TransactionDirection, asset: { __typename?: 'Token', id: string, name?: string, symbol?: string, address?: string, decimals?: number, chain: Chain, standard?: TokenStandard, project?: { __typename?: 'TokenProject', id: string, isSpam?: boolean, logo?: { __typename?: 'Image', id: string, url: string } } }, transactedValue?: { __typename?: 'Amount', id: string, currency?: Currency, value: number } }> };
+export type AssetActivityPartsFragment = {
+  __typename?: 'AssetActivity';
+  id: string;
+  timestamp: number;
+  type: ActivityType;
+  chain: Chain;
+  transaction: {
+    __typename?: 'Transaction';
+    id: string;
+    blockNumber: number;
+    hash: string;
+    status: TransactionStatus;
+    to: string;
+    from: string;
+    nonce: number;
+  };
+  assetChanges: Array<
+    | {
+        __typename: 'NftApproval';
+        id: string;
+        nftStandard: NftStandard;
+        approvedAddress: string;
+        asset: {
+          __typename?: 'NftAsset';
+          id: string;
+          name?: string;
+          tokenId: string;
+          nftContract?: {
+            __typename?: 'NftContract';
+            id: string;
+            chain: Chain;
+            address: string;
+          };
+          image?: { __typename?: 'Image'; id: string; url: string };
+          collection?: {
+            __typename?: 'NftCollection';
+            id: string;
+            name?: string;
+          };
+        };
+      }
+    | {
+        __typename: 'NftApproveForAll';
+        id: string;
+        nftStandard: NftStandard;
+        operatorAddress: string;
+        approved: boolean;
+        asset: {
+          __typename?: 'NftAsset';
+          id: string;
+          name?: string;
+          tokenId: string;
+          nftContract?: {
+            __typename?: 'NftContract';
+            id: string;
+            chain: Chain;
+            address: string;
+          };
+          image?: { __typename?: 'Image'; id: string; url: string };
+          collection?: {
+            __typename?: 'NftCollection';
+            id: string;
+            name?: string;
+          };
+        };
+      }
+    | {
+        __typename: 'NftTransfer';
+        id: string;
+        nftStandard: NftStandard;
+        sender: string;
+        recipient: string;
+        direction: TransactionDirection;
+        asset: {
+          __typename?: 'NftAsset';
+          id: string;
+          name?: string;
+          tokenId: string;
+          nftContract?: {
+            __typename?: 'NftContract';
+            id: string;
+            chain: Chain;
+            address: string;
+          };
+          image?: { __typename?: 'Image'; id: string; url: string };
+          collection?: {
+            __typename?: 'NftCollection';
+            id: string;
+            name?: string;
+          };
+        };
+      }
+    | {
+        __typename: 'TokenApproval';
+        id: string;
+        tokenStandard: TokenStandard;
+        approvedAddress: string;
+        quantity: string;
+        asset: {
+          __typename?: 'Token';
+          id: string;
+          name?: string;
+          symbol?: string;
+          address?: string;
+          decimals?: number;
+          chain: Chain;
+          standard?: TokenStandard;
+          project?: {
+            __typename?: 'TokenProject';
+            id: string;
+            isSpam?: boolean;
+            logo?: { __typename?: 'Image'; id: string; url: string };
+          };
+        };
+      }
+    | {
+        __typename: 'TokenTransfer';
+        id: string;
+        tokenStandard: TokenStandard;
+        quantity: string;
+        sender: string;
+        recipient: string;
+        direction: TransactionDirection;
+        asset: {
+          __typename?: 'Token';
+          id: string;
+          name?: string;
+          symbol?: string;
+          address?: string;
+          decimals?: number;
+          chain: Chain;
+          standard?: TokenStandard;
+          project?: {
+            __typename?: 'TokenProject';
+            id: string;
+            isSpam?: boolean;
+            logo?: { __typename?: 'Image'; id: string; url: string };
+          };
+        };
+        transactedValue?: {
+          __typename?: 'Amount';
+          id: string;
+          currency?: Currency;
+          value: number;
+        };
+      }
+  >;
+};
 
 export type TransactionListQueryVariables = Exact<{
   account: Scalars['String'];
 }>;
 
-
-export type TransactionListQuery = { __typename?: 'Query', portfolios?: Array<{ __typename?: 'Portfolio', id: string, assetActivities?: Array<{ __typename?: 'AssetActivity', id: string, timestamp: number, type: ActivityType, chain: Chain, transaction: { __typename?: 'Transaction', id: string, blockNumber: number, hash: string, status: TransactionStatus, to: string, from: string, nonce: number }, assetChanges: Array<{ __typename: 'NftApproval', id: string, nftStandard: NftStandard, approvedAddress: string, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } } | { __typename: 'NftApproveForAll', id: string, nftStandard: NftStandard, operatorAddress: string, approved: boolean, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } } | { __typename: 'NftTransfer', id: string, nftStandard: NftStandard, sender: string, recipient: string, direction: TransactionDirection, asset: { __typename?: 'NftAsset', id: string, name?: string, tokenId: string, nftContract?: { __typename?: 'NftContract', id: string, chain: Chain, address: string }, image?: { __typename?: 'Image', id: string, url: string }, collection?: { __typename?: 'NftCollection', id: string, name?: string } } } | { __typename: 'TokenApproval', id: string, tokenStandard: TokenStandard, approvedAddress: string, quantity: string, asset: { __typename?: 'Token', id: string, name?: string, symbol?: string, address?: string, decimals?: number, chain: Chain, standard?: TokenStandard, project?: { __typename?: 'TokenProject', id: string, isSpam?: boolean, logo?: { __typename?: 'Image', id: string, url: string } } } } | { __typename: 'TokenTransfer', id: string, tokenStandard: TokenStandard, quantity: string, sender: string, recipient: string, direction: TransactionDirection, asset: { __typename?: 'Token', id: string, name?: string, symbol?: string, address?: string, decimals?: number, chain: Chain, standard?: TokenStandard, project?: { __typename?: 'TokenProject', id: string, isSpam?: boolean, logo?: { __typename?: 'Image', id: string, url: string } } }, transactedValue?: { __typename?: 'Amount', id: string, currency?: Currency, value: number } }> }> }> };
+export type TransactionListQuery = {
+  __typename?: 'Query';
+  portfolios?: Array<{
+    __typename?: 'Portfolio';
+    id: string;
+    assetActivities?: Array<{
+      __typename?: 'AssetActivity';
+      id: string;
+      timestamp: number;
+      type: ActivityType;
+      chain: Chain;
+      transaction: {
+        __typename?: 'Transaction';
+        id: string;
+        blockNumber: number;
+        hash: string;
+        status: TransactionStatus;
+        to: string;
+        from: string;
+        nonce: number;
+      };
+      assetChanges: Array<
+        | {
+            __typename: 'NftApproval';
+            id: string;
+            nftStandard: NftStandard;
+            approvedAddress: string;
+            asset: {
+              __typename?: 'NftAsset';
+              id: string;
+              name?: string;
+              tokenId: string;
+              nftContract?: {
+                __typename?: 'NftContract';
+                id: string;
+                chain: Chain;
+                address: string;
+              };
+              image?: { __typename?: 'Image'; id: string; url: string };
+              collection?: {
+                __typename?: 'NftCollection';
+                id: string;
+                name?: string;
+              };
+            };
+          }
+        | {
+            __typename: 'NftApproveForAll';
+            id: string;
+            nftStandard: NftStandard;
+            operatorAddress: string;
+            approved: boolean;
+            asset: {
+              __typename?: 'NftAsset';
+              id: string;
+              name?: string;
+              tokenId: string;
+              nftContract?: {
+                __typename?: 'NftContract';
+                id: string;
+                chain: Chain;
+                address: string;
+              };
+              image?: { __typename?: 'Image'; id: string; url: string };
+              collection?: {
+                __typename?: 'NftCollection';
+                id: string;
+                name?: string;
+              };
+            };
+          }
+        | {
+            __typename: 'NftTransfer';
+            id: string;
+            nftStandard: NftStandard;
+            sender: string;
+            recipient: string;
+            direction: TransactionDirection;
+            asset: {
+              __typename?: 'NftAsset';
+              id: string;
+              name?: string;
+              tokenId: string;
+              nftContract?: {
+                __typename?: 'NftContract';
+                id: string;
+                chain: Chain;
+                address: string;
+              };
+              image?: { __typename?: 'Image'; id: string; url: string };
+              collection?: {
+                __typename?: 'NftCollection';
+                id: string;
+                name?: string;
+              };
+            };
+          }
+        | {
+            __typename: 'TokenApproval';
+            id: string;
+            tokenStandard: TokenStandard;
+            approvedAddress: string;
+            quantity: string;
+            asset: {
+              __typename?: 'Token';
+              id: string;
+              name?: string;
+              symbol?: string;
+              address?: string;
+              decimals?: number;
+              chain: Chain;
+              standard?: TokenStandard;
+              project?: {
+                __typename?: 'TokenProject';
+                id: string;
+                isSpam?: boolean;
+                logo?: { __typename?: 'Image'; id: string; url: string };
+              };
+            };
+          }
+        | {
+            __typename: 'TokenTransfer';
+            id: string;
+            tokenStandard: TokenStandard;
+            quantity: string;
+            sender: string;
+            recipient: string;
+            direction: TransactionDirection;
+            asset: {
+              __typename?: 'Token';
+              id: string;
+              name?: string;
+              symbol?: string;
+              address?: string;
+              decimals?: number;
+              chain: Chain;
+              standard?: TokenStandard;
+              project?: {
+                __typename?: 'TokenProject';
+                id: string;
+                isSpam?: boolean;
+                logo?: { __typename?: 'Image'; id: string; url: string };
+              };
+            };
+            transactedValue?: {
+              __typename?: 'Amount';
+              id: string;
+              currency?: Currency;
+              value: number;
+            };
+          }
+      >;
+    }>;
+  }>;
+};
