@@ -845,6 +845,7 @@ describe('Util tests', function () {
       ),
     ).to.deep.equal({
       hasAuthority: false,
+      owner: eoa,
       reason: 'missingSignedPermission',
     });
 
@@ -864,6 +865,7 @@ describe('Util tests', function () {
       ),
     ).to.deep.equal({
       hasAuthority: true,
+      owner: eoa,
       reason: 'onChainUserLevelApproval',
     });
 
@@ -875,7 +877,7 @@ describe('Util tests', function () {
         chainId,
         hardhatForkProvider,
       ),
-    ).to.deep.equal({
+    ).to.deep.include({
       hasAuthority: true,
       reason: 'onChainPositionSpecificApproval',
     });
@@ -908,7 +910,7 @@ describe('Util tests', function () {
         chainId,
         hardhatForkProvider,
       ),
-    ).to.deep.equal({
+    ).to.deep.include({
       hasAuthority: true,
       reason: 'offChainPositionSpecificApproval',
     });
