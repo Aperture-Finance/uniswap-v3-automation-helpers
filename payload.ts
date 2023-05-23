@@ -17,10 +17,12 @@ export function generateLimitOrderCloseRequestPayload(
   feeTier: FeeAmount,
   maxGasProportion: number,
 ): Payload {
-  const token0 = [
-    outerLimitPrice.baseCurrency.address,
-    outerLimitPrice.quoteCurrency.address,
-  ].sort()[0];
+  // Note that we should use `Token.sortsBefore()` to compare two tokens instead of directly comparing their addresses because an address can be checksum-ed.
+  const token0 = outerLimitPrice.baseCurrency.sortsBefore(
+    outerLimitPrice.quoteCurrency,
+  )
+    ? outerLimitPrice.baseCurrency.address
+    : outerLimitPrice.quoteCurrency.address;
   return {
     ownerAddr,
     chainId,

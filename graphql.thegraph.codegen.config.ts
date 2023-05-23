@@ -2,14 +2,14 @@
 
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
-// Generates TS objects from the Uniswap graphql schema.
+// Generates TS objects from the schemas returned by graphql queries
 // To learn more: https://www.apollographql.com/docs/react/development-testing/static-typing/#setting-up-your-project
 const config: CodegenConfig = {
   overwrite: true,
-  schema: 'data/uniswap-data-schema.graphql',
-  documents: ['data/uniswap-data-document.graphql'],
+  schema: 'data/uniswap-thegraph-schema.graphql',
+  documents: ['data/uniswap-thegraph-document.graphql'],
   generates: {
-    'data/__graphql_generated__/uniswap-data-types-and-hooks.ts': {
+    'data/__graphql_generated__/uniswap-thegraph-types-and-hooks.ts': {
       plugins: ['typescript', 'typescript-operations'],
       config: {
         withHooks: true,

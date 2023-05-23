@@ -28,7 +28,7 @@ import {
   alignPriceToClosestUsableTick,
   priceToClosestUsableTick,
 } from '../tick';
-import { getPool } from '../pool';
+import { getFeeTierDistribution, getPool } from '../pool';
 import {
   ActionTypeEnum,
   ApertureSupportedChainId,
@@ -989,5 +989,27 @@ describe('Wallet activity tests', function () {
       nonce: undefined,
       otherAccount: '0x95E333ea9f678111ED30c8f7A002d8C3aDA1EC09',
     });
+  });
+});
+
+describe('Pool subgraph query tests', function () {
+  it('Fee tier distribution', async function () {
+    const distribution = await getFeeTierDistribution(
+      chainId,
+      WBTC_ADDRESS,
+      WETH_ADDRESS,
+    );
+    const distributionOppositeTokenOrder = await getFeeTierDistribution(
+      chainId,
+      WETH_ADDRESS,
+      WBTC_ADDRESS,
+    );
+    expect(distribution).to.deep.equal(distributionOppositeTokenOrder);
+    expect(
+      Object.values(distribution).reduce(
+        (partialSum, num) => partialSum + num,
+        0,
+      ),
+    ).to.be.approximately(/*expected=*/ 1, /*delta=*/ 1e-9);
   });
 });

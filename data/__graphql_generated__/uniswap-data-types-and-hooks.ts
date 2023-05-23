@@ -26,7 +26,6 @@ export type Scalars = {
    * strings.  Invalid JSON strings like "**{a: 1}**", "**{'a': 1}**" and "**Unquoted
    * string**" will throw GraphQL validation errors.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   AWSJSON: any;
 };
 
@@ -156,7 +155,7 @@ export type Image = {
   url: Scalars['String'];
 };
 
-/**   TODO: deprecate this enum */
+/** TODO: deprecate this enum */
 export enum MarketSortableField {
   MarketCap = 'MARKET_CAP',
   Volume = 'VOLUME',
@@ -215,7 +214,7 @@ export enum NftActivityType {
 export type NftApproval = {
   __typename?: 'NftApproval';
   approvedAddress: Scalars['String'];
-  /**   can be erc721, erc1155, noncompliant */
+  /** can be erc721, erc1155, noncompliant */
   asset: NftAsset;
   id: Scalars['ID'];
   nftStandard: NftStandard;
@@ -224,7 +223,7 @@ export type NftApproval = {
 export type NftApproveForAll = {
   __typename?: 'NftApproveForAll';
   approved: Scalars['Boolean'];
-  /**   can be erc721, erc1155, noncompliant */
+  /** can be erc721, erc1155, noncompliant */
   asset: NftAsset;
   id: Scalars['ID'];
   nftStandard: NftStandard;
@@ -247,7 +246,7 @@ export type NftAsset = {
   name?: Maybe<Scalars['String']>;
   nftContract?: Maybe<NftContract>;
   originalImage?: Maybe<Image>;
-  /**   TODO: may need to be array to support erc1155 cases. not needed at the moment so will revisit. */
+  /** TODO: may need to be array to support erc1155 cases. not needed at the moment so will revisit. */
   ownerAddress?: Maybe<Scalars['String']>;
   rarities?: Maybe<Array<NftAssetRarity>>;
   smallImage?: Maybe<Image>;
@@ -570,9 +569,9 @@ export type NftTrade = {
   contractAddress: Scalars['String'];
   id: Scalars['ID'];
   marketplace: NftMarketplace;
-  /**   price represents the current price of the NFT, which can be different from quotePrice */
+  /** price represents the current price of the NFT, which can be different from quotePrice */
   price: TokenAmount;
-  /**   quotePrice represents the last quoted price of the NFT */
+  /** quotePrice represents the last quoted price of the NFT */
   quotePrice?: Maybe<TokenAmount>;
   tokenId: Scalars['String'];
   tokenType?: Maybe<NftStandard>;
@@ -618,7 +617,7 @@ export type PageInfo = {
   startCursor?: Maybe<Scalars['String']>;
 };
 
-/**   v2 pool parameters as defined by https://github.com/Uniswap/v2-sdk/blob/main/src/entities/pair.ts */
+/** v2 pool parameters as defined by https://github.com/Uniswap/v2-sdk/blob/main/src/entities/pair.ts */
 export type PairInput = {
   tokenAmountA: TokenAmountInput;
   tokenAmountB: TokenAmountInput;
@@ -638,7 +637,7 @@ export type PermitInput = {
   spender: Scalars['String'];
 };
 
-/**   v3 pool parameters as defined by https://github.com/Uniswap/v3-sdk/blob/main/src/entities/pool.ts */
+/** v3 pool parameters as defined by https://github.com/Uniswap/v3-sdk/blob/main/src/entities/pool.ts */
 export type PoolInput = {
   fee: Scalars['Int'];
   liquidity: Scalars['String'];
@@ -652,7 +651,7 @@ export type Portfolio = {
   __typename?: 'Portfolio';
   assetActivities?: Maybe<Array<Maybe<AssetActivity>>>;
   id: Scalars['ID'];
-  /**   TODO: (michael.zhang) replace with paginated query */
+  /** TODO: (michael.zhang) replace with paginated query */
   nftBalances?: Maybe<Array<Maybe<NftBalance>>>;
   ownerAddress: Scalars['String'];
   tokenBalances?: Maybe<Array<Maybe<TokenBalance>>>;
@@ -847,7 +846,7 @@ export type TokenAmountInput = {
 export type TokenApproval = {
   __typename?: 'TokenApproval';
   approvedAddress: Scalars['String'];
-  /**   can be erc20 or native */
+  /** can be erc20 or native */
   asset: Token;
   id: Scalars['ID'];
   quantity: Scalars['String'];

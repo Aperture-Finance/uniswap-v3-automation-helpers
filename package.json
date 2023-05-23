@@ -1,7 +1,7 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
@@ -9,7 +9,8 @@
     "lint": "eslint ./ --quiet",
     "lint:fix": "eslint ./ --quiet --fix && prettier -w ./",
     "prettier": "prettier -c ./",
-    "graphql:generate:data": "graphql-codegen --config graphql.data.codegen.config.ts"
+    "graphql:generate:data": "graphql-codegen --config graphql.data.codegen.config.ts",
+    "graphql:generate:thegraph": "graphql-codegen --config graphql.thegraph.codegen.config.ts"
   },
   "repository": {
     "type": "git",
