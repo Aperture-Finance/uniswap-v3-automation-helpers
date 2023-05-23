@@ -11,7 +11,7 @@ import {
   TransactionStatus,
   TokenApprovalPartsFragment,
   TokenTransferPartsFragment,
-} from './data/__graphql_generated__/types-and-hooks';
+} from './data/__graphql_generated__/uniswap-data-types-and-hooks';
 import { Currency } from '@uniswap/sdk-core';
 import { getAddress } from 'ethers/lib/utils';
 import {
