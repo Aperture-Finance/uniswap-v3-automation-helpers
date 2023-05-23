@@ -45,6 +45,7 @@ import {
   getCollectedFeesFromReceipt,
   getPosition,
   getPositionFromBasicInfo,
+  getTokenSvg,
   isPositionInRange,
 } from '../position';
 import {
@@ -949,6 +950,10 @@ describe('Util tests', function () {
       hardhatForkProvider,
     );
     expect(isPositionInRange(outOfRangePosition)).to.equal(false);
+  });
+
+  it('Token Svg', async function () {
+    await getTokenSvg(chainId, 4, hardhatForkProvider);
   });
 });
 
