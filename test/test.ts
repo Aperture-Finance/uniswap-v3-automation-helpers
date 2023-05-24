@@ -79,7 +79,7 @@ const TEST_WALLET_PRIVATE_KEY =
   '0x077646fb889571f9ce30e420c155812277271d4d914c799eef764f5709cafd5b';
 
 async function resetHardhatNetwork() {
-  hardhatReset(
+  await hardhatReset(
     `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
     /*blockNumber=*/ 17188000,
   );
