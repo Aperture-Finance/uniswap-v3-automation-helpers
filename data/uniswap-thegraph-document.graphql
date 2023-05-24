@@ -24,7 +24,5 @@ query AllV3Ticks($poolAddress: String, $skip: Int!) {
   ) {
     tick: tickIdx
     liquidityNet
-    price0
-    price1
   }
 }

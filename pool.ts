@@ -1,5 +1,10 @@
 import { Provider } from '@ethersproject/abstract-provider';
-import { FeeAmount, Pool, computePoolAddress } from '@uniswap/v3-sdk';
+import {
+  FeeAmount,
+  Pool,
+  TICK_SPACINGS,
+  computePoolAddress,
+} from '@uniswap/v3-sdk';
 import { BasicPositionInfo } from './position';
 import {
   ApertureSupportedChainId,
@@ -8,7 +13,11 @@ import {
 import { getChainInfo } from './chain';
 import { Token } from '@uniswap/sdk-core';
 import axios from 'axios';
-import { FeeTierDistributionQuery } from './data/__graphql_generated__/uniswap-thegraph-types-and-hooks';
+import {
+  AllV3TicksQuery,
+  FeeTierDistributionQuery,
+} from './data/__graphql_generated__/uniswap-thegraph-types-and-hooks';
+import JSBI from 'jsbi';
 
 /**
  * Constructs a Uniswap SDK Pool object for the pool behind the specified position.
@@ -153,4 +162,80 @@ export async function getFeeTierDistribution(
     [FeeAmount.MEDIUM]: getFeeTierFraction(FeeAmount.MEDIUM),
     [FeeAmount.HIGH]: getFeeTierFraction(FeeAmount.HIGH),
   };
+}
+
+export type TickNumber = number;
+export type LiquidityAmount = JSBI;
+
+/**
+ * Fetches the liquidity for all ticks for the specified pool.
+ * @param chainId Chain id.
+ * @param pool The liquidity pool to fetch the tick to liquidity map for.
+ * @returns A map from tick numbers to liquidity amounts for the specified pool.
+ */
+export async function getTickToLiquidityMapForPool(
+  chainId: ApertureSupportedChainId,
+  pool: Pool,
+): Promise<Map<TickNumber, LiquidityAmount>> {
+  if (chainId !== ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID) {
+    throw 'Unsupported chain id for fetching liquidity for all ticks from subgraph';
+  }
+  let rawData: AllV3TicksQuery['ticks'] = [];
+  const numTicksPerQuery = 1000;
+  const chainInfo = getChainInfo(chainId);
+  const poolAddress = computePoolAddress({
+    factoryAddress: chainInfo.uniswap_v3_factory,
+    tokenA: pool.token0,
+    tokenB: pool.token1,
+    fee: pool.fee,
+  }).toLowerCase();
+  for (let skip = 0; ; skip += numTicksPerQuery) {
+    const response: AllV3TicksQuery | undefined = (
+      await axios.post(chainInfo.uniswap_subgraph_url!, {
+        operationName: 'AllV3Ticks',
+        variables: {
+          poolAddress,
+          skip,
+        },
+        query: `
+          query AllV3Ticks($poolAddress: String, $skip: Int!) {
+            ticks(first: 1000, skip: $skip, where: { poolAddress: $poolAddress }, orderBy: tickIdx) {
+              tick: tickIdx
+              liquidityNet
+            }
+          }
+        `,
+      })
+    ).data.data;
+    const numItems = response?.ticks.length ?? 0;
+    if (numItems > 0) {
+      rawData = rawData.concat(response!.ticks);
+    }
+    // We fetch 1000 items per query, so if we get less than that, then we know that we have fetched all the items.
+    if (numItems < numTicksPerQuery) {
+      break;
+    }
+  }
+
+  const data = new Map<TickNumber, LiquidityAmount>();
+  if (rawData.length > 0) {
+    rawData.sort((a, b) => Number(a.tick) - Number(b.tick));
+    let currentLiquidity = JSBI.BigInt(0);
+    let rawDataIndex = 0;
+    for (
+      let tick = Number(rawData[0].tick);
+      rawDataIndex < rawData.length;
+      tick += TICK_SPACINGS[pool.fee]
+    ) {
+      if (tick === Number(rawData[rawDataIndex].tick)) {
+        currentLiquidity = JSBI.add(
+          currentLiquidity,
+          JSBI.BigInt(rawData[rawDataIndex].liquidityNet as string),
+        );
+        rawDataIndex++;
+      }
+      data.set(tick, currentLiquidity);
+    }
+  }
+  return data;
 }

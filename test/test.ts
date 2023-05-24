@@ -28,7 +28,11 @@ import {
   alignPriceToClosestUsableTick,
   priceToClosestUsableTick,
 } from '../tick';
-import { getFeeTierDistribution, getPool } from '../pool';
+import {
+  getFeeTierDistribution,
+  getPool,
+  getTickToLiquidityMapForPool,
+} from '../pool';
 import {
   ActionTypeEnum,
   ApertureSupportedChainId,
@@ -58,6 +62,7 @@ import {
   generateLimitOrderCloseRequestPayload,
 } from '../payload';
 import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
+import JSBI from 'jsbi';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1013,5 +1018,18 @@ describe('Pool subgraph query tests', function () {
         0,
       ),
     ).to.be.approximately(/*expected=*/ 1, /*delta=*/ 1e-9);
+  });
+
+  it('Tick liquidity distribution', async function () {
+    const WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
+    const WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
+    const tickToLiquidityMap = await getTickToLiquidityMapForPool(
+      chainId,
+      await getPool(WETH, WBTC, FeeAmount.LOW, chainId, hardhatForkProvider),
+    );
+    expect(tickToLiquidityMap.size).to.be.greaterThan(0);
+    for (const liquidity of tickToLiquidityMap.values()) {
+      expect(JSBI.greaterThanOrEqual(liquidity, JSBI.BigInt(0))).to.equal(true);
+    }
   });
 });
