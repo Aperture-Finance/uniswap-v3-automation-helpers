@@ -92,6 +92,7 @@ export async function getPool(
 
 /**
  * Fetches the TVL distribution of the different fee tiers behind the specified token pair.
+ * Implementation heavily adapted from https://github.com/Uniswap/interface/blob/bd4042aa16cbd035f4b543272ef9ae301c96e8c9/src/hooks/useFeeTierDistribution.ts#L76.
  * @param chainId Chain id.
  * @param tokenA Address of one of the tokens in the pool.
  * @param tokenB Address of the other token in the pool.
