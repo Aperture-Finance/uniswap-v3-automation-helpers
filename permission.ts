@@ -9,6 +9,7 @@ import { getChainInfo } from './chain';
 
 export interface PositionApprovalStatus {
   hasAuthority: boolean;
+  owner: string;
   reason: string;
   error?: Error | unknown;
 }
@@ -38,6 +39,7 @@ export async function checkPositionApprovalStatus(
   ]);
   if (approved == chainInfo.aperture_uniswap_v3_automan) {
     return {
+      owner,
       hasAuthority: true,
       reason: 'onChainPositionSpecificApproval',
     };
@@ -48,12 +50,14 @@ export async function checkPositionApprovalStatus(
   );
   if (automanIsOperator) {
     return {
+      owner,
       hasAuthority: true,
       reason: 'onChainUserLevelApproval',
     };
   }
   if (permitInfo === undefined) {
     return {
+      owner,
       hasAuthority: false,
       reason: 'missingSignedPermission',
     };
@@ -69,11 +73,13 @@ export async function checkPositionApprovalStatus(
       permitSignature.s,
     );
     return {
+      owner,
       hasAuthority: true,
       reason: 'offChainPositionSpecificApproval',
     };
   } catch (err) {
     return {
+      owner,
       hasAuthority: false,
       reason: 'invalidSignedPermission',
       error: err,
@@ -86,6 +92,7 @@ export async function checkPositionApprovalStatus(
  * @param chainId Chain id.
  * @param positionId Id of the position to generate permission for.
  * @param deadlineEpochSeconds The signed permission will be valid until this deadline specified in number of seconds since UNIX epoch.
+ * @param provider Ethers provider.
  * @returns An object containing typed data ready to be signed with, for example, ethers `Wallet._signTypedData(domain, types, value)`.
  */
 export async function generateTypedDataForPermit(
