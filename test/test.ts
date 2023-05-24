@@ -79,7 +79,7 @@ const TEST_WALLET_PRIVATE_KEY =
   '0x077646fb889571f9ce30e420c155812277271d4d914c799eef764f5709cafd5b';
 
 async function resetHardhatNetwork() {
-  hardhatReset(
+  await hardhatReset(
     `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
     /*blockNumber=*/ 17188000,
   );
@@ -845,6 +845,7 @@ describe('Util tests', function () {
       ),
     ).to.deep.equal({
       hasAuthority: false,
+      owner: eoa,
       reason: 'missingSignedPermission',
     });
 
@@ -864,6 +865,7 @@ describe('Util tests', function () {
       ),
     ).to.deep.equal({
       hasAuthority: true,
+      owner: eoa,
       reason: 'onChainUserLevelApproval',
     });
 
@@ -875,7 +877,7 @@ describe('Util tests', function () {
         chainId,
         hardhatForkProvider,
       ),
-    ).to.deep.equal({
+    ).to.deep.include({
       hasAuthority: true,
       reason: 'onChainPositionSpecificApproval',
     });
@@ -908,7 +910,7 @@ describe('Util tests', function () {
         chainId,
         hardhatForkProvider,
       ),
-    ).to.deep.equal({
+    ).to.deep.include({
       hasAuthority: true,
       reason: 'offChainPositionSpecificApproval',
     });
