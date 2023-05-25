@@ -12,6 +12,7 @@ export interface WhitelistedPool {
 /**
  * Returns a map of whitelisted pools for the specified chain.
  * @param chainId Chain id.
+ * @param whitelistedPoolsJson Whitelisted pools JSON.
  * @returns A map of whitelisted pools keyed by pool addresses.
  */
 export function getWhitelistedPools(
