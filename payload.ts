@@ -2,7 +2,7 @@ import {
   ActionTypeEnum,
   ApertureSupportedChainId,
   ConditionTypeEnum,
-  Payload,
+  CreateTriggerPayload,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { BigNumberish } from 'ethers';
 import { FeeAmount } from '@uniswap/v3-sdk';
@@ -16,7 +16,7 @@ export function generateLimitOrderCloseRequestPayload(
   inputCurrencyAmount: CurrencyAmount<Currency>,
   feeTier: FeeAmount,
   maxGasProportion: number,
-): Payload {
+): CreateTriggerPayload {
   // Note that we should use `Token.sortsBefore()` to compare two tokens instead of directly comparing their addresses because an address can be checksum-ed.
   const token0 = outerLimitPrice.baseCurrency.sortsBefore(
     outerLimitPrice.quoteCurrency,
@@ -51,7 +51,7 @@ export function generateAutoCompoundRequestPayload(
   feeToPrincipalRatioThreshold: number,
   slippage: number,
   maxGasProportion: number,
-): Payload {
+): CreateTriggerPayload {
   return {
     ownerAddr,
     chainId,

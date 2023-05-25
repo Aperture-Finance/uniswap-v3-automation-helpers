@@ -77,6 +77,7 @@ function getTxToNonfungiblePositionManager(
  * @param inputCurrencyAmount The amount of input asset that the user wants to sell.
  * @param poolFee The fee tier of the liquidity pool that the limit order position should be created on.
  * @param deadlineEpochSeconds Transaction deadline in seconds since UNIX epoch.
+ * @param chainId Chain id.
  * @param provider Ethers provider.
  * @returns The unsigned transaction that creates such a position.
  */
@@ -85,7 +86,7 @@ export async function getCreatePositionTxForLimitOrder(
   outerLimitPrice: Price<Token, Token>,
   inputCurrencyAmount: CurrencyAmount<Currency>,
   poolFee: FeeAmount,
-  deadlineEpochSeconds: number,
+  deadlineEpochSeconds: BigNumberish,
   chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<TransactionRequest> {
@@ -146,7 +147,7 @@ export async function getCreatePositionTxForLimitOrder(
     position,
     {
       slippageTolerance: new Percent(0),
-      deadline: deadlineEpochSeconds,
+      deadline: deadlineEpochSeconds.toString(),
       useNative: inputCurrencyAmount.currency.isNative
         ? getNativeCurrency(chainId)
         : undefined,
@@ -165,6 +166,7 @@ export async function getCreatePositionTxForLimitOrder(
  * @param position The position to create.
  * @param options Options.
  * @param chainId Chain id.
+ * @param provider Ethers provider.
  * @returns The unsigned tx.
  */
 export async function getCreatePositionTx(
@@ -203,6 +205,7 @@ export async function getCreatePositionTx(
  * @param increaseLiquidityOptions Increase liquidity options.
  * @param chainId Chain id.
  * @param provider Ethers provider.
+ * @param liquidityToAdd The amount of liquidity to add to the existing position.
  * @param position Uniswap SDK Position object for the specified position (optional); if undefined, one will be created.
  * @returns The unsigned tx.
  */
