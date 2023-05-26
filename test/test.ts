@@ -21,6 +21,7 @@ import {
   FeeAmount,
   Position,
   TICK_SPACINGS,
+  nearestUsableTick,
   priceToClosestTick,
   tickToPrice,
 } from '@uniswap/v3-sdk';
@@ -63,6 +64,7 @@ import {
 } from '../payload';
 import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
 import JSBI from 'jsbi';
+import { getPublicProvider } from '../provider';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1021,15 +1023,25 @@ describe('Pool subgraph query tests', function () {
   });
 
   it('Tick liquidity distribution', async function () {
-    const WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
-    const WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
+    const provider = getPublicProvider(chainId);
+    const WBTC = await getToken(WBTC_ADDRESS, chainId, provider);
+    const WETH = await getToken(WETH_ADDRESS, chainId, provider);
+    const pool = await getPool(WETH, WBTC, FeeAmount.LOW, chainId, provider);
     const tickToLiquidityMap = await getTickToLiquidityMapForPool(
       chainId,
-      await getPool(WETH, WBTC, FeeAmount.LOW, chainId, hardhatForkProvider),
+      pool,
     );
     expect(tickToLiquidityMap.size).to.be.greaterThan(0);
     for (const liquidity of tickToLiquidityMap.values()) {
       expect(JSBI.greaterThanOrEqual(liquidity, JSBI.BigInt(0))).to.equal(true);
     }
+    expect(
+      JSBI.equal(
+        pool.liquidity,
+        tickToLiquidityMap.get(
+          nearestUsableTick(pool.tickCurrent, TICK_SPACINGS[FeeAmount.LOW]),
+        )!,
+      ),
+    ).to.equal(true);
   });
 });

@@ -181,7 +181,7 @@ export async function getTickToLiquidityMapForPool(
     throw 'Unsupported chain id for fetching liquidity for all ticks from subgraph';
   }
   let rawData: AllV3TicksQuery['ticks'] = [];
-  const numTicksPerQuery = 1000;
+  const numTicksPerQuery = 2000;
   const chainInfo = getChainInfo(chainId);
   const poolAddress = computePoolAddress({
     factoryAddress: chainInfo.uniswap_v3_factory,
@@ -222,6 +222,7 @@ export async function getTickToLiquidityMapForPool(
     rawData.sort((a, b) => Number(a.tick) - Number(b.tick));
     let currentLiquidity = JSBI.BigInt(0);
     let rawDataIndex = 0;
+    // TODO: For plotting we don't need a datapoint for each tick spacing. Consider decreasing the size of the returned map.
     for (
       let tick = Number(rawData[0].tick);
       rawDataIndex < rawData.length;
