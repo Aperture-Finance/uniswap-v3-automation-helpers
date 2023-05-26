@@ -394,7 +394,6 @@ function parseActivity(
   }
 }
 
-// TODO: Consider using Apollo client to request activities instead of manually crafting the request.
 /**
  * Fetches wallet activities for the specified address. Activities include ERC-20 and NFT token transfers, approvals, and Uniswap trades and liquidity management.
  * @param address The wallet address to fetch activities for.

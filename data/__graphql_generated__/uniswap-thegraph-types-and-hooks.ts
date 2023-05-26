@@ -5294,11 +5294,5 @@ export type AllV3TicksQueryVariables = Exact<{
 
 export type AllV3TicksQuery = {
   __typename?: 'Query';
-  ticks: Array<{
-    __typename?: 'Tick';
-    liquidityNet: any;
-    price0: any;
-    price1: any;
-    tick: any;
-  }>;
+  ticks: Array<{ __typename?: 'Tick'; liquidityNet: any; tick: any }>;
 };

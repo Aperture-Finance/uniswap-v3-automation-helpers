@@ -21,6 +21,7 @@ import {
   FeeAmount,
   Position,
   TICK_SPACINGS,
+  computePoolAddress,
   priceToClosestTick,
   tickToPrice,
 } from '@uniswap/v3-sdk';
@@ -28,7 +29,11 @@ import {
   alignPriceToClosestUsableTick,
   priceToClosestUsableTick,
 } from '../tick';
-import { getFeeTierDistribution, getPool } from '../pool';
+import {
+  getFeeTierDistribution,
+  getPool,
+  getTickToLiquidityMapForPool,
+} from '../pool';
 import {
   ActionTypeEnum,
   ApertureSupportedChainId,
@@ -58,6 +63,9 @@ import {
   generateLimitOrderCloseRequestPayload,
 } from '../payload';
 import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
+import JSBI from 'jsbi';
+import { getPublicProvider } from '../provider';
+import axios from 'axios';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1013,5 +1021,52 @@ describe('Pool subgraph query tests', function () {
         0,
       ),
     ).to.be.approximately(/*expected=*/ 1, /*delta=*/ 1e-9);
+  });
+
+  it('Tick liquidity distribution', async function () {
+    const provider = getPublicProvider(chainId);
+    const WBTC = await getToken(WBTC_ADDRESS, chainId, provider);
+    const WETH = await getToken(WETH_ADDRESS, chainId, provider);
+    const pool = await getPool(WETH, WBTC, FeeAmount.LOW, chainId, provider);
+    const tickToLiquidityMap = await getTickToLiquidityMapForPool(
+      chainId,
+      pool,
+    );
+    expect(tickToLiquidityMap.size).to.be.greaterThan(0);
+    for (const liquidity of tickToLiquidityMap.values()) {
+      expect(JSBI.greaterThanOrEqual(liquidity, JSBI.BigInt(0))).to.equal(true);
+    }
+
+    // Fetch current in-range liquidity from subgraph.
+    const chainInfo = getChainInfo(chainId);
+    const poolAddress = computePoolAddress({
+      factoryAddress: chainInfo.uniswap_v3_factory!,
+      tokenA: WBTC,
+      tokenB: WETH,
+      fee: FeeAmount.LOW,
+    });
+    const poolResponse = (
+      await axios.post(chainInfo.uniswap_subgraph_url!, {
+        operationName: 'PoolLiquidity',
+        variables: {},
+        query: `
+          query PoolLiquidity {
+            pool(id: "${poolAddress.toLowerCase()}") {
+              liquidity
+              tick
+            }
+          }`,
+      })
+    ).data.data.pool;
+    const inRangeLiquidity = JSBI.BigInt(poolResponse.liquidity);
+    const tickSpacing = TICK_SPACINGS[FeeAmount.LOW];
+    const tickCurrentAligned =
+      Math.floor(Number(poolResponse.tick) / tickSpacing) * tickSpacing;
+    expect(
+      JSBI.equal(
+        JSBI.BigInt(inRangeLiquidity),
+        tickToLiquidityMap.get(tickCurrentAligned)!,
+      ),
+    ).to.equal(true);
   });
 });
