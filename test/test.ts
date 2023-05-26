@@ -21,7 +21,7 @@ import {
   FeeAmount,
   Position,
   TICK_SPACINGS,
-  nearestUsableTick,
+  computePoolAddress,
   priceToClosestTick,
   tickToPrice,
 } from '@uniswap/v3-sdk';
@@ -65,6 +65,7 @@ import {
 import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
 import JSBI from 'jsbi';
 import { getPublicProvider } from '../provider';
+import axios from 'axios';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1035,12 +1036,36 @@ describe('Pool subgraph query tests', function () {
     for (const liquidity of tickToLiquidityMap.values()) {
       expect(JSBI.greaterThanOrEqual(liquidity, JSBI.BigInt(0))).to.equal(true);
     }
+
+    // Fetch current in-range liquidity from subgraph.
+    const chainInfo = getChainInfo(chainId);
+    const poolAddress = computePoolAddress({
+      factoryAddress: chainInfo.uniswap_v3_factory!,
+      tokenA: WBTC,
+      tokenB: WETH,
+      fee: FeeAmount.LOW,
+    });
+    const poolResponse = (
+      await axios.post(chainInfo.uniswap_subgraph_url!, {
+        operationName: 'PoolLiquidity',
+        variables: {},
+        query: `
+          query PoolLiquidity {
+            pool(id: "${poolAddress.toLowerCase()}") {
+              liquidity
+              tick
+            }
+          }`,
+      })
+    ).data.data.pool;
+    const inRangeLiquidity = JSBI.BigInt(poolResponse.liquidity);
+    const tickSpacing = TICK_SPACINGS[FeeAmount.LOW];
+    const tickCurrentAligned =
+      Math.floor(Number(poolResponse.tick) / tickSpacing) * tickSpacing;
     expect(
       JSBI.equal(
-        pool.liquidity,
-        tickToLiquidityMap.get(
-          nearestUsableTick(pool.tickCurrent, TICK_SPACINGS[FeeAmount.LOW]),
-        )!,
+        JSBI.BigInt(inRangeLiquidity),
+        tickToLiquidityMap.get(tickCurrentAligned)!,
       ),
     ).to.equal(true);
   });
