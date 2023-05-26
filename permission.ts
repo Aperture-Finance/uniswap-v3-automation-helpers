@@ -98,7 +98,7 @@ export async function checkPositionApprovalStatus(
 export async function generateTypedDataForPermit(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
-  deadlineEpochSeconds: number,
+  deadlineEpochSeconds: BigNumberish,
   provider: Provider,
 ): Promise<{
   domain: TypedDataDomain;

@@ -241,12 +241,12 @@ function parseSendReceive(
     return transfer.direction === 'IN'
       ? {
           title: `Received`,
-          descriptor: `${amount} ${assetName} ${`from`} `,
+          descriptor: `${amount} ${assetName} from `,
           otherAccount: isAddress(transfer.sender) || undefined,
         }
       : {
           title: `Sent`,
-          descriptor: `${amount} ${assetName} ${`to`} `,
+          descriptor: `${amount} ${assetName} to `,
           otherAccount: isAddress(transfer.recipient) || undefined,
         };
   }
