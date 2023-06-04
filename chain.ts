@@ -1,8 +1,8 @@
+import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { getAddress } from 'ethers/lib/utils';
 import whitelistedPoolsEthereum from './data/whitelistedPools-1.json';
 import whitelistedPoolsArbitrum from './data/whitelistedPools-42161.json';
 import { WhitelistedPool, getWhitelistedPools } from './whitelist';
-import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 
 export interface ChainInfo {
   uniswap_v3_factory: string;

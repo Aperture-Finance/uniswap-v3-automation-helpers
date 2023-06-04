@@ -1,7 +1,7 @@
 import { Price, Token } from '@uniswap/sdk-core';
+import axios from 'axios';
 import JSBI from 'jsbi';
 import { getChainInfo } from './chain';
-import axios from 'axios';
 
 /**
  * Parses the specified price string for the price of `baseToken` denominated in `quoteToken`.

@@ -1,7 +1,7 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
@@ -29,14 +29,12 @@
   "homepage": "https://aperture.finance/",
   "dependencies": {
     "@0xsequence/multicall": "^0.43.29",
-    "@aperture_finance/uniswap-v3-automation-sdk": "^0.1.5",
+    "@aperture_finance/uniswap-v3-automation-sdk": "^0.1.9",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
-    "@uniswap/sdk-core": "^3.2.2",
     "@uniswap/v3-sdk": "^3.9.0",
     "axios": "^1.4.0",
-    "ethers": "^5.7.2",
-    "jsbi": "^3.1.4"
+    "ethers": "5.7.2"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^3.3.1",
@@ -48,17 +46,17 @@
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.16.3",
-    "@typescript-eslint/eslint-plugin": "^5.59.7",
-    "@typescript-eslint/parser": "^5.59.7",
+    "@typescript-eslint/eslint-plugin": "^5.59.8",
+    "@typescript-eslint/parser": "^5.59.8",
     "chai": "^4.3.7",
     "chai-as-promised": "^7.1.1",
-    "eslint": "^8.41.0",
+    "eslint": "^8.42.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
     "graphql": "^16.6.0",
-    "hardhat": "^2.14.0",
+    "hardhat": "^2.14.1",
     "prettier": "^2.8.8",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.4"
+    "typescript": "^5.1.3"
   }
 }

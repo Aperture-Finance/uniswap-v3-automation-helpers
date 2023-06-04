@@ -188,7 +188,7 @@ function parseLPTransfers(changes: TransactionFragments) {
   const poolTokenA = changes.TokenTransfer[0];
   const poolTokenB = changes.TokenTransfer[1];
 
-  const tokenAQuanitity = formatNumberOrString(
+  const tokenAQuantity = formatNumberOrString(
     poolTokenA.quantity,
     NumberType.TokenNonTx,
   );
@@ -198,7 +198,7 @@ function parseLPTransfers(changes: TransactionFragments) {
   );
 
   return {
-    descriptor: `${tokenAQuanitity} ${poolTokenA.asset.symbol} and ${tokenBQuantity} ${poolTokenB.asset.symbol}`,
+    descriptor: `${tokenAQuantity} ${poolTokenA.asset.symbol} and ${tokenBQuantity} ${poolTokenB.asset.symbol}`,
     logos: [
       poolTokenA.asset.project?.logo?.url,
       poolTokenB.asset.project?.logo?.url,
@@ -261,7 +261,7 @@ function parseMint(
   if (Object.keys(collectionMap).length === 1) {
     const collectionName = Object.keys(collectionMap)[0];
 
-    // Edge case: Minting a v3 positon represents adding liquidity
+    // Edge case: Minting a v3 position represents adding liquidity
     if (
       changes.TokenTransfer.length === 2 &&
       callsPositionManagerContract(assetActivity)
@@ -326,7 +326,7 @@ function parseUnknown(
 }
 
 function getLogoSrcs(changes: TransactionFragments): string[] {
-  // Uses set to avoid duplicate logos (e.g. nft's w/ same image url)
+  // Uses set to avoid duplicate logos (e.g. NFTs w/ same image url)
   const logoSet = new Set<string | undefined>();
   // Uses only NFT logos if they are present (will not combine nft image w/ token image)
   if (changes.NftTransfer.length > 0) {

@@ -1,17 +1,18 @@
-import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
-import { FeeAmount, Position } from '@uniswap/v3-sdk';
-import { Provider } from '@ethersproject/abstract-provider';
-import { getChainInfo } from './chain';
-import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
-import { getPoolFromBasicPositionInfo } from './pool';
-import { getToken } from './currency';
-import { BigNumber, BigNumberish } from 'ethers';
-import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { TransactionReceipt } from '@ethersproject/abstract-provider/src.ts';
+import {
+  ApertureSupportedChainId,
+  INonfungiblePositionManager__factory,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import {
   CollectEventObject,
   DecreaseLiquidityEventObject,
 } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types/src/interfaces/INonfungiblePositionManager';
+import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
+import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
+import { FeeAmount, Position } from '@uniswap/v3-sdk';
+import { BigNumber, BigNumberish } from 'ethers';
+import { getChainInfo } from './chain';
+import { getToken } from './currency';
+import { getPoolFromBasicPositionInfo } from './pool';
 
 export interface BasicPositionInfo {
   token0: Token;
@@ -210,10 +211,11 @@ export async function getPositionIdsByOwner(
 ): Promise<BigNumber[]> {
   const npm = getNPM(chainId, provider);
   const numPositions = (await npm.balanceOf(owner)).toNumber();
-  const promises = [...Array(numPositions).keys()].map((index) =>
-    npm.tokenOfOwnerByIndex(owner, index),
+  return Promise.all(
+    [...Array(numPositions).keys()].map((index) =>
+      npm.tokenOfOwnerByIndex(owner, index),
+    ),
   );
-  return Promise.all(promises);
 }
 
 /**

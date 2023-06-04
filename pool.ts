@@ -1,23 +1,23 @@
+import {
+  ApertureSupportedChainId,
+  IUniswapV3Pool__factory,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
+import { Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
   Pool,
   TICK_SPACINGS,
   computePoolAddress,
 } from '@uniswap/v3-sdk';
-import { BasicPositionInfo } from './position';
-import {
-  ApertureSupportedChainId,
-  IUniswapV3Pool__factory,
-} from '@aperture_finance/uniswap-v3-automation-sdk';
-import { getChainInfo } from './chain';
-import { Token } from '@uniswap/sdk-core';
 import axios from 'axios';
+import JSBI from 'jsbi';
+import { getChainInfo } from './chain';
+import { BasicPositionInfo } from './position';
 import {
   AllV3TicksQuery,
   FeeTierDistributionQuery,
 } from './data/__graphql_generated__/uniswap-thegraph-types-and-hooks';
-import JSBI from 'jsbi';
 
 /**
  * Constructs a Uniswap SDK Pool object for the pool behind the specified position.
