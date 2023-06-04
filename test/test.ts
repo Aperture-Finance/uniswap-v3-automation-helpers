@@ -217,6 +217,7 @@ describe('Limit order tests', function () {
         tenWBTC,
         poolFee,
         /*maxGasProportion=*/ 0.2,
+        1627776000,
       ),
     ).to.deep.equal({
       action: {
@@ -236,6 +237,7 @@ describe('Limit order tests', function () {
       },
       nftId: '500511',
       ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
+      expiration: 1627776000,
     });
   });
 
@@ -329,6 +331,7 @@ describe('Limit order tests', function () {
         tenWETH,
         poolFee,
         /*maxGasProportion=*/ 0.2,
+        1627776000,
       ),
     ).to.deep.equal({
       action: {
@@ -348,6 +351,7 @@ describe('Limit order tests', function () {
       },
       nftId: '500512',
       ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
+      expiration: 1627776000,
     });
 
     // Create another WETH -> WBTC limit order but provide native ether this time.
@@ -397,6 +401,7 @@ describe('Limit order tests', function () {
         tenETH,
         poolFee,
         /*maxGasProportion=*/ 0.2,
+        1627776000,
       ),
     ).to.deep.equal({
       action: {
@@ -416,6 +421,7 @@ describe('Limit order tests', function () {
       },
       nftId: '500513',
       ownerAddr: '0x4bD047CA72fa05F0B89ad08FE5Ba5ccdC07DFFBF',
+      expiration: 1627776000,
     });
   });
 });
@@ -816,6 +822,7 @@ describe('Automan transaction tests', function () {
         /*feeToPrincipalRatioThreshold=*/ 0.1,
         /*slippage=*/ 0.05,
         /*maxGasProportion=*/ 0.01,
+        1627776000,
       ),
     ).to.deep.equal({
       action: {
@@ -830,6 +837,7 @@ describe('Automan transaction tests', function () {
       },
       nftId: positionId.toString(),
       ownerAddr: eoa,
+      expiration: 1627776000,
     });
   });
 });

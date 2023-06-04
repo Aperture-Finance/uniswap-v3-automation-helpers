@@ -1,10 +1,10 @@
-import { BigNumberish, TypedDataDomain, TypedDataField, ethers } from 'ethers';
-import { Provider } from '@ethersproject/abstract-provider';
-import { INonfungiblePositionManager__factory } from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types';
 import {
   ApertureSupportedChainId,
+  INonfungiblePositionManager__factory,
   PermitInfo,
-} from '@aperture_finance/uniswap-v3-automation-sdk/interfaces';
+} from '@aperture_finance/uniswap-v3-automation-sdk';
+import { Provider } from '@ethersproject/abstract-provider';
+import { BigNumberish, TypedDataDomain, TypedDataField, ethers } from 'ethers';
 import { getChainInfo } from './chain';
 
 export interface PositionApprovalStatus {

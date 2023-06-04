@@ -1,4 +1,18 @@
 import {
+  ApertureSupportedChainId,
+  INonfungiblePositionManager,
+  INonfungiblePositionManager__factory,
+  IUniV3Automan__factory,
+  IUniswapV3Factory__factory,
+  IUniswapV3Pool__factory,
+  PermitInfo,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
+import {
+  Provider,
+  TransactionReceipt,
+  TransactionRequest,
+} from '@ethersproject/providers';
+import {
   BigintIsh,
   Currency,
   CurrencyAmount,
@@ -18,37 +32,23 @@ import {
   tickToPrice,
 } from '@uniswap/v3-sdk';
 import { BigNumber, BigNumberish } from 'ethers';
-import { Provider } from '@ethersproject/abstract-provider';
-import {
-  TransactionReceipt,
-  TransactionRequest,
-} from '@ethersproject/providers';
-import { priceToClosestUsableTick } from './tick';
-import { ChainInfo, getChainInfo } from './chain';
-import { getNativeCurrency } from './currency';
-import { getPoolFromBasicPositionInfo } from './pool';
-import {
-  BasicPositionInfo,
-  getCollectableTokenAmounts,
-  getPosition,
-} from './position';
 import JSBI from 'jsbi';
-import {
-  ApertureSupportedChainId,
-  INonfungiblePositionManager,
-  INonfungiblePositionManager__factory,
-  IUniV3Automan__factory,
-  IUniswapV3Factory__factory,
-  IUniswapV3Pool__factory,
-  PermitInfo,
-} from '@aperture_finance/uniswap-v3-automation-sdk';
-import { getBasicPositionInfo } from './position';
 import {
   AutomanFragment,
   AutomanParams,
   getAutomanRebalanceCallInfo,
   getAutomanReinvestCallInfo,
 } from './automan';
+import { ChainInfo, getChainInfo } from './chain';
+import { getNativeCurrency } from './currency';
+import { getPoolFromBasicPositionInfo } from './pool';
+import {
+  BasicPositionInfo,
+  getBasicPositionInfo,
+  getCollectableTokenAmounts,
+  getPosition,
+} from './position';
+import { priceToClosestUsableTick } from './tick';
 
 function getTxToNonfungiblePositionManager(
   chainInfo: ChainInfo,

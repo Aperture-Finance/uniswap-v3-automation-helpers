@@ -4,9 +4,9 @@ import {
   ConditionTypeEnum,
   CreateTriggerPayload,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { BigNumberish } from 'ethers';
-import { FeeAmount } from '@uniswap/v3-sdk';
 import { Currency, CurrencyAmount, Price, Token } from '@uniswap/sdk-core';
+import { FeeAmount } from '@uniswap/v3-sdk';
+import { BigNumberish } from 'ethers';
 
 export function generateLimitOrderCloseRequestPayload(
   ownerAddr: string,
@@ -16,8 +16,10 @@ export function generateLimitOrderCloseRequestPayload(
   inputCurrencyAmount: CurrencyAmount<Currency>,
   feeTier: FeeAmount,
   maxGasProportion: number,
+  expiration: number,
 ): CreateTriggerPayload {
-  // Note that we should use `Token.sortsBefore()` to compare two tokens instead of directly comparing their addresses because an address can be checksum-ed.
+  // Note that we should use `Token.sortsBefore()` to compare two tokens instead of directly comparing their addresses
+  // because an address can be checksum-ed.
   const token0 = outerLimitPrice.baseCurrency.sortsBefore(
     outerLimitPrice.quoteCurrency,
   )
@@ -26,6 +28,7 @@ export function generateLimitOrderCloseRequestPayload(
   return {
     ownerAddr,
     chainId,
+    expiration,
     nftId: positionId.toString(),
     condition: {
       type: ConditionTypeEnum.enum.TokenAmount,
@@ -51,10 +54,12 @@ export function generateAutoCompoundRequestPayload(
   feeToPrincipalRatioThreshold: number,
   slippage: number,
   maxGasProportion: number,
+  expiration: number,
 ): CreateTriggerPayload {
   return {
     ownerAddr,
     chainId,
+    expiration,
     nftId: positionId.toString(),
     condition: {
       type: ConditionTypeEnum.enum.AccruedFees,
