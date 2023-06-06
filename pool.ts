@@ -8,6 +8,7 @@ import {
   FeeAmount,
   Pool,
   TICK_SPACINGS,
+  tickToPrice,
   computePoolAddress,
 } from '@uniswap/v3-sdk';
 import axios from 'axios';
@@ -239,4 +240,29 @@ export async function getTickToLiquidityMapForPool(
     }
   }
   return data;
+}
+
+export interface Liquidity {
+  liquidityActive: LiquidityAmount;
+  price0: string;
+  price1: string;
+}
+
+export async function getLiquidityArrayForPool(
+  chainId: ApertureSupportedChainId,
+  pool: Pool,
+): Promise<Liquidity[]> {
+  const token0 = pool.token0;
+  const token1 = pool.token1;
+  const tickToLiquidityMap = await getTickToLiquidityMapForPool(chainId, pool);
+  const liquidityArray: Liquidity[] = [];
+  tickToLiquidityMap.forEach((liquidity, tick) => {
+    const price = tickToPrice(token0, token1, tick);
+    liquidityArray.push({
+      liquidityActive: liquidity,
+      price0: price.toFixed(token0.decimals),
+      price1: price.invert().toFixed(token1.decimals),
+    });
+  });
+  return liquidityArray;
 }
