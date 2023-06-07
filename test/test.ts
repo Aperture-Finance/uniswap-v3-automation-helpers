@@ -1,39 +1,10 @@
-import chaiAsPromised from 'chai-as-promised';
+import axios from 'axios';
 import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { getNativeCurrency, getToken } from '../currency';
-import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
-import { parsePrice } from '../price';
-import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
-import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
-import { getCurrencyAmount } from '../currency';
-import {
-  getAddLiquidityTx,
-  getCollectTx,
-  getCreatePositionTx,
-  getCreatePositionTxForLimitOrder,
-  getMintedPositionIdFromTxReceipt,
-  getRebalanceTx,
-  getReinvestTx,
-  getRemoveLiquidityTx,
-} from '../transaction';
-import {
-  FeeAmount,
-  Position,
-  TICK_SPACINGS,
-  computePoolAddress,
-  priceToClosestTick,
-  tickToPrice,
-} from '@uniswap/v3-sdk';
-import {
-  alignPriceToClosestUsableTick,
-  priceToClosestUsableTick,
-} from '../tick';
-import {
-  getFeeTierDistribution,
-  getPool,
-  getTickToLiquidityMapForPool,
-} from '../pool';
+import JSBI from 'jsbi';
+import { providers } from '@0xsequence/multicall';
 import {
   ActionTypeEnum,
   ApertureSupportedChainId,
@@ -43,6 +14,33 @@ import {
   UniV3Automan__factory,
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
+import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
+import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
+import {
+  FeeAmount,
+  Position,
+  TICK_SPACINGS,
+  computePoolAddress,
+  priceToClosestTick,
+  tickToPrice,
+} from '@uniswap/v3-sdk';
+import { getWalletActivities } from '../activity';
+import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
+import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
+import {
+  generateAutoCompoundRequestPayload,
+  generateLimitOrderCloseRequestPayload,
+} from '../payload';
+import {
+  checkPositionApprovalStatus,
+  generateTypedDataForPermit,
+} from '../permission';
+import {
+  getFeeTierDistribution,
+  getLiquidityArrayForPool,
+  getPool,
+  getTickToLiquidityMapForPool,
+} from '../pool';
 import {
   BasicPositionInfo,
   getBasicPositionInfo,
@@ -53,23 +51,29 @@ import {
   getTokenSvg,
   isPositionInRange,
 } from '../position';
-import {
-  checkPositionApprovalStatus,
-  generateTypedDataForPermit,
-} from '../permission';
-import { getWalletActivities } from '../activity';
-import {
-  generateAutoCompoundRequestPayload,
-  generateLimitOrderCloseRequestPayload,
-} from '../payload';
-import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
-import JSBI from 'jsbi';
+import { parsePrice } from '../price';
 import { getPublicProvider } from '../provider';
-import axios from 'axios';
+import {
+  alignPriceToClosestUsableTick,
+  priceToClosestUsableTick,
+  readTickToLiquidityMap,
+} from '../tick';
+import {
+  getAddLiquidityTx,
+  getCollectTx,
+  getCreatePositionTx,
+  getCreatePositionTxForLimitOrder,
+  getMintedPositionIdFromTxReceipt,
+  getRebalanceTx,
+  getReinvestTx,
+  getRemoveLiquidityTx,
+} from '../transaction';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const hardhatForkProvider = ethers.provider;
+const hardhatForkProvider = new providers.MulticallProvider(ethers.provider, {
+  timeWindow: 0,
+});
 const chainId = ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID;
 // A whale address (Avax bridge) on Ethereum mainnet with a lot of ether and token balances.
 const WHALE_ADDRESS = '0x8EB8a3b98659Cce290402893d0123abb75E3ab28';
@@ -98,8 +102,10 @@ describe('Limit order tests', function () {
   const poolFee = FeeAmount.MEDIUM;
 
   before(async function () {
-    WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
-    WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
+    [WBTC, WETH] = await Promise.all([
+      getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
+      getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
+    ]);
   });
 
   it('Selling WBTC for WETH', async function () {
@@ -448,8 +454,10 @@ describe('Position liquidity management tests', function () {
 
   before(async function () {
     await resetHardhatNetwork();
-    wbtcBalanceBefore = await wbtcContract.balanceOf(eoa);
-    wethBalanceBefore = await wethContract.balanceOf(eoa);
+    [wbtcBalanceBefore, wethBalanceBefore] = await Promise.all([
+      wbtcContract.balanceOf(eoa),
+      wethContract.balanceOf(eoa),
+    ]);
     nativeEtherBalanceBefore = await hardhatForkProvider.getBalance(eoa);
     position4BasicInfo = await getBasicPositionInfo(
       chainId,
@@ -463,8 +471,10 @@ describe('Position liquidity management tests', function () {
       position4BasicInfo,
     );
 
-    WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
-    WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
+    [WBTC, WETH] = await Promise.all([
+      getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
+      getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
+    ]);
   });
 
   beforeEach(async function () {
@@ -960,13 +970,11 @@ describe('Util tests', function () {
   });
 
   it('Position in-range', async function () {
-    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
+    const [inRangePosition, outOfRangePosition] = await Promise.all([
+      getPosition(chainId, 4, hardhatForkProvider),
+      getPosition(chainId, 7, hardhatForkProvider),
+    ]);
     expect(isPositionInRange(inRangePosition)).to.equal(true);
-    const outOfRangePosition = await getPosition(
-      chainId,
-      7,
-      hardhatForkProvider,
-    );
     expect(isPositionInRange(outOfRangePosition)).to.equal(false);
   });
 
@@ -1012,16 +1020,10 @@ describe('Wallet activity tests', function () {
 
 describe('Pool subgraph query tests', function () {
   it('Fee tier distribution', async function () {
-    const distribution = await getFeeTierDistribution(
-      chainId,
-      WBTC_ADDRESS,
-      WETH_ADDRESS,
-    );
-    const distributionOppositeTokenOrder = await getFeeTierDistribution(
-      chainId,
-      WETH_ADDRESS,
-      WBTC_ADDRESS,
-    );
+    const [distribution, distributionOppositeTokenOrder] = await Promise.all([
+      getFeeTierDistribution(chainId, WBTC_ADDRESS, WETH_ADDRESS),
+      getFeeTierDistribution(chainId, WETH_ADDRESS, WBTC_ADDRESS),
+    ]);
     expect(distribution).to.deep.equal(distributionOppositeTokenOrder);
     expect(
       Object.values(distribution).reduce(
@@ -1033,8 +1035,10 @@ describe('Pool subgraph query tests', function () {
 
   it('Tick liquidity distribution', async function () {
     const provider = getPublicProvider(chainId);
-    const WBTC = await getToken(WBTC_ADDRESS, chainId, provider);
-    const WETH = await getToken(WETH_ADDRESS, chainId, provider);
+    const [WBTC, WETH] = await Promise.all([
+      getToken(WBTC_ADDRESS, chainId, provider),
+      getToken(WETH_ADDRESS, chainId, provider),
+    ]);
     const pool = await getPool(WETH, WBTC, FeeAmount.LOW, chainId, provider);
     const tickToLiquidityMap = await getTickToLiquidityMapForPool(
       chainId,
@@ -1073,8 +1077,14 @@ describe('Pool subgraph query tests', function () {
     expect(
       JSBI.equal(
         JSBI.BigInt(inRangeLiquidity),
-        tickToLiquidityMap.get(tickCurrentAligned)!,
+        readTickToLiquidityMap(tickToLiquidityMap, tickCurrentAligned)!,
       ),
     ).to.equal(true);
+    const liquidityArr = await getLiquidityArrayForPool(chainId, pool);
+    for (const element of liquidityArr) {
+      if (JSBI.equal(element.liquidityActive, inRangeLiquidity)) {
+        console.log(element);
+      }
+    }
   });
 });
