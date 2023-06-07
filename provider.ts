@@ -14,5 +14,8 @@ export function getPublicProvider(
     new ethers.providers.InfuraProvider(
       getChainInfo(chainId).infura_network_id!,
     ),
+    {
+      timeWindow: 0,
+    },
   );
 }

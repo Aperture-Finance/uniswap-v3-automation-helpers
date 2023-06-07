@@ -32,11 +32,14 @@ export function parsePrice(
   return new Price(
     baseToken,
     quoteToken,
-    JSBI.multiply(
-      JSBI.BigInt(10 ** decimals),
-      JSBI.BigInt(10 ** baseToken.decimals),
+    JSBI.exponentiate(
+      JSBI.BigInt(10),
+      JSBI.BigInt(decimals + baseToken.decimals),
     ),
-    JSBI.multiply(withoutDecimals, JSBI.BigInt(10 ** quoteToken.decimals)),
+    JSBI.multiply(
+      withoutDecimals,
+      JSBI.exponentiate(JSBI.BigInt(10), JSBI.BigInt(quoteToken.decimals)),
+    ),
   );
 }
 
