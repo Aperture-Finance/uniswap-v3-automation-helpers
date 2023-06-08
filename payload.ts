@@ -3,9 +3,14 @@ import {
   ApertureSupportedChainId,
   ConditionTypeEnum,
   CreateTriggerPayload,
+  PriceCondition,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Price, Token } from '@uniswap/sdk-core';
 import { BigNumberish } from 'ethers';
+import { getRawRelativePriceFromTokenValueProportion } from './price';
+import Big, { BigSource } from 'big.js';
+import { TickMath } from '@uniswap/v3-sdk';
+import JSBI from 'jsbi';
 
 export function generateLimitOrderCloseRequestPayload(
   ownerAddr: string,
@@ -62,5 +67,36 @@ export function generateAutoCompoundRequestPayload(
       slippage,
       maxGasProportion,
     },
+  };
+}
+
+export function generatePriceConditionFromTokenValueProportion(
+  tickCurrent: number,
+  tickLower: number,
+  tickUpper: number,
+  token0ValueProportion: BigSource,
+  durationSec?: number,
+): PriceCondition {
+  const priceThreshold = getRawRelativePriceFromTokenValueProportion(
+    tickLower,
+    tickUpper,
+    new Big(token0ValueProportion),
+  );
+  const tickTreshold = TickMath.getTickAtSqrtRatio(
+    JSBI.BigInt(
+      priceThreshold.sqrt().mul(new Big(2).pow(96)).toFixed(0).toString(),
+    ),
+  );
+  let lte: string | undefined, gte: string | undefined;
+  if (tickTreshold > tickCurrent) {
+    gte = priceThreshold.toString();
+  } else {
+    lte = priceThreshold.toString();
+  }
+  return {
+    type: ConditionTypeEnum.enum.Price,
+    lte,
+    gte,
+    durationSec,
   };
 }

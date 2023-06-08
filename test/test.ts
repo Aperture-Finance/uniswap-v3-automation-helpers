@@ -11,6 +11,7 @@ import {
   ConditionTypeEnum,
   IERC20__factory,
   INonfungiblePositionManager__factory,
+  PriceConditionSchema,
   UniV3Automan__factory,
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
@@ -32,6 +33,7 @@ import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
 import {
   generateAutoCompoundRequestPayload,
   generateLimitOrderCloseRequestPayload,
+  generatePriceConditionFromTokenValueProportion,
 } from '../payload';
 import {
   checkPositionApprovalStatus,
@@ -1013,6 +1015,36 @@ describe('Util tests', function () {
     expect(token0ValueProportion.toFixed(30)).to.equal(
       '0.299999992918951004985073219045',
     );
+
+    // Verify that price condition is generated correctly.
+    const condition = generatePriceConditionFromTokenValueProportion(
+      position.pool.tickCurrent,
+      position.tickLower,
+      position.tickUpper,
+      new Big('0.3'),
+      /*durationSec=*/ 7200,
+    );
+    expect(PriceConditionSchema.safeParse(condition).success).to.equal(true);
+    expect(condition).to.deep.equal({
+      type: ConditionTypeEnum.enum.Price,
+      lte: undefined,
+      gte: '226996287752.678057810335753063814267017558211732849518876855922215569664',
+      durationSec: 7200,
+    });
+    expect(
+      generatePriceConditionFromTokenValueProportion(
+        position.pool.tickCurrent,
+        position.tickLower,
+        position.tickUpper,
+        new Big('0.95'),
+        /*durationSec=*/ undefined,
+      ),
+    ).to.deep.equal({
+      type: ConditionTypeEnum.enum.Price,
+      lte: '104792862935.904580651554157750042230410340267140482472644533377909257225',
+      gte: undefined,
+      durationSec: undefined,
+    });
   });
 });
 
