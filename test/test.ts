@@ -979,11 +979,9 @@ describe('Util tests', function () {
       position.tickUpper,
       new Big('0.3'),
     );
-    expect(
-      price.eq(
-        '226996287752.678057810335753063814267017558211732849518876855922215569664',
-      ),
-    ).to.equal(true);
+    expect(price.toString()).to.equal(
+      '226996287752.678057810335753063814267017558211732849518876855922215569664',
+    );
 
     // Verify that the calculated price indeed corresponds to ~30% of the position value in token0.
     const sqrtPriceX96 = JSBI.BigInt(
