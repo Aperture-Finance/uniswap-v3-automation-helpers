@@ -7,7 +7,7 @@ import { Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
   Pool,
-  TICK_SPACINGS,
+  tickToPrice,
   computePoolAddress,
 } from '@uniswap/v3-sdk';
 import axios from 'axios';
@@ -166,6 +166,7 @@ export async function getFeeTierDistribution(
 
 export type TickNumber = number;
 export type LiquidityAmount = JSBI;
+export type TickToLiquidityMap = Map<TickNumber, LiquidityAmount>;
 
 /**
  * Fetches the liquidity for all ticks for the specified pool.
@@ -176,7 +177,7 @@ export type LiquidityAmount = JSBI;
 export async function getTickToLiquidityMapForPool(
   chainId: ApertureSupportedChainId,
   pool: Pool,
-): Promise<Map<TickNumber, LiquidityAmount>> {
+): Promise<TickToLiquidityMap> {
   if (chainId !== ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID) {
     throw 'Unsupported chain id for fetching liquidity for all ticks from subgraph';
   }
@@ -220,23 +221,46 @@ export async function getTickToLiquidityMapForPool(
   const data = new Map<TickNumber, LiquidityAmount>();
   if (rawData.length > 0) {
     rawData.sort((a, b) => Number(a.tick) - Number(b.tick));
-    let currentLiquidity = JSBI.BigInt(0);
-    let rawDataIndex = 0;
-    // TODO: For plotting we don't need a datapoint for each tick spacing. Consider decreasing the size of the returned map.
-    for (
-      let tick = Number(rawData[0].tick);
-      rawDataIndex < rawData.length;
-      tick += TICK_SPACINGS[pool.fee]
-    ) {
-      if (tick === Number(rawData[rawDataIndex].tick)) {
-        currentLiquidity = JSBI.add(
-          currentLiquidity,
-          JSBI.BigInt(rawData[rawDataIndex].liquidityNet as string),
-        );
-        rawDataIndex++;
-      }
-      data.set(tick, currentLiquidity);
+    let cumulativeLiquidity = JSBI.BigInt(0);
+    for (const { tick, liquidityNet } of rawData) {
+      cumulativeLiquidity = JSBI.add(
+        cumulativeLiquidity,
+        JSBI.BigInt(liquidityNet),
+      );
+      // There is a `Number.isInteger` check in `tickToPrice`.
+      data.set(Math.floor(tick), cumulativeLiquidity);
     }
   }
   return data;
+}
+
+export interface Liquidity {
+  liquidityActive: LiquidityAmount;
+  price0: string;
+  price1: string;
+}
+
+/**
+ * Transform the tick to liquidity map into an array suitable for the UI.
+ * @param chainId Chain id.
+ * @param pool The liquidity pool to fetch the tick to liquidity map for.
+ * @returns An array of liquidity objects.
+ */
+export async function getLiquidityArrayForPool(
+  chainId: ApertureSupportedChainId,
+  pool: Pool,
+): Promise<Liquidity[]> {
+  const token0 = pool.token0;
+  const token1 = pool.token1;
+  const tickToLiquidityMap = await getTickToLiquidityMapForPool(chainId, pool);
+  const liquidityArray: Liquidity[] = [];
+  tickToLiquidityMap.forEach((liquidity, tick) => {
+    const price = tickToPrice(token0, token1, tick);
+    liquidityArray.push({
+      liquidityActive: liquidity,
+      price0: price.toFixed(token0.decimals),
+      price1: price.invert().toFixed(token1.decimals),
+    });
+  });
+  return liquidityArray;
 }
