@@ -4,8 +4,7 @@ import {
   ConditionTypeEnum,
   CreateTriggerPayload,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { Currency, CurrencyAmount, Price, Token } from '@uniswap/sdk-core';
-import { FeeAmount } from '@uniswap/v3-sdk';
+import { Price, Token } from '@uniswap/sdk-core';
 import { BigNumberish } from 'ethers';
 
 export function generateLimitOrderCloseRequestPayload(
@@ -13,8 +12,6 @@ export function generateLimitOrderCloseRequestPayload(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   outerLimitPrice: Price<Token, Token>,
-  inputCurrencyAmount: CurrencyAmount<Currency>,
-  feeTier: FeeAmount,
   maxGasProportion: number,
   expiration: number,
 ): CreateTriggerPayload {
@@ -36,12 +33,7 @@ export function generateLimitOrderCloseRequestPayload(
     },
     action: {
       type: ActionTypeEnum.enum.LimitOrderClose,
-      inputTokenAmount: {
-        address: outerLimitPrice.baseCurrency.address,
-        rawAmount: inputCurrencyAmount.quotient.toString(),
-      },
-      outputTokenAddr: outerLimitPrice.quoteCurrency.address,
-      feeTier,
+      inputTokenAddr: outerLimitPrice.baseCurrency.address,
       maxGasProportion,
     },
   };

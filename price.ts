@@ -2,6 +2,8 @@ import { Price, Token } from '@uniswap/sdk-core';
 import axios from 'axios';
 import JSBI from 'jsbi';
 import { getChainInfo } from './chain';
+import Big from 'big.js';
+import { TickMath } from '@uniswap/v3-sdk';
 
 /**
  * Parses the specified price string for the price of `baseToken` denominated in `quoteToken`.
@@ -55,4 +57,43 @@ export async function getTokenUSDPriceFromCoingecko(
   );
   // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&vs_currencies=usd
   return priceResponse.data[token.address.toLowerCase()]['usd'];
+}
+
+/**
+ * For a given tick range from `tickLower` to `tickUpper`, and a given proportion of the value of the position that is held in token0,
+ * calculate the raw price of token0 denominated in token1.
+ * @param tickLower The lower tick of the range.
+ * @param tickUpper The upper tick of the range.
+ * @param token0ValueProportion The proportion of the value of the position that is held in token0, as a `Big` number between 0 and 1, inclusive.
+ * @returns The raw price of token0 denominated in token1 for the specified tick range and token0 value proportion.
+ */
+export function getRawRelativePriceFromTokenValueProportion(
+  tickLower: number,
+  tickUpper: number,
+  token0ValueProportion: Big,
+): Big {
+  if (token0ValueProportion.lt(0) || token0ValueProportion.gt(1)) {
+    throw new Error(
+      'Invalid token0ValueProportion: must be a value between 0 and 1, inclusive',
+    );
+  }
+  const sqrtRatioAtTickLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
+  const sqrtRatioAtTickUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+  // Let Big use 30 decimal places of precision since 2^96 < 10^29.
+  Big.DP = 30;
+  const scale = new Big('2').pow(96);
+  const L = new Big(sqrtRatioAtTickLowerX96.toString()).div(scale);
+  const U = new Big(sqrtRatioAtTickUpperX96.toString()).div(scale);
+  return U.minus(token0ValueProportion.times(U).times(2))
+    .add(
+      U.times(
+        token0ValueProportion
+          .times(L)
+          .times(-4)
+          .times(token0ValueProportion.sub(1))
+          .add(U.times(token0ValueProportion.times(-2).add(1).pow(2))),
+      ).sqrt(),
+    )
+    .div(token0ValueProportion.times(-2).add(2))
+    .pow(2);
 }

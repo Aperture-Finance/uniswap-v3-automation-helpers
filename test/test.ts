@@ -3,8 +3,11 @@ import chai from 'chai';
 import { ethers } from 'hardhat';
 import { getNativeCurrency, getToken } from '../currency';
 import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
-import { parsePrice } from '../price';
-import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
+import {
+  getRawRelativePriceFromTokenValueProportion,
+  parsePrice,
+} from '../price';
+import { CurrencyAmount, Fraction, Percent, Token } from '@uniswap/sdk-core';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
 import { getCurrencyAmount } from '../currency';
 import {
@@ -19,8 +22,10 @@ import {
 } from '../transaction';
 import {
   FeeAmount,
+  Pool,
   Position,
   TICK_SPACINGS,
+  TickMath,
   computePoolAddress,
   priceToClosestTick,
   tickToPrice,
@@ -66,6 +71,7 @@ import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
 import JSBI from 'jsbi';
 import { getPublicProvider } from '../provider';
 import axios from 'axios';
+import Big from 'big.js';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -214,20 +220,13 @@ describe('Limit order tests', function () {
         chainId,
         positionId,
         alignedLimitPrice,
-        tenWBTC,
-        poolFee,
         /*maxGasProportion=*/ 0.2,
-        1627776000,
+        /*expiration=*/ 1627776000,
       ),
     ).to.deep.equal({
       action: {
-        feeTier: 3000,
-        inputTokenAmount: {
-          address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
-          rawAmount: '1000000000',
-        },
+        inputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
         maxGasProportion: 0.2,
-        outputTokenAddr: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         type: 'LimitOrderClose',
       },
       chainId: 1,
@@ -328,20 +327,13 @@ describe('Limit order tests', function () {
         chainId,
         positionId,
         alignedLimitPrice,
-        tenWETH,
-        poolFee,
         /*maxGasProportion=*/ 0.2,
-        1627776000,
+        /*expiration=*/ 1627776000,
       ),
     ).to.deep.equal({
       action: {
-        feeTier: 3000,
-        inputTokenAmount: {
-          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-          rawAmount: '10000000000000000000',
-        },
+        inputTokenAddr: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         maxGasProportion: 0.2,
-        outputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
         type: 'LimitOrderClose',
       },
       chainId: 1,
@@ -398,20 +390,13 @@ describe('Limit order tests', function () {
         chainId,
         nativeEthPositionId,
         alignedLimitPrice,
-        tenETH,
-        poolFee,
         /*maxGasProportion=*/ 0.2,
-        1627776000,
+        /*expiration=*/ 1627776000,
       ),
     ).to.deep.equal({
       action: {
-        feeTier: 3000,
-        inputTokenAmount: {
-          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-          rawAmount: '10000000000000000000',
-        },
+        inputTokenAddr: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         maxGasProportion: 0.2,
-        outputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
         type: 'LimitOrderClose',
       },
       chainId: 1,
@@ -971,7 +956,55 @@ describe('Util tests', function () {
   });
 
   it('Token Svg', async function () {
-    await getTokenSvg(chainId, 4, hardhatForkProvider);
+    const url = await getTokenSvg(chainId, 4, hardhatForkProvider);
+    expect(url.toString().slice(0, 60)).to.equal(
+      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjkwIiBoZWlnaHQ9Ij',
+    );
+  });
+
+  it('Token value proportion to price conversion', async function () {
+    const position = await getPosition(chainId, 4, hardhatForkProvider);
+    const price = await getRawRelativePriceFromTokenValueProportion(
+      position.tickLower,
+      position.tickUpper,
+      new Big('0.3'),
+    );
+    expect(
+      price.eq(
+        '226996287752.678057810335753063814267017558211732849518876855922215569664',
+      ),
+    ).to.equal(true);
+
+    // Verify that the calculated price indeed corresponds to ~30% of the position value in token0.
+    const sqrtPriceX96 = JSBI.BigInt(
+      price.sqrt().times(new Big(2).pow(96)).toFixed(0).toString(),
+    );
+    const tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+    const theoreticalPosition = new Position({
+      pool: new Pool(
+        position.amount0.currency,
+        position.amount1.currency,
+        position.pool.fee,
+        sqrtPriceX96,
+        position.liquidity,
+        tick,
+      ),
+      liquidity: position.liquidity,
+      tickLower: position.tickLower,
+      tickUpper: position.tickUpper,
+    });
+    const token0Value =
+      theoreticalPosition.pool.token0Price.asFraction.multiply(
+        theoreticalPosition.amount0,
+      ).quotient;
+    const token1Value = theoreticalPosition.amount1.quotient;
+    const token0ValueProportion = new Fraction(
+      token0Value,
+      JSBI.add(token0Value, token1Value),
+    );
+    expect(token0ValueProportion.toFixed(30)).to.equal(
+      '0.299999992918951004985073219045',
+    );
   });
 });
 
@@ -1012,16 +1045,10 @@ describe('Wallet activity tests', function () {
 
 describe('Pool subgraph query tests', function () {
   it('Fee tier distribution', async function () {
-    const distribution = await getFeeTierDistribution(
-      chainId,
-      WBTC_ADDRESS,
-      WETH_ADDRESS,
-    );
-    const distributionOppositeTokenOrder = await getFeeTierDistribution(
-      chainId,
-      WETH_ADDRESS,
-      WBTC_ADDRESS,
-    );
+    const [distribution, distributionOppositeTokenOrder] = await Promise.all([
+      getFeeTierDistribution(chainId, WBTC_ADDRESS, WETH_ADDRESS),
+      getFeeTierDistribution(chainId, WETH_ADDRESS, WBTC_ADDRESS),
+    ]);
     expect(distribution).to.deep.equal(distributionOppositeTokenOrder);
     expect(
       Object.values(distribution).reduce(
