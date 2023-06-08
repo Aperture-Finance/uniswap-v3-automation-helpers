@@ -11,15 +11,18 @@ import {
   ConditionTypeEnum,
   IERC20__factory,
   INonfungiblePositionManager__factory,
+  PriceConditionSchema,
   UniV3Automan__factory,
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
-import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
+import { CurrencyAmount, Fraction, Percent, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
+  Pool,
   Position,
   TICK_SPACINGS,
+  TickMath,
   computePoolAddress,
   priceToClosestTick,
   tickToPrice,
@@ -30,6 +33,7 @@ import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
 import {
   generateAutoCompoundRequestPayload,
   generateLimitOrderCloseRequestPayload,
+  generatePriceConditionFromTokenValueProportion,
 } from '../payload';
 import {
   checkPositionApprovalStatus,
@@ -51,7 +55,10 @@ import {
   getTokenSvg,
   isPositionInRange,
 } from '../position';
-import { parsePrice } from '../price';
+import {
+  getRawRelativePriceFromTokenValueProportion,
+  parsePrice,
+} from '../price';
 import { getPublicProvider } from '../provider';
 import {
   alignPriceToClosestUsableTick,
@@ -68,6 +75,7 @@ import {
   getReinvestTx,
   getRemoveLiquidityTx,
 } from '../transaction';
+import Big from 'big.js';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -220,20 +228,13 @@ describe('Limit order tests', function () {
         chainId,
         positionId,
         alignedLimitPrice,
-        tenWBTC,
-        poolFee,
         /*maxGasProportion=*/ 0.2,
-        1627776000,
+        /*expiration=*/ 1627776000,
       ),
     ).to.deep.equal({
       action: {
-        feeTier: 3000,
-        inputTokenAmount: {
-          address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
-          rawAmount: '1000000000',
-        },
+        inputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
         maxGasProportion: 0.2,
-        outputTokenAddr: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         type: 'LimitOrderClose',
       },
       chainId: 1,
@@ -334,20 +335,13 @@ describe('Limit order tests', function () {
         chainId,
         positionId,
         alignedLimitPrice,
-        tenWETH,
-        poolFee,
         /*maxGasProportion=*/ 0.2,
-        1627776000,
+        /*expiration=*/ 1627776000,
       ),
     ).to.deep.equal({
       action: {
-        feeTier: 3000,
-        inputTokenAmount: {
-          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-          rawAmount: '10000000000000000000',
-        },
+        inputTokenAddr: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         maxGasProportion: 0.2,
-        outputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
         type: 'LimitOrderClose',
       },
       chainId: 1,
@@ -404,20 +398,13 @@ describe('Limit order tests', function () {
         chainId,
         nativeEthPositionId,
         alignedLimitPrice,
-        tenETH,
-        poolFee,
         /*maxGasProportion=*/ 0.2,
-        1627776000,
+        /*expiration=*/ 1627776000,
       ),
     ).to.deep.equal({
       action: {
-        feeTier: 3000,
-        inputTokenAmount: {
-          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-          rawAmount: '10000000000000000000',
-        },
+        inputTokenAddr: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
         maxGasProportion: 0.2,
-        outputTokenAddr: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
         type: 'LimitOrderClose',
       },
       chainId: 1,
@@ -979,7 +966,83 @@ describe('Util tests', function () {
   });
 
   it('Token Svg', async function () {
-    await getTokenSvg(chainId, 4, hardhatForkProvider);
+    const url = await getTokenSvg(chainId, 4, hardhatForkProvider);
+    expect(url.toString().slice(0, 60)).to.equal(
+      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjkwIiBoZWlnaHQ9Ij',
+    );
+  });
+
+  it('Token value proportion to price conversion', async function () {
+    const position = await getPosition(chainId, 4, hardhatForkProvider);
+    const price = await getRawRelativePriceFromTokenValueProportion(
+      position.tickLower,
+      position.tickUpper,
+      new Big('0.3'),
+    );
+    expect(price.toString()).to.equal(
+      '226996287752.678057810335753063814267017558211732849518876855922215569664',
+    );
+
+    // Verify that the calculated price indeed corresponds to ~30% of the position value in token0.
+    const sqrtPriceX96 = JSBI.BigInt(
+      price.sqrt().times(new Big(2).pow(96)).toFixed(0).toString(),
+    );
+    const tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+    const theoreticalPosition = new Position({
+      pool: new Pool(
+        position.amount0.currency,
+        position.amount1.currency,
+        position.pool.fee,
+        sqrtPriceX96,
+        position.liquidity,
+        tick,
+      ),
+      liquidity: position.liquidity,
+      tickLower: position.tickLower,
+      tickUpper: position.tickUpper,
+    });
+    const token0Value =
+      theoreticalPosition.pool.token0Price.asFraction.multiply(
+        theoreticalPosition.amount0,
+      ).quotient;
+    const token1Value = theoreticalPosition.amount1.quotient;
+    const token0ValueProportion = new Fraction(
+      token0Value,
+      JSBI.add(token0Value, token1Value),
+    );
+    expect(token0ValueProportion.toFixed(30)).to.equal(
+      '0.299999992918951004985073219045',
+    );
+
+    // Verify that price condition is generated correctly.
+    const condition = generatePriceConditionFromTokenValueProportion(
+      position.pool.tickCurrent,
+      position.tickLower,
+      position.tickUpper,
+      new Big('0.3'),
+      /*durationSec=*/ 7200,
+    );
+    expect(PriceConditionSchema.safeParse(condition).success).to.equal(true);
+    expect(condition).to.deep.equal({
+      type: ConditionTypeEnum.enum.Price,
+      lte: undefined,
+      gte: '226996287752.678057810335753063814267017558211732849518876855922215569664',
+      durationSec: 7200,
+    });
+    expect(
+      generatePriceConditionFromTokenValueProportion(
+        position.pool.tickCurrent,
+        position.tickLower,
+        position.tickUpper,
+        new Big('0.95'),
+        /*durationSec=*/ undefined,
+      ),
+    ).to.deep.equal({
+      type: ConditionTypeEnum.enum.Price,
+      lte: '104792862935.904580651554157750042230410340267140482472644533377909257225',
+      gte: undefined,
+      durationSec: undefined,
+    });
   });
 });
 
