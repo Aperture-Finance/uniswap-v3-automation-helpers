@@ -56,3 +56,38 @@ export function getWhitelistedPools(
   }
   return whitelistedPoolsMap;
 }
+
+export function getWhitelistedTokens(
+  chainId: ApertureSupportedChainId,
+  whitelistedPoolsJson: {
+    id: string;
+    feeTier: string;
+    token0: {
+      id: string;
+      decimals: string;
+      symbol: string;
+      name: string;
+    };
+    token1: {
+      id: string;
+      decimals: string;
+      symbol: string;
+      name: string;
+    };
+  }[],
+) {
+  const whitelistedTokens = new Map();
+  for (const pool of whitelistedPoolsJson) {
+    if (!whitelistedTokens.has(pool.token0.symbol)) {
+      whitelistedTokens.set(pool.token0.symbol, {
+        [chainId]: getAddress(pool.token0.id),
+      });
+    }
+    if (!whitelistedTokens.has(pool.token1.symbol)) {
+      whitelistedTokens.set(pool.token1.symbol, {
+        [chainId]: getAddress(pool.token1.id),
+      });
+    }
+  }
+  console.log(whitelistedTokens);
+}
