@@ -8,7 +8,7 @@ import {
   FeeAmount,
   Pool,
   tickToPrice,
-  computePoolAddress,
+  computePoolAddress as _computePoolAddress,
 } from '@uniswap/v3-sdk';
 import axios from 'axios';
 import JSBI from 'jsbi';
@@ -18,6 +18,54 @@ import {
   AllV3TicksQuery,
   FeeTierDistributionQuery,
 } from './data/__graphql_generated__/uniswap-thegraph-types-and-hooks';
+
+export type PoolKey = {
+  token0: string;
+  token1: string;
+  fee: FeeAmount;
+};
+
+export function getPoolKey(
+  tokenA: string,
+  tokenB: string,
+  fee: FeeAmount,
+): PoolKey {
+  if (tokenA.toLowerCase() === tokenB.toLowerCase())
+    throw new Error('IDENTICAL_ADDRESSES');
+  return tokenA.toLowerCase() < tokenB.toLowerCase()
+    ? { token0: tokenA, token1: tokenB, fee }
+    : { token0: tokenB, token1: tokenA, fee };
+}
+
+/**
+ * Computes a pool address
+ * @param factoryAddress The Uniswap V3 factory address
+ * @param token0 The first token of the pair, irrespective of sort order
+ * @param token1 The second token of the pair, irrespective of sort order
+ * @param fee The fee tier of the pool
+ * @returns The pool address
+ */
+function computePoolAddress(
+  factoryAddress: string,
+  token0: Token | string,
+  token1: Token | string,
+  fee: FeeAmount,
+): string {
+  return _computePoolAddress({
+    factoryAddress,
+    tokenA: new Token(
+      1,
+      typeof token0 === 'string' ? token0 : token0.address,
+      18,
+    ),
+    tokenB: new Token(
+      1,
+      typeof token1 === 'string' ? token1 : token1.address,
+      18,
+    ),
+    fee,
+  });
+}
 
 /**
  * Constructs a Uniswap SDK Pool object for the pool behind the specified position.
@@ -33,12 +81,12 @@ export async function getPoolFromBasicPositionInfo(
 ): Promise<Pool> {
   const chainInfo = getChainInfo(chainId);
   const poolContract = IUniswapV3Pool__factory.connect(
-    computePoolAddress({
-      factoryAddress: chainInfo.uniswap_v3_factory,
-      tokenA: basicInfo.token0,
-      tokenB: basicInfo.token1,
-      fee: basicInfo.fee,
-    }),
+    computePoolAddress(
+      chainInfo.uniswap_v3_factory,
+      basicInfo.token0,
+      basicInfo.token1,
+      basicInfo.fee,
+    ),
     provider,
   );
   const [slot0, inRangeLiquidity] = await Promise.all([
@@ -73,12 +121,12 @@ export async function getPool(
   provider: Provider,
 ): Promise<Pool> {
   const poolContract = IUniswapV3Pool__factory.connect(
-    computePoolAddress({
-      factoryAddress: getChainInfo(chainId).uniswap_v3_factory,
+    computePoolAddress(
+      getChainInfo(chainId).uniswap_v3_factory,
       tokenA,
       tokenB,
       fee,
-    }),
+    ),
     provider,
   );
   // If the specified pool has not been created yet, then the slot0() and liquidity() calls should fail (and throw an error).
@@ -176,7 +224,7 @@ export type TickToLiquidityMap = Map<TickNumber, LiquidityAmount>;
  */
 export async function getTickToLiquidityMapForPool(
   chainId: ApertureSupportedChainId,
-  pool: Pool,
+  pool: Pool | PoolKey,
 ): Promise<TickToLiquidityMap> {
   if (chainId !== ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID) {
     throw 'Unsupported chain id for fetching liquidity for all ticks from subgraph';
@@ -184,12 +232,12 @@ export async function getTickToLiquidityMapForPool(
   let rawData: AllV3TicksQuery['ticks'] = [];
   const numTicksPerQuery = 2000;
   const chainInfo = getChainInfo(chainId);
-  const poolAddress = computePoolAddress({
-    factoryAddress: chainInfo.uniswap_v3_factory,
-    tokenA: pool.token0,
-    tokenB: pool.token1,
-    fee: pool.fee,
-  }).toLowerCase();
+  const poolAddress = computePoolAddress(
+    chainInfo.uniswap_v3_factory,
+    pool.token0,
+    pool.token1,
+    pool.fee,
+  ).toLowerCase();
   for (let skip = 0; ; skip += numTicksPerQuery) {
     const response: AllV3TicksQuery | undefined = (
       await axios.post(chainInfo.uniswap_subgraph_url!, {
