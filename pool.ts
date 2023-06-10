@@ -25,6 +25,13 @@ export type PoolKey = {
   fee: FeeAmount;
 };
 
+/**
+ * Creates the pool key which is enough to compute the pool address
+ * @param tokenA The first token of the pair, irrespective of sort order
+ * @param tokenB The second token of the pair, irrespective of sort order
+ * @param fee The fee tier of the pool
+ * @returns The pool key
+ */
 export function getPoolKey(
   tokenA: string,
   tokenB: string,
