@@ -1,7 +1,13 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
-  "description": "Helpers for Aperture's Uniswap V3 automation platform",
   "version": "0.3.0",
+  "description": "Helpers for Aperture's Uniswap V3 automation platform",
+  "author": "Aperture Finance <engineering@aperture.finance>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Aperture-Finance/uniswap-v3-automation-helpers/issues"
+  },
+  "homepage": "https://aperture.finance/",
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
@@ -21,12 +27,11 @@
     "uniswap",
     "aperture"
   ],
-  "author": "Aperture Finance <engineering@aperture.finance>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/Aperture-Finance/uniswap-v3-automation-helpers/issues"
-  },
-  "homepage": "https://aperture.finance/",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@0xsequence/multicall": "^0.43.30",
     "@aperture_finance/uniswap-v3-automation-sdk": "^0.2.4",

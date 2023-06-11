@@ -8,6 +8,9 @@
     "strict": true,
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "declaration": true,
+    "declarationDir": "dist"
   }
 }
