@@ -57,21 +57,59 @@ function computePoolAddress(
   token0: Token | string,
   token1: Token | string,
   fee: FeeAmount,
+): string;
+
+/**
+ * Computes a pool address
+ * @param factoryAddress The Uniswap V3 factory address
+ * @param pool The pool
+ * @returns The pool address
+ */
+function computePoolAddress(
+  factoryAddress: string,
+  pool: PoolKey | Pool,
+): string;
+
+function computePoolAddress(
+  factoryAddress: string,
+  token0OrPool: Token | string | PoolKey | Pool,
+  token1?: Token | string,
+  fee?: FeeAmount,
 ): string {
-  return _computePoolAddress({
-    factoryAddress,
-    tokenA: new Token(
-      1,
-      typeof token0 === 'string' ? token0 : token0.address,
-      18,
-    ),
-    tokenB: new Token(
-      1,
-      typeof token1 === 'string' ? token1 : token1.address,
-      18,
-    ),
-    fee,
-  });
+  if (typeof token0OrPool === 'object' && !('address' in token0OrPool)) {
+    const pool = token0OrPool as PoolKey | Pool;
+    return _computePoolAddress({
+      factoryAddress,
+      tokenA: new Token(
+        1,
+        typeof pool.token0 === 'string' ? pool.token0 : pool.token0.address,
+        18,
+      ),
+      tokenB: new Token(
+        1,
+        typeof pool.token1 === 'string' ? pool.token1 : pool.token1.address,
+        18,
+      ),
+      fee: pool.fee,
+    });
+  } else {
+    const token0 = token0OrPool as Token | string;
+    if (!token1 || !fee) throw new Error('Invalid arguments');
+    return _computePoolAddress({
+      factoryAddress,
+      tokenA: new Token(
+        1,
+        typeof token0 === 'string' ? token0 : token0.address,
+        18,
+      ),
+      tokenB: new Token(
+        1,
+        typeof token1 === 'string' ? token1 : token1.address,
+        18,
+      ),
+      fee,
+    });
+  }
 }
 
 /**
@@ -241,9 +279,7 @@ export async function getTickToLiquidityMapForPool(
   const chainInfo = getChainInfo(chainId);
   const poolAddress = computePoolAddress(
     chainInfo.uniswap_v3_factory,
-    pool.token0,
-    pool.token1,
-    pool.fee,
+    pool,
   ).toLowerCase();
   for (let skip = 0; ; skip += numTicksPerQuery) {
     const response: AllV3TicksQuery | undefined = (
