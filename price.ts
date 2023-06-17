@@ -1,9 +1,9 @@
 import { Price, Token } from '@uniswap/sdk-core';
+import { TickMath } from '@uniswap/v3-sdk';
 import axios from 'axios';
+import Big from 'big.js';
 import JSBI from 'jsbi';
 import { getChainInfo } from './chain';
-import Big from 'big.js';
-import { TickMath } from '@uniswap/v3-sdk';
 
 /**
  * Parses the specified price string for the price of `baseToken` denominated in `quoteToken`.
@@ -60,6 +60,33 @@ export async function getTokenUSDPriceFromCoingecko(
   );
   // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&vs_currencies=usd
   return priceResponse.data[token.address.toLowerCase()]['usd'];
+}
+
+/**
+ * Fetches tokens' current USD price from Coingecko in a batch.
+ * @param token The token to fetch price information for.
+ * @returns The tokens' current USD price. For example,
+ * {
+ *    0xbe9895146f7af43049ca1c1ae358b0541ea49704: 1783.17,
+ *    0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce: 0.00000681
+ * }
+ */
+export async function getTokenUSDPriceListFromCoingecko(
+  token: Token,
+): Promise<{ [address: string]: number }> {
+  const chainInfo = getChainInfo(token.chainId);
+  if (chainInfo.coingecko_asset_platform_id === undefined) return {};
+  const priceResponse = await axios.get(
+    `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}?contract_addresses=${token.address}&vs_currencies=usd`,
+  );
+  // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&vs_currencies=usd
+  return Object.keys(priceResponse.data).reduce(
+    (obj: { [address: string]: number }, address: any) => {
+      obj[address] = priceResponse.data[address]['usd'];
+      return obj;
+    },
+    {},
+  );
 }
 
 /**
