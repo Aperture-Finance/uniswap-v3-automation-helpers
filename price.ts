@@ -72,12 +72,13 @@ export async function getTokenUSDPriceFromCoingecko(
  * }
  */
 export async function getTokenUSDPriceListFromCoingecko(
-  token: Token,
+  tokens: Token[],
 ): Promise<{ [address: string]: number }> {
-  const chainInfo = getChainInfo(token.chainId);
+  const chainInfo = getChainInfo(tokens[0].chainId);
   if (chainInfo.coingecko_asset_platform_id === undefined) return {};
+  const addresses = tokens.map((token) => token.address).toString();
   const priceResponse = await axios.get(
-    `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}?contract_addresses=${token.address}&vs_currencies=usd`,
+    `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}?contract_addresses=${addresses}&vs_currencies=usd`,
   );
   // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&vs_currencies=usd
   return Object.keys(priceResponse.data).reduce(
