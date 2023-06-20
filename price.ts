@@ -85,7 +85,7 @@ export async function getTokenUSDPriceListFromCoingecko(
   );
   // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&vs_currencies=usd
   return Object.keys(priceResponse.data).reduce(
-    (obj: { [address: string]: number }, address: any) => {
+    (obj: { [address: string]: number }, address: string) => {
       obj[address] = priceResponse.data[address]['usd'];
       return obj;
     },
