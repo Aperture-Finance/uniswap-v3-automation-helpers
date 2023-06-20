@@ -1,13 +1,16 @@
 import { Price, Token } from '@uniswap/sdk-core';
-import { TickMath } from '@uniswap/v3-sdk';
+import { SqrtPriceMath, TickMath } from '@uniswap/v3-sdk';
 import axios from 'axios';
 import Big from 'big.js';
 import JSBI from 'jsbi';
 import { getChainInfo } from './chain';
 
+const Q96 = new Big('2').pow(96);
+
 /**
  * Parses the specified price string for the price of `baseToken` denominated in `quoteToken`.
- * As an example, if `baseToken` is WBTC and `quoteToken` is WETH, then the "10.23" price string represents the exchange ratio of "1 WBTC = 10.23 WETH".
+ * As an example, if `baseToken` is WBTC and `quoteToken` is WETH, then the "10.23" price string represents the exchange
+ * ratio of "1 WBTC = 10.23 WETH".
  * In general, `price` amount of `quoteToken` is worth the same as 1 human-unit of `baseToken`.
  * Internally, price is represented as the amount of raw `quoteToken` that is worth the same as 1 raw `baseToken`:
  * 1 raw WBTC = 10^(-8) WBTC = 10^(-8) * 10.23 WETH = 10^(-8) * 10.23 * 10^18 raw WETH = 10.23 * 10^(18-10) raw WETH.
@@ -64,7 +67,7 @@ export async function getTokenUSDPriceFromCoingecko(
 
 /**
  * Fetches tokens' current USD price from Coingecko in a batch.
- * @param token The token to fetch price information for.
+ * @param tokens The tokens to fetch price information for.
  * @returns The tokens' current USD price. For example,
  * {
  *    0xbe9895146f7af43049ca1c1ae358b0541ea49704: 1783.17,
@@ -91,11 +94,12 @@ export async function getTokenUSDPriceListFromCoingecko(
 }
 
 /**
- * For a given tick range from `tickLower` to `tickUpper`, and a given proportion of the value of the position that is held in token0,
- * calculate the raw price of token0 denominated in token1.
+ * For a given tick range from `tickLower` to `tickUpper`, and a given proportion of the position value that is held in
+ * token0, calculate the raw price of token0 denominated in token1.
  * @param tickLower The lower tick of the range.
  * @param tickUpper The upper tick of the range.
- * @param token0ValueProportion The proportion of the value of the position that is held in token0, as a `Big` number between 0 and 1, inclusive.
+ * @param token0ValueProportion The proportion of the position value that is held in token0, as a `Big` number between 0
+ * and 1, inclusive.
  * @returns The raw price of token0 denominated in token1 for the specified tick range and token0 value proportion.
  */
 export function getRawRelativePriceFromTokenValueProportion(
@@ -112,9 +116,8 @@ export function getRawRelativePriceFromTokenValueProportion(
   const sqrtRatioAtTickUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
   // Let Big use 30 decimal places of precision since 2^96 < 10^29.
   Big.DP = 30;
-  const scale = new Big('2').pow(96);
-  const L = new Big(sqrtRatioAtTickLowerX96.toString()).div(scale);
-  const U = new Big(sqrtRatioAtTickUpperX96.toString()).div(scale);
+  const L = new Big(sqrtRatioAtTickLowerX96.toString()).div(Q96);
+  const U = new Big(sqrtRatioAtTickUpperX96.toString()).div(Q96);
   return U.minus(token0ValueProportion.times(U).times(2))
     .add(
       U.times(
@@ -127,4 +130,49 @@ export function getRawRelativePriceFromTokenValueProportion(
     )
     .div(token0ValueProportion.times(-2).add(2))
     .pow(2);
+}
+
+/**
+ * Given a price ratio of token1/token0, calculate the proportion of the position value that is held in token0 for a
+ * given tick range. Inverse of `getRawRelativePriceFromTokenValueProportion`.
+ * @param tickLower The lower tick of the range.
+ * @param tickUpper The upper tick of the range.
+ * @param priceRatio The price ratio of token1/token0, as a `Big` number.
+ * @returns The proportion of the position value that is held in token0, as a `Big` number between 0 and 1, inclusive.
+ */
+export function getTokenValueProportionFromPriceRatio(
+  tickLower: number,
+  tickUpper: number,
+  priceRatio: Big,
+): Big {
+  const sqrtPriceX96 = JSBI.BigInt(
+    priceRatio.sqrt().times(Q96).toFixed(0).toString(),
+  );
+  const tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+  // only token0
+  if (tick < tickLower) {
+    return new Big(1);
+  }
+  // only token1
+  else if (tick >= tickUpper) {
+    return new Big(0);
+  } else {
+    const sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower);
+    const sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+    const liquidity = JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(96));
+    const amount0 = SqrtPriceMath.getAmount0Delta(
+      sqrtPriceX96,
+      sqrtRatioBX96,
+      liquidity,
+      false,
+    );
+    const amount1 = SqrtPriceMath.getAmount1Delta(
+      sqrtRatioAX96,
+      sqrtPriceX96,
+      liquidity,
+      false,
+    );
+    const value0 = new Big(amount0.toString()).mul(priceRatio);
+    return value0.div(value0.add(amount1.toString()));
+  }
 }

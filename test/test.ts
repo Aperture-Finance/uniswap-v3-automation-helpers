@@ -57,6 +57,7 @@ import {
 } from '../position';
 import {
   getRawRelativePriceFromTokenValueProportion,
+  getTokenValueProportionFromPriceRatio,
   parsePrice,
 } from '../price';
 import { getPublicProvider } from '../provider';
@@ -984,34 +985,13 @@ describe('Util tests', function () {
     );
 
     // Verify that the calculated price indeed corresponds to ~30% of the position value in token0.
-    const sqrtPriceX96 = JSBI.BigInt(
-      price.sqrt().times(new Big(2).pow(96)).toFixed(0).toString(),
-    );
-    const tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
-    const theoreticalPosition = new Position({
-      pool: new Pool(
-        position.amount0.currency,
-        position.amount1.currency,
-        position.pool.fee,
-        sqrtPriceX96,
-        position.liquidity,
-        tick,
-      ),
-      liquidity: position.liquidity,
-      tickLower: position.tickLower,
-      tickUpper: position.tickUpper,
-    });
-    const token0Value =
-      theoreticalPosition.pool.token0Price.asFraction.multiply(
-        theoreticalPosition.amount0,
-      ).quotient;
-    const token1Value = theoreticalPosition.amount1.quotient;
-    const token0ValueProportion = new Fraction(
-      token0Value,
-      JSBI.add(token0Value, token1Value),
+    const token0ValueProportion = getTokenValueProportionFromPriceRatio(
+      position.tickLower,
+      position.tickUpper,
+      price,
     );
     expect(token0ValueProportion.toFixed(30)).to.equal(
-      '0.299999992918951004985073219045',
+      '0.299999999999999999999998780740',
     );
 
     // Verify that price condition is generated correctly.
