@@ -29,7 +29,7 @@ export const CHAIN_ID_TO_INFO: {
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
     ),
     aperture_uniswap_v3_automan: getAddress(
-      '0x7cE50ece5c924c1b8b10275F0cC546Db6EB5915a',
+      '0xdB1fE098232A00A8B81dd6c2A911f2486cb374EE',
     ),
     infura_network_id: 'goerli',
     whitelistedPools: getWhitelistedPools(
