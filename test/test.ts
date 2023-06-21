@@ -1,7 +1,7 @@
 import axios from 'axios';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BigNumber, Contract, ContractFactory, Signer } from 'ethers';
+import { BigNumber, Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 import { providers } from '@0xsequence/multicall';
@@ -16,13 +16,11 @@ import {
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
-import { CurrencyAmount, Fraction, Percent, Token } from '@uniswap/sdk-core';
+import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
-  Pool,
   Position,
   TICK_SPACINGS,
-  TickMath,
   computePoolAddress,
   priceToClosestTick,
   tickToPrice,
@@ -57,6 +55,7 @@ import {
 } from '../position';
 import {
   getRawRelativePriceFromTokenValueProportion,
+  getTokenValueProportionFromPriceRatio,
   parsePrice,
 } from '../price';
 import { getPublicProvider } from '../provider';
@@ -83,7 +82,7 @@ const hardhatForkProvider = new providers.MulticallProvider(ethers.provider, {
   timeWindow: 0,
 });
 const chainId = ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID;
-// A whale address (Avax bridge) on Ethereum mainnet with a lot of ether and token balances.
+// A whale address (Avax bridge) on Ethereum mainnet with a lot of ethers and token balances.
 const WHALE_ADDRESS = '0x8EB8a3b98659Cce290402893d0123abb75E3ab28';
 const WBTC_ADDRESS = '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599';
 const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
@@ -731,16 +730,17 @@ describe('Automan transaction tests', function () {
     await hardhatForkProvider.getBalance(WHALE_ADDRESS);
 
     // Deploy Automan.
-    const automanFactory = new ContractFactory(
-      UniV3Automan__factory.createInterface(),
-      UniV3Automan__factory.bytecode,
+    automanContract = await new UniV3Automan__factory(
       await ethers.getImpersonatedSigner(WHALE_ADDRESS),
-    );
-    automanContract = await automanFactory.deploy(
+    ).deploy(
       getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
       /*owner=*/ WHALE_ADDRESS,
-      /*feeCollector=*/ WHALE_ADDRESS,
       /*controller=*/ WHALE_ADDRESS,
+      /*feeConfig=*/ {
+        // Set the max fee deduction to 50%.
+        feeLimitPips: BigNumber.from('500000000000000000'),
+        feeCollector: WHALE_ADDRESS,
+      },
     );
     await automanContract.deployed();
 
@@ -785,7 +785,7 @@ describe('Automan transaction tests', function () {
       await getBasicPositionInfo(chainId, newPositionId, hardhatForkProvider),
     ).to.deep.equal({
       fee: existingPosition.pool.fee,
-      liquidity: '13291499353879',
+      liquidity: '13291498909567',
       tickLower: 240000,
       tickUpper: 300000,
       token0: existingPosition.pool.token0,
@@ -810,7 +810,7 @@ describe('Automan transaction tests', function () {
       await getBasicPositionInfo(chainId, positionId, hardhatForkProvider)
     ).liquidity!;
     expect(liquidityBeforeReinvest.toString()).to.equal('34399999543676');
-    expect(liquidityAfterReinvest.toString()).to.equal('39910988755092');
+    expect(liquidityAfterReinvest.toString()).to.equal('39910987438794');
     expect(
       generateAutoCompoundRequestPayload(
         eoa,
@@ -895,7 +895,7 @@ describe('Util tests', function () {
       reason: 'onChainPositionSpecificApproval',
     });
 
-    // Construct and sign a permit message approving position id 4.
+    // Construct and sign a permit digest that approves position id 4.
     const wallet = new ethers.Wallet(TEST_WALLET_PRIVATE_KEY);
     const permitTypedData = await generateTypedDataForPermit(
       chainId,
@@ -984,34 +984,13 @@ describe('Util tests', function () {
     );
 
     // Verify that the calculated price indeed corresponds to ~30% of the position value in token0.
-    const sqrtPriceX96 = JSBI.BigInt(
-      price.sqrt().times(new Big(2).pow(96)).toFixed(0).toString(),
-    );
-    const tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
-    const theoreticalPosition = new Position({
-      pool: new Pool(
-        position.amount0.currency,
-        position.amount1.currency,
-        position.pool.fee,
-        sqrtPriceX96,
-        position.liquidity,
-        tick,
-      ),
-      liquidity: position.liquidity,
-      tickLower: position.tickLower,
-      tickUpper: position.tickUpper,
-    });
-    const token0Value =
-      theoreticalPosition.pool.token0Price.asFraction.multiply(
-        theoreticalPosition.amount0,
-      ).quotient;
-    const token1Value = theoreticalPosition.amount1.quotient;
-    const token0ValueProportion = new Fraction(
-      token0Value,
-      JSBI.add(token0Value, token1Value),
+    const token0ValueProportion = getTokenValueProportionFromPriceRatio(
+      position.tickLower,
+      position.tickUpper,
+      price,
     );
     expect(token0ValueProportion.toFixed(30)).to.equal(
-      '0.299999992918951004985073219045',
+      '0.299999999999999999999998780740',
     );
 
     // Verify that price condition is generated correctly.
