@@ -1,6 +1,7 @@
 import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { getAddress } from 'ethers/lib/utils';
 import whitelistedPoolsEthereum from './data/whitelistedPools-1.json';
+import whitelistedPoolsGoerli from './data/whitelistedPools-5.json';
 import whitelistedPoolsArbitrum from './data/whitelistedPools-42161.json';
 import { WhitelistedPool, getWhitelistedPools } from './whitelist';
 
@@ -31,6 +32,10 @@ export const CHAIN_ID_TO_INFO: {
       '0x7cE50ece5c924c1b8b10275F0cC546Db6EB5915a',
     ),
     infura_network_id: 'goerli',
+    whitelistedPools: getWhitelistedPools(
+      ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID,
+      whitelistedPoolsGoerli,
+    ),
   },
   [ApertureSupportedChainId.ARBITRUM_GOERLI_TESTNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
