@@ -52,7 +52,7 @@ export function getPoolKey(
  * @param fee The fee tier of the pool
  * @returns The pool address
  */
-function computePoolAddress(
+export function computePoolAddress(
   factoryAddress: string,
   token0: Token | string,
   token1: Token | string,

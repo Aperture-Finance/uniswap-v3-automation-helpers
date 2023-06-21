@@ -9,6 +9,23 @@ export interface WhitelistedPool {
   feeTier: FeeAmount;
 }
 
+export interface Pool {
+  id: string;
+  feeTier: string;
+  token0: {
+    id: string;
+    decimals: string;
+    symbol: string;
+    name: string;
+  };
+  token1: {
+    id: string;
+    decimals: string;
+    symbol: string;
+    name: string;
+  };
+}
+
 /**
  * Returns a map of whitelisted pools for the specified chain.
  * @param chainId Chain id.
@@ -17,22 +34,7 @@ export interface WhitelistedPool {
  */
 export function getWhitelistedPools(
   chainId: ApertureSupportedChainId,
-  whitelistedPoolsJson: {
-    id: string;
-    feeTier: string;
-    token0: {
-      id: string;
-      decimals: string;
-      symbol: string;
-      name: string;
-    };
-    token1: {
-      id: string;
-      decimals: string;
-      symbol: string;
-      name: string;
-    };
-  }[],
+  whitelistedPoolsJson: Pool[],
 ): Map<string, WhitelistedPool> {
   const whitelistedPoolsMap = new Map();
   for (const pool of whitelistedPoolsJson) {
@@ -65,22 +67,7 @@ export function getWhitelistedPools(
  */
 export function getWhitelistedTokens(
   chainId: ApertureSupportedChainId,
-  whitelistedPoolsJson: {
-    id: string;
-    feeTier: string;
-    token0: {
-      id: string;
-      decimals: string;
-      symbol: string;
-      name: string;
-    };
-    token1: {
-      id: string;
-      decimals: string;
-      symbol: string;
-      name: string;
-    };
-  }[],
+  whitelistedPoolsJson: Pool[],
 ): Map<
   string,
   {
