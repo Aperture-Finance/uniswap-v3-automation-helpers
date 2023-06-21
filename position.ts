@@ -5,7 +5,7 @@ import {
 import {
   CollectEventObject,
   DecreaseLiquidityEventObject,
-} from '@aperture_finance/uniswap-v3-automation-sdk/typechain-types/src/interfaces/INonfungiblePositionManager';
+} from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/@aperture_finance/uni-v3-lib/src/interfaces/INonfungiblePositionManager';
 import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount, Position } from '@uniswap/v3-sdk';
