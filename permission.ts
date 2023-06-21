@@ -62,6 +62,40 @@ export async function checkPositionApprovalStatus(
       reason: 'missingSignedPermission',
     };
   }
+  if (await checkPositionPermit(positionId, permitInfo, chainId, provider)) {
+    return {
+      owner,
+      hasAuthority: true,
+      reason: 'offChainPositionSpecificApproval',
+    };
+  } else {
+    return {
+      owner,
+      hasAuthority: false,
+      reason: 'invalidSignedPermission',
+    };
+  }
+}
+
+/**
+ * Check if the permit is valid by calling the permit function on `NonfungiblePositionManager`.
+ * @param positionId Position id.
+ * @param permitInfo Permit info containing the signature and deadline.
+ * @param chainId Chain id.
+ * @param provider Ethers provider.
+ * @returns True if the permit is valid, false otherwise.
+ */
+export async function checkPositionPermit(
+  positionId: BigNumberish,
+  permitInfo: PermitInfo,
+  chainId: ApertureSupportedChainId,
+  provider: ethers.providers.Provider,
+) {
+  const chainInfo = getChainInfo(chainId);
+  const npm = INonfungiblePositionManager__factory.connect(
+    chainInfo.uniswap_v3_nonfungible_position_manager,
+    provider,
+  );
   try {
     const permitSignature = ethers.utils.splitSignature(permitInfo.signature);
     await npm.callStatic.permit(
@@ -72,18 +106,9 @@ export async function checkPositionApprovalStatus(
       permitSignature.r,
       permitSignature.s,
     );
-    return {
-      owner,
-      hasAuthority: true,
-      reason: 'offChainPositionSpecificApproval',
-    };
+    return true;
   } catch (err) {
-    return {
-      owner,
-      hasAuthority: false,
-      reason: 'invalidSignedPermission',
-      error: err,
-    };
+    return false;
   }
 }
 
