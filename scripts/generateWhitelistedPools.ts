@@ -1,8 +1,11 @@
 import axios from 'axios';
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { getChainInfo } from '../chain';
 import { config as dotenvConfig } from 'dotenv';
 import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
+import { FeeAmount } from '@uniswap/v3-sdk';
+import { computePoolAddress } from '../pool';
+import { Pool } from '../whitelist';
 
 dotenvConfig();
 
@@ -100,7 +103,34 @@ async function generateWhitelistedPools(chainId: number) {
   );
 }
 
-generateWhitelistedPools(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID);
-generateWhitelistedPools(ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID);
+// generateWhitelistedPools(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID);
+// generateWhitelistedPools(ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID);
 // There are 42 whitelisted pools involving 26 tokens on Ethereum mainnet.
 // There are 23 whitelisted pools involving 17 tokens on Arbitrum.
+
+/**
+ * Generate the pool addresses for the whitelisted pools on testnet.
+ * @param chainId The chain id.
+ */
+function generateTestnetPools(chainId: number) {
+  const path = `data/whitelistedPools-${chainId}.json`;
+  // Read and parse the JSON file
+  const rawData = readFileSync(path, 'utf-8');
+  const pools: Pool[] = JSON.parse(rawData);
+  // Modify each pool in the array
+  for (const pool of pools) {
+    // Replace the id field with the computed pool address
+    pool.id = computePoolAddress(
+      getChainInfo(chainId).uniswap_v3_factory,
+      pool.token0.id,
+      pool.token1.id,
+      Number(pool.feeTier) as FeeAmount,
+    );
+  }
+
+  // Stringify and write the modified object back to the file
+  const newData = JSON.stringify(pools, null, 2);
+  writeFileSync(path, newData, 'utf-8');
+}
+
+generateTestnetPools(ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID);
