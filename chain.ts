@@ -3,7 +3,11 @@ import { getAddress } from 'ethers/lib/utils';
 import whitelistedPoolsEthereum from './data/whitelistedPools-1.json';
 import whitelistedPoolsGoerli from './data/whitelistedPools-5.json';
 import whitelistedPoolsArbitrum from './data/whitelistedPools-42161.json';
-import { WhitelistedPool, getWhitelistedPools } from './whitelist';
+import {
+  WhitelistedPool,
+  getWhitelistedPools,
+  getWhitelistedTokens,
+} from './whitelist';
 
 export interface ChainInfo {
   uniswap_v3_factory: string;
@@ -16,6 +20,7 @@ export interface ChainInfo {
   uniswap_subgraph_url?: string;
   // Only populated for mainnets. Map from pool addresses to `WhitelistedPool` with information about the two tokens and pool fee tier.
   whitelistedPools?: Map<string, WhitelistedPool>;
+  whitelistedTokens?: Map<string, string>;
 }
 
 export const CHAIN_ID_TO_INFO: {
@@ -33,6 +38,10 @@ export const CHAIN_ID_TO_INFO: {
     ),
     infura_network_id: 'goerli',
     whitelistedPools: getWhitelistedPools(
+      ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID,
+      whitelistedPoolsGoerli,
+    ),
+    whitelistedTokens: getWhitelistedTokens(
       ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID,
       whitelistedPoolsGoerli,
     ),
@@ -69,6 +78,10 @@ export const CHAIN_ID_TO_INFO: {
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       whitelistedPoolsEthereum,
     ),
+    whitelistedTokens: getWhitelistedTokens(
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      whitelistedPoolsEthereum,
+    ),
   },
   [ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
@@ -86,6 +99,10 @@ export const CHAIN_ID_TO_INFO: {
     uniswap_subgraph_url:
       'https://api.thegraph.com/subgraphs/name/ianlapham/arbitrum-minimal',
     whitelistedPools: getWhitelistedPools(
+      ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
+      whitelistedPoolsArbitrum,
+    ),
+    whitelistedTokens: getWhitelistedTokens(
       ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
       whitelistedPoolsArbitrum,
     ),

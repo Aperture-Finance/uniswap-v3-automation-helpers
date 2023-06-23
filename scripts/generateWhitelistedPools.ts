@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { readFileSync, writeFileSync } from 'fs';
-import { getChainInfo } from '../chain';
 import { config as dotenvConfig } from 'dotenv';
 import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
+import { Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
+import { getChainInfo } from '../chain';
 import { computePoolAddress } from '../pool';
+import { getTokenUSDPriceListFromCoingecko } from '../price';
 import { Pool } from '../whitelist';
 
 dotenvConfig();
@@ -76,24 +78,26 @@ async function generateWhitelistedPools(chainId: number) {
     `data/whitelistedPools-${chainId}.json`,
     JSON.stringify(filteredPools),
   );
+
+  // create a set of unique token ids
   const tokens: Set<string> = new Set();
   for (const pool of filteredPools) {
     tokens.add(pool.token0.id);
     tokens.add(pool.token1.id);
   }
-  for (const token of tokens) {
-    const priceResponse = await axios.get(
-      `https://pro-api.coingecko.com/api/v3/simple/token_price/${getChainInfo(
-        chainId,
-      )
-        .coingecko_asset_platform_id!}?contract_addresses=${token}&vs_currencies=usd&x_cg_pro_api_key=${
-        process.env.COINGECKO_API_KEY
-      }`,
-    );
-    if (token in priceResponse.data) {
-      console.log(
-        `Token ${token}'s price is ${priceResponse.data[token]['usd']}.`,
-      );
+
+  // Convert the Set to an Array of Token objects, then pass to the function
+  const tokenArray = Array.from(tokens).map(
+    (addr) => new Token(chainId, addr, 18),
+  );
+
+  // call coingecko API for all tokens at once
+  const priceList = await getTokenUSDPriceListFromCoingecko(tokenArray);
+
+  // loop over priceList and print information
+  for (const token in priceList) {
+    if (priceList[token]) {
+      console.log(`Token ${token}'s price is ${priceList[token]}.`);
     } else {
       console.log(`Token ${token} doesn't have Coingecko price support.`);
     }
@@ -103,10 +107,10 @@ async function generateWhitelistedPools(chainId: number) {
   );
 }
 
-// generateWhitelistedPools(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID);
-// generateWhitelistedPools(ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID);
-// There are 42 whitelisted pools involving 26 tokens on Ethereum mainnet.
-// There are 23 whitelisted pools involving 17 tokens on Arbitrum.
+generateWhitelistedPools(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID);
+generateWhitelistedPools(ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID);
+// There are 43 whitelisted pools involving 29 tokens on Ethereum mainnet.
+// There are 26 whitelisted pools involving 20 tokens on Arbitrum.
 
 /**
  * Generate the pool addresses for the whitelisted pools on testnet.
@@ -119,6 +123,10 @@ function generateTestnetPools(chainId: number) {
   const pools: Pool[] = JSON.parse(rawData);
   // Modify each pool in the array
   for (const pool of pools) {
+    if (pool.token0.id.toLowerCase() > pool.token1.id.toLowerCase()) {
+      // Swap the order of token0 and token1
+      [pool.token0, pool.token1] = [pool.token1, pool.token0];
+    }
     // Replace the id field with the computed pool address
     pool.id = computePoolAddress(
       getChainInfo(chainId).uniswap_v3_factory,
