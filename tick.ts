@@ -1,4 +1,4 @@
-import { Price, Token } from '@uniswap/sdk-core';
+import { Fraction, Price, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
   TICK_SPACINGS,
@@ -9,6 +9,20 @@ import {
 } from '@uniswap/v3-sdk';
 import JSBI from 'jsbi';
 import { LiquidityAmount, TickNumber, TickToLiquidityMap } from './pool';
+
+const Q96 = JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(96));
+const Q192 = JSBI.exponentiate(Q96, JSBI.BigInt(2));
+export const MIN_PRICE = new Fraction(
+  JSBI.multiply(TickMath.MIN_SQRT_RATIO, TickMath.MIN_SQRT_RATIO),
+  Q192,
+);
+export const MAX_PRICE = new Fraction(
+  JSBI.subtract(
+    JSBI.multiply(TickMath.MAX_SQRT_RATIO, TickMath.MAX_SQRT_RATIO),
+    JSBI.BigInt(1),
+  ),
+  Q192,
+);
 
 /**
  * Finds the closest usable tick for the specified price and pool fee tier.
@@ -21,9 +35,15 @@ export function priceToClosestUsableTick(
   price: Price<Token, Token>,
   poolFee: FeeAmount,
 ): number {
-  let tick = priceToClosestTick(price);
-  tick = Math.max(tick, TickMath.MIN_TICK);
-  tick = Math.min(tick, TickMath.MAX_TICK);
+  let tick: number;
+  const sorted = price.baseCurrency.sortsBefore(price.quoteCurrency);
+  if (price.lessThan(MIN_PRICE)) {
+    tick = sorted ? TickMath.MIN_TICK : TickMath.MAX_TICK;
+  } else if (price.greaterThan(MAX_PRICE)) {
+    tick = sorted ? TickMath.MAX_TICK : TickMath.MIN_TICK;
+  } else {
+    tick = priceToClosestTick(price);
+  }
   return nearestUsableTick(tick, TICK_SPACINGS[poolFee]);
 }
 

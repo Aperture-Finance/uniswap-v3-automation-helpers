@@ -16,7 +16,7 @@ import {
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
-import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
+import { CurrencyAmount, Percent, Price, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
   Position,
@@ -24,6 +24,8 @@ import {
   computePoolAddress,
   priceToClosestTick,
   tickToPrice,
+  TickMath,
+  nearestUsableTick,
 } from '@uniswap/v3-sdk';
 import { getWalletActivities } from '../activity';
 import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
@@ -61,6 +63,8 @@ import {
 import { getPublicProvider } from '../provider';
 import {
   alignPriceToClosestUsableTick,
+  MIN_PRICE,
+  MAX_PRICE,
   priceToClosestUsableTick,
   readTickToLiquidityMap,
 } from '../tick';
@@ -1022,6 +1026,69 @@ describe('Util tests', function () {
       gte: undefined,
       durationSec: undefined,
     });
+  });
+});
+
+describe('Price to tick', function () {
+  const token0 = new Token(1, WBTC_ADDRESS, 18);
+  const token1 = new Token(1, WETH_ADDRESS, 18);
+  const fee = FeeAmount.MEDIUM;
+  const zeroPrice = new Price(token0, token1, '1', '0');
+  const maxPrice = new Price(
+    token0,
+    token1,
+    MAX_PRICE.denominator,
+    MAX_PRICE.numerator,
+  );
+
+  it('A zero price should return MIN_TICK', function () {
+    expect(priceToClosestUsableTick(zeroPrice, fee)).to.equal(
+      nearestUsableTick(TickMath.MIN_TICK, TICK_SPACINGS[fee]),
+    );
+  });
+
+  it('The tick is invariant to the order of base/quote tokens', function () {
+    expect(priceToClosestUsableTick(zeroPrice.invert(), fee)).to.equal(
+      priceToClosestUsableTick(zeroPrice, fee),
+    );
+    expect(priceToClosestUsableTick(maxPrice.invert(), fee)).to.equal(
+      priceToClosestUsableTick(maxPrice, fee),
+    );
+  });
+
+  it('If token1 is the baseCurrency, then a price of 0 should return MAX_TICK', function () {
+    expect(
+      priceToClosestUsableTick(new Price(token1, token0, '1', '0'), fee),
+    ).to.equal(nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[fee]));
+  });
+
+  it('MIN_PRICE should return MIN_TICK', function () {
+    expect(
+      priceToClosestUsableTick(
+        new Price(token0, token1, MIN_PRICE.denominator, MIN_PRICE.numerator),
+        fee,
+      ),
+    ).to.equal(nearestUsableTick(TickMath.MIN_TICK, TICK_SPACINGS[fee]));
+  });
+
+  it('Prices greater than MAX_PRICE should return MAX_TICK', function () {
+    expect(
+      priceToClosestUsableTick(
+        new Price(
+          token0,
+          token1,
+          MAX_PRICE.denominator,
+          JSBI.add(MAX_PRICE.numerator, JSBI.BigInt(1)),
+        ),
+        fee,
+      ),
+    ).to.equal(nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[fee]));
+  });
+
+  it('MAX_PRICE should return MAX_TICK', function () {
+    expect(priceToClosestUsableTick(maxPrice, fee)).to.equal(
+      nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[fee]),
+    );
   });
 });
 
