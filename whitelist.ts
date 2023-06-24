@@ -68,23 +68,14 @@ export function getWhitelistedPools(
 export function getWhitelistedTokens(
   chainId: ApertureSupportedChainId,
   whitelistedPoolsJson: Pool[],
-): Map<
-  string,
-  {
-    [chainId: number]: string;
-  }
-> {
+): Map<string, string> {
   const whitelistedTokens = new Map();
   for (const pool of whitelistedPoolsJson) {
     if (!whitelistedTokens.has(pool.token0.symbol)) {
-      whitelistedTokens.set(pool.token0.symbol, {
-        [chainId]: getAddress(pool.token0.id),
-      });
+      whitelistedTokens.set(pool.token0.symbol, getAddress(pool.token0.id));
     }
     if (!whitelistedTokens.has(pool.token1.symbol)) {
-      whitelistedTokens.set(pool.token1.symbol, {
-        [chainId]: getAddress(pool.token1.id),
-      });
+      whitelistedTokens.set(pool.token1.symbol, getAddress(pool.token1.id));
     }
   }
   return whitelistedTokens;
