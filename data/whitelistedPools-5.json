@@ -158,5 +158,21 @@
       "decimals": "6",
       "name": "USD Coin"
     }
+  },
+  {
+    "id": "0xf83aF5ead11a631DCDe1E62dCA759CC4BA6B8B05",
+    "feeTier": "3000",
+    "token0": {
+      "id": "0x7e1C44fc257153b681eB8771A21abeF47aa36e77",
+      "symbol": "AptrB",
+      "decimals": "6",
+      "name": "ApertureTestTokenB"
+    },
+    "token1": {
+      "id": "0xD15F4770CBcbfbBffc90f9ADEea58cA4a87F2544",
+      "symbol": "AptrA",
+      "decimals": "8",
+      "name": "ApertureTestTokenA"
+    }
   }
 ]
