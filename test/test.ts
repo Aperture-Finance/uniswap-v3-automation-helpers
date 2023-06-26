@@ -1,9 +1,3 @@
-import axios from 'axios';
-import chai from 'chai';
-import chaiAsPromised from 'chai-as-promised';
-import { BigNumber, Contract, Signer } from 'ethers';
-import { ethers } from 'hardhat';
-import JSBI from 'jsbi';
 import { providers } from '@0xsequence/multicall';
 import {
   ActionTypeEnum,
@@ -21,12 +15,20 @@ import {
   FeeAmount,
   Position,
   TICK_SPACINGS,
+  TickMath,
   computePoolAddress,
+  nearestUsableTick,
   priceToClosestTick,
   tickToPrice,
-  TickMath,
-  nearestUsableTick,
 } from '@uniswap/v3-sdk';
+import axios from 'axios';
+import Big from 'big.js';
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import { BigNumber, Contract, Signer } from 'ethers';
+import { ethers } from 'hardhat';
+import JSBI from 'jsbi';
+
 import { getWalletActivities } from '../activity';
 import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
 import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
@@ -62,11 +64,12 @@ import {
 } from '../price';
 import { getPublicProvider } from '../provider';
 import {
-  alignPriceToClosestUsableTick,
-  MIN_PRICE,
   MAX_PRICE,
+  MIN_PRICE,
+  alignPriceToClosestUsableTick,
   priceToClosestUsableTick,
   readTickToLiquidityMap,
+  sqrtRatioToPrice,
 } from '../tick';
 import {
   getAddLiquidityTx,
@@ -78,7 +81,6 @@ import {
   getReinvestTx,
   getRemoveLiquidityTx,
 } from '../transaction';
-import Big from 'big.js';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1029,7 +1031,7 @@ describe('Util tests', function () {
   });
 });
 
-describe('Price to tick', function () {
+describe('Price to tick conversion', function () {
   const token0 = new Token(1, WBTC_ADDRESS, 18);
   const token1 = new Token(1, WETH_ADDRESS, 18);
   const fee = FeeAmount.MEDIUM;
@@ -1089,6 +1091,14 @@ describe('Price to tick', function () {
     expect(priceToClosestUsableTick(maxPrice, fee)).to.equal(
       nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[fee]),
     );
+  });
+
+  it('Sqrt ratio to price', function () {
+    const price = alignPriceToClosestUsableTick(maxPrice, fee);
+    const tick = priceToClosestUsableTick(price, fee);
+    expect(
+      sqrtRatioToPrice(TickMath.getSqrtRatioAtTick(tick), token0, token1),
+    ).to.deep.equal(price);
   });
 });
 

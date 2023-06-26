@@ -8,6 +8,7 @@ import {
   tickToPrice,
 } from '@uniswap/v3-sdk';
 import JSBI from 'jsbi';
+
 import { LiquidityAmount, TickNumber, TickToLiquidityMap } from './pool';
 
 const Q96 = JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(96));
@@ -23,6 +24,24 @@ export const MAX_PRICE = new Fraction(
   ),
   Q192,
 );
+
+/**
+ * Returns a price object corresponding to the sqrt ratio and the base/quote token
+ * @param sqrtRatioX96 The sqrt ratio as a Q64.96
+ * @param baseToken The base token of the price
+ * @param quoteToken The quote token of the price
+ * @returns The price corresponding to the input sqrt ratio
+ */
+export function sqrtRatioToPrice(
+  sqrtRatioX96: JSBI,
+  baseToken: Token,
+  quoteToken: Token,
+): Price<Token, Token> {
+  const ratioX192 = JSBI.multiply(sqrtRatioX96, sqrtRatioX96);
+  return baseToken.sortsBefore(quoteToken)
+    ? new Price(baseToken, quoteToken, Q192, ratioX192)
+    : new Price(baseToken, quoteToken, ratioX192, Q192);
+}
 
 /**
  * Finds the closest usable tick for the specified price and pool fee tier.

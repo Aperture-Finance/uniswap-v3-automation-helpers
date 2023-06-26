@@ -1,6 +1,6 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
   "author": "Aperture Finance <engineering@aperture.finance>",
   "license": "MIT",
@@ -34,7 +34,7 @@
   ],
   "dependencies": {
     "@0xsequence/multicall": "^0.43.34",
-    "@aperture_finance/uniswap-v3-automation-sdk": "^0.4.1",
+    "@aperture_finance/uniswap-v3-automation-sdk": "^0.4.2",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@uniswap/v3-sdk": "^3.9.0",
@@ -48,6 +48,7 @@
     "@graphql-codegen/typescript-operations": "^3.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/big.js": "^6.1.6",
     "@types/chai": "^4.3.5",
     "@types/chai-as-promised": "^7.1.5",

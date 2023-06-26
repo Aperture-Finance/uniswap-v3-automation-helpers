@@ -1,5 +1,6 @@
-import { ethers } from 'ethers';
 import { providers } from '@0xsequence/multicall';
+import { ethers } from 'ethers';
+
 import { getChainInfo } from './chain';
 
 /**

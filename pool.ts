@@ -3,21 +3,23 @@ import {
   IUniswapV3Pool__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
-import { Token } from '@uniswap/sdk-core';
+import { Price, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
   Pool,
-  tickToPrice,
   computePoolAddress as _computePoolAddress,
+  tickToPrice,
 } from '@uniswap/v3-sdk';
 import axios from 'axios';
 import JSBI from 'jsbi';
+
 import { getChainInfo } from './chain';
-import { BasicPositionInfo } from './position';
 import {
   AllV3TicksQuery,
   FeeTierDistributionQuery,
 } from './data/__graphql_generated__/uniswap-thegraph-types-and-hooks';
+import { BasicPositionInfo } from './position';
+import { sqrtRatioToPrice } from './tick';
 
 export type PoolKey = {
   token0: string;
@@ -152,6 +154,15 @@ export async function getPool(
     inRangeLiquidity.toString(),
     slot0.tick,
   );
+}
+
+/**
+ * Get the price of `token0` in terms of `token1` in the pool.
+ * @param pool A Uniswap v3 pool.
+ * @returns The price of `token0` in terms of `token1` in the pool.
+ */
+export function getPoolPrice(pool: Pool): Price<Token, Token> {
+  return sqrtRatioToPrice(pool.sqrtRatioX96, pool.token0, pool.token1);
 }
 
 /**

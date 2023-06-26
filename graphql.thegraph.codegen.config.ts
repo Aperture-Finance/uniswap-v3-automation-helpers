@@ -1,5 +1,4 @@
 /* eslint-env node */
-
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
 // Generates TS objects from the schemas returned by graphql queries

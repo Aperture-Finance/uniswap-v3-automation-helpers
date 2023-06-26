@@ -1,5 +1,6 @@
 import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { getAddress } from 'ethers/lib/utils';
+
 import whitelistedPoolsEthereum from './data/whitelistedPools-1.json';
 import whitelistedPoolsGoerli from './data/whitelistedPools-5.json';
 import whitelistedPoolsArbitrum from './data/whitelistedPools-42161.json';

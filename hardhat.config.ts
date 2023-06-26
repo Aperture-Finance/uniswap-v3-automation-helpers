@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
-import { HardhatUserConfig } from 'hardhat/config';
 import { config as dotenvConfig } from 'dotenv';
+import { HardhatUserConfig } from 'hardhat/config';
 
 dotenvConfig();
 
