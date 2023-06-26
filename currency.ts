@@ -10,6 +10,7 @@ import {
   NativeCurrency,
   Token,
 } from '@uniswap/sdk-core';
+
 import { nativeOnChain } from './uniswap-constants';
 
 // The `Currency` type is defined as `Currency = NativeCurrency | Token`.

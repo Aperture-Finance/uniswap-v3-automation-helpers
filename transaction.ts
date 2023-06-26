@@ -33,6 +33,7 @@ import {
 } from '@uniswap/v3-sdk';
 import { BigNumber, BigNumberish } from 'ethers';
 import JSBI from 'jsbi';
+
 import {
   AutomanFragment,
   AutomanParams,

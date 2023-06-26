@@ -1,23 +1,24 @@
 // Adapted from https://github.com/Uniswap/interface/blob/main/src/components/AccountDrawer/MiniPortfolio/Activity/parseRemote.tsx.
+import { Currency } from '@uniswap/sdk-core';
 import axios from 'axios';
-import { formatNumberOrString, NumberType } from './uniswap-conedison/format';
+import { getAddress } from 'ethers/lib/utils';
+
 import {
   ActivityType,
   AssetActivityPartsFragment,
   Chain,
-  NftApproveForAllPartsFragment,
   NftApprovalPartsFragment,
+  NftApproveForAllPartsFragment,
   NftTransferPartsFragment,
-  TransactionStatus,
   TokenApprovalPartsFragment,
   TokenTransferPartsFragment,
+  TransactionStatus,
 } from './data/__graphql_generated__/uniswap-data-types-and-hooks';
-import { Currency } from '@uniswap/sdk-core';
-import { getAddress } from 'ethers/lib/utils';
+import { NumberType, formatNumberOrString } from './uniswap-conedison/format';
 import {
-  nativeOnChain,
   NONFUNGIBLE_POSITION_MANAGER_ADDRESSES,
   UniswapSupportedChainId,
+  nativeOnChain,
 } from './uniswap-constants';
 
 export type TransactionReceipt = AssetActivityPartsFragment['transaction'];

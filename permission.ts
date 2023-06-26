@@ -5,6 +5,7 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
 import { BigNumberish, TypedDataDomain, TypedDataField, ethers } from 'ethers';
+
 import { getChainInfo } from './chain';
 
 export interface PositionApprovalStatus {
