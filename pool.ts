@@ -14,6 +14,7 @@ import axios from 'axios';
 import JSBI from 'jsbi';
 
 import { getChainInfo } from './chain';
+import { getToken } from './currency';
 import {
   AllV3TicksQuery,
   FeeTierDistributionQuery,
@@ -123,8 +124,8 @@ export async function getPoolFromBasicPositionInfo(
  * @returns The constructed Uniswap SDK Pool object.
  */
 export async function getPool(
-  tokenA: Token,
-  tokenB: Token,
+  tokenA: Token | string,
+  tokenB: Token | string,
   fee: FeeAmount,
   chainId: ApertureSupportedChainId,
   provider: Provider,
@@ -139,16 +140,29 @@ export async function getPool(
     provider,
   );
   // If the specified pool has not been created yet, then the slot0() and liquidity() calls should fail (and throw an error).
-  const [slot0, inRangeLiquidity] = await Promise.all([
-    poolContract.slot0(),
-    poolContract.liquidity(),
-  ]);
+  // Also update the tokens to the canonical type.
+  const [slot0, inRangeLiquidity, tokenACanon, tokenBCanon] = await Promise.all(
+    [
+      poolContract.slot0(),
+      poolContract.liquidity(),
+      getToken(
+        typeof tokenA === 'string' ? tokenA : tokenA.address,
+        chainId,
+        provider,
+      ),
+      getToken(
+        typeof tokenB === 'string' ? tokenB : tokenB.address,
+        chainId,
+        provider,
+      ),
+    ],
+  );
   if (slot0.sqrtPriceX96.isZero()) {
     throw 'Pool has been created but not yet initialized';
   }
   return new Pool(
-    tokenA,
-    tokenB,
+    tokenACanon,
+    tokenBCanon,
     fee,
     slot0.sqrtPriceX96.toString(),
     inRangeLiquidity.toString(),
