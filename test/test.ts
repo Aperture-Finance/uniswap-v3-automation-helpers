@@ -54,6 +54,7 @@ import {
   getCollectedFeesFromReceipt,
   getPosition,
   getPositionFromBasicInfo,
+  getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
 } from '../position';
@@ -201,11 +202,7 @@ describe('Limit order tests', function () {
     );
     // Create the limit order position.
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const positionId = getMintedPositionIdFromTxReceipt(
-      txReceipt,
-      eoa,
-      chainId,
-    )!;
+    const positionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
     const basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
@@ -306,11 +303,7 @@ describe('Limit order tests', function () {
     );
     // Create the limit order position.
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const positionId = getMintedPositionIdFromTxReceipt(
-      txReceipt,
-      eoa,
-      chainId,
-    )!;
+    const positionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
     const basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
@@ -381,7 +374,6 @@ describe('Limit order tests', function () {
     const nativeEthPositionId = getMintedPositionIdFromTxReceipt(
       nativeEthTxReceipt,
       eoa,
-      chainId,
     )!;
     expect(
       await getBasicPositionInfo(
@@ -704,7 +696,6 @@ describe('Position liquidity management tests', function () {
     const createdPositionId = getMintedPositionIdFromTxReceipt(
       createPositionTxReceipt,
       eoa,
-      chainId,
     )!;
     expect(
       await getBasicPositionInfo(
@@ -768,7 +759,7 @@ describe('Automan transaction tests', function () {
       positionId,
       hardhatForkProvider,
     );
-    const txRequest = await getRebalanceTx(
+    const { tx: txRequest } = await getRebalanceTx(
       chainId,
       eoa,
       positionId,
@@ -782,11 +773,7 @@ describe('Automan transaction tests', function () {
     const txReceipt = await (
       await impersonatedOwnerSigner.sendTransaction(txRequest)
     ).wait();
-    const newPositionId = getMintedPositionIdFromTxReceipt(
-      txReceipt,
-      eoa,
-      chainId,
-    )!;
+    const newPositionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
     expect(
       await getBasicPositionInfo(chainId, newPositionId, hardhatForkProvider),
     ).to.deep.equal({
@@ -803,7 +790,7 @@ describe('Automan transaction tests', function () {
     const liquidityBeforeReinvest = (
       await getBasicPositionInfo(chainId, positionId, hardhatForkProvider)
     ).liquidity!;
-    const txRequest = await getReinvestTx(
+    const { tx: txRequest } = await getReinvestTx(
       chainId,
       eoa,
       positionId,
@@ -1028,6 +1015,39 @@ describe('Util tests', function () {
       gte: undefined,
       durationSec: undefined,
     });
+  });
+
+  it('Test getRebalancedPosition', async function () {
+    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
+    // rebalance to an out of range position
+    const newTickLower =
+      inRangePosition.tickUpper + TICK_SPACINGS[FeeAmount.MEDIUM];
+    const newTickUpper =
+      inRangePosition.tickUpper + 100 * TICK_SPACINGS[FeeAmount.MEDIUM];
+    const newPosition = getRebalancedPosition(
+      inRangePosition,
+      newTickLower,
+      newTickUpper,
+    );
+    expect(JSBI.toNumber(newPosition.amount1.quotient)).to.equal(0);
+    const revertedPosition = getRebalancedPosition(
+      newPosition,
+      inRangePosition.tickLower,
+      inRangePosition.tickUpper,
+    );
+    const amount0 = JSBI.toNumber(inRangePosition.amount0.quotient);
+    expect(
+      JSBI.toNumber(revertedPosition.amount0.quotient),
+    ).to.be.approximately(amount0, amount0 / 1e6);
+    const amount1 = JSBI.toNumber(inRangePosition.amount1.quotient);
+    expect(
+      JSBI.toNumber(revertedPosition.amount1.quotient),
+    ).to.be.approximately(amount1, amount1 / 1e6);
+    const liquidity = JSBI.toNumber(inRangePosition.liquidity);
+    expect(JSBI.toNumber(revertedPosition.liquidity)).to.be.approximately(
+      liquidity,
+      liquidity / 1e6,
+    );
   });
 });
 

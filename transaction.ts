@@ -395,17 +395,21 @@ export async function getCollectTx(
   );
 }
 
-async function getAmountMinFromSlippage(
+interface SimulatedAmounts {
+  amount0: BigNumber;
+  amount1: BigNumber;
+  amount0Min: BigNumberish;
+  amount1Min: BigNumberish;
+}
+
+async function getAmountsWithSlippage(
   automanAddress: string,
   ownerAddress: string,
   functionFragment: AutomanFragment,
   functionParams: AutomanParams,
   slippageTolerance: Percent,
   provider: Provider,
-): Promise<{
-  amount0Min: BigNumberish;
-  amount1Min: BigNumberish;
-}> {
+): Promise<SimulatedAmounts> {
   const { amount0, amount1 } = (await IUniV3Automan__factory.connect(
     automanAddress,
     provider,
@@ -419,6 +423,8 @@ async function getAmountMinFromSlippage(
   };
   const coefficient = new Percent(1).subtract(slippageTolerance);
   return {
+    amount0,
+    amount1,
     amount0Min: coefficient.multiply(amount0.toString()).quotient.toString(),
     amount1Min: coefficient.multiply(amount1.toString()).quotient.toString(),
   };
@@ -436,7 +442,7 @@ async function getAmountMinFromSlippage(
  * @param provider Ethers provider.
  * @param existingPosition Optional, the existing position.
  * @param permitInfo Optional. If Automan doesn't already has authority over the existing position, this should be populated with a valid owner-signed permit info.
- * @returns The generated transaction request.
+ * @returns The generated transaction request and expected amounts.
  */
 export async function getRebalanceTx(
   chainId: ApertureSupportedChainId,
@@ -449,7 +455,10 @@ export async function getRebalanceTx(
   provider: Provider,
   existingPosition?: Position,
   permitInfo?: PermitInfo,
-): Promise<TransactionRequest> {
+): Promise<{
+  tx: TransactionRequest;
+  amounts: SimulatedAmounts;
+}> {
   if (existingPosition === undefined) {
     existingPosition = await getPosition(chainId, existingPositionId, provider);
   }
@@ -472,7 +481,7 @@ export async function getRebalanceTx(
     existingPositionId,
     permitInfo,
   );
-  const amountMin = await getAmountMinFromSlippage(
+  const amounts = await getAmountsWithSlippage(
     automanAddress,
     ownerAddress,
     functionFragment,
@@ -480,18 +489,21 @@ export async function getRebalanceTx(
     slippageTolerance,
     provider,
   );
-  mintParams.amount0Min = amountMin.amount0Min;
-  mintParams.amount1Min = amountMin.amount1Min;
+  mintParams.amount0Min = amounts.amount0Min;
+  mintParams.amount1Min = amounts.amount1Min;
   return {
-    from: ownerAddress,
-    to: automanAddress,
-    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      functionFragment,
-      getAutomanRebalanceCallInfo(mintParams, existingPositionId, permitInfo)
-        .params,
-    ),
+    tx: {
+      from: ownerAddress,
+      to: automanAddress,
+      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        functionFragment,
+        getAutomanRebalanceCallInfo(mintParams, existingPositionId, permitInfo)
+          .params,
+      ),
+    },
+    amounts: amounts,
   };
 }
 
@@ -504,7 +516,7 @@ export async function getRebalanceTx(
  * @param deadlineEpochSeconds Timestamp when the tx expires (in seconds since epoch).
  * @param provider Ethers provider.
  * @param permitInfo Optional. If Automan doesn't already has authority over the existing position, this should be populated with a valid owner-signed permit info.
- * @returns The generated transaction request.
+ * @returns The generated transaction request and expected amounts.
  */
 export async function getReinvestTx(
   chainId: ApertureSupportedChainId,
@@ -514,7 +526,10 @@ export async function getReinvestTx(
   deadlineEpochSeconds: BigNumberish,
   provider: Provider,
   permitInfo?: PermitInfo,
-): Promise<TransactionRequest> {
+): Promise<{
+  tx: TransactionRequest;
+  amounts: SimulatedAmounts;
+}> {
   const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
     {
       tokenId: positionId,
@@ -529,7 +544,7 @@ export async function getReinvestTx(
     increaseLiquidityParams,
     permitInfo,
   );
-  const amountMin = await getAmountMinFromSlippage(
+  const amounts = await getAmountsWithSlippage(
     automanAddress,
     ownerAddress,
     functionFragment,
@@ -537,17 +552,20 @@ export async function getReinvestTx(
     slippageTolerance,
     provider,
   );
-  increaseLiquidityParams.amount0Min = amountMin.amount0Min;
-  increaseLiquidityParams.amount1Min = amountMin.amount1Min;
+  increaseLiquidityParams.amount0Min = amounts.amount0Min;
+  increaseLiquidityParams.amount1Min = amounts.amount1Min;
   return {
-    from: ownerAddress,
-    to: automanAddress,
-    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      functionFragment,
-      getAutomanReinvestCallInfo(increaseLiquidityParams, permitInfo).params,
-    ),
+    tx: {
+      from: ownerAddress,
+      to: automanAddress,
+      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        functionFragment,
+        getAutomanReinvestCallInfo(increaseLiquidityParams, permitInfo).params,
+      ),
+    },
+    amounts: amounts,
   };
 }
 
@@ -575,28 +593,24 @@ export function getSetApprovalForAllTx(
  * Parses the specified transaction receipt and extracts the position id (token id) minted by NPM within the transaction.
  * @param txReceipt The transaction receipt to parse.
  * @param recipientAddress The receipt address to which the position is minted.
- * @param chainId The chain id.
  * @returns If a position is minted to `recipientAddress`, the position id is returned. If there is more than one, the first is returned. If there are none, `undefined` is returned.
  */
 export function getMintedPositionIdFromTxReceipt(
   txReceipt: TransactionReceipt,
   recipientAddress: string,
-  chainId: ApertureSupportedChainId,
 ): BigNumber | undefined {
   const npmInterface = INonfungiblePositionManager__factory.createInterface();
-  const npmAddress =
-    getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
   for (const log of txReceipt.logs) {
-    if (npmAddress === log.address) {
-      const parsedLog = npmInterface.parseLog(log);
+    try {
+      const event = npmInterface.parseLog(log);
       if (
-        parsedLog.name === 'Transfer' &&
-        parsedLog.args.from === ADDRESS_ZERO &&
-        parsedLog.args.to === recipientAddress
+        event.name === 'Transfer' &&
+        event.args.from === ADDRESS_ZERO &&
+        event.args.to === recipientAddress
       ) {
-        return parsedLog.args.tokenId;
+        return event.args.tokenId;
       }
-    }
+    } catch (e) {}
   }
   return undefined;
 }

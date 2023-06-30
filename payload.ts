@@ -23,11 +23,6 @@ export function generateLimitOrderCloseRequestPayload(
 ): CreateTriggerPayload {
   // Note that we should use `Token.sortsBefore()` to compare two tokens instead of directly comparing their addresses
   // because an address can be checksum-ed.
-  const token0 = outerLimitPrice.baseCurrency.sortsBefore(
-    outerLimitPrice.quoteCurrency,
-  )
-    ? outerLimitPrice.baseCurrency.address
-    : outerLimitPrice.quoteCurrency.address;
   return {
     ownerAddr,
     chainId,
@@ -35,7 +30,11 @@ export function generateLimitOrderCloseRequestPayload(
     nftId: positionId.toString(),
     condition: {
       type: ConditionTypeEnum.enum.TokenAmount,
-      zeroAmountToken: outerLimitPrice.baseCurrency.address === token0 ? 0 : 1,
+      zeroAmountToken: outerLimitPrice.baseCurrency.sortsBefore(
+        outerLimitPrice.quoteCurrency,
+      )
+        ? 0
+        : 1,
     },
     action: {
       type: ActionTypeEnum.enum.LimitOrderClose,

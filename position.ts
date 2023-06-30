@@ -9,11 +9,13 @@ import {
 import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount, Position } from '@uniswap/v3-sdk';
+import Big from 'big.js';
 import { BigNumber, BigNumberish } from 'ethers';
 
 import { getChainInfo } from './chain';
 import { getToken } from './currency';
-import { getPoolFromBasicPositionInfo } from './pool';
+import { getPoolFromBasicPositionInfo, getPoolPrice } from './pool';
+import { getTokenValueProportionFromPriceRatio } from './price';
 
 export interface BasicPositionInfo {
   token0: Token;
@@ -261,4 +263,51 @@ export async function getTokenSvg(
     'base64',
   ).toString('utf-8');
   return new URL(JSON.parse(json_uri).image);
+}
+
+/**
+ * Predict the position after rebalance assuming the pool price remains the same.
+ * @param position Position info before rebalance.
+ * @param newTickLower The new lower tick.
+ * @param newTickUpper The new upper tick.
+ * @returns The position info after rebalance.
+ */
+export function getRebalancedPosition(
+  position: Position,
+  newTickLower: number,
+  newTickUpper: number,
+): Position {
+  const price = getPoolPrice(position.pool);
+  const positionBefore = new Position({
+    pool: position.pool,
+    liquidity: position.liquidity!,
+    tickLower: position.tickLower,
+    tickUpper: position.tickUpper,
+  });
+  // Calculate the position equity denominated in token1 before rebalance.
+  const equityBefore = new Big(
+    price
+      .quote(positionBefore.amount0)
+      .add(positionBefore.amount1)
+      .quotient.toString(),
+  );
+  const token0Proportion = getTokenValueProportionFromPriceRatio(
+    newTickLower,
+    newTickUpper,
+    new Big(price.numerator.toString()).div(price.denominator.toString()),
+  );
+  const amount1After = new Big(1).sub(token0Proportion).mul(equityBefore);
+  // token0's equity denominated in token1 divided by the price
+  const amount0After = new Big(equityBefore)
+    .sub(amount1After)
+    .mul(price.denominator.toString())
+    .div(price.numerator.toString());
+  return Position.fromAmounts({
+    pool: position.pool,
+    tickLower: newTickLower,
+    tickUpper: newTickUpper,
+    amount0: amount0After.toFixed(0),
+    amount1: amount1After.toFixed(0),
+    useFullPrecision: false,
+  });
 }
