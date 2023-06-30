@@ -25,7 +25,6 @@ import axios from 'axios';
 import Big from 'big.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import exp from 'constants';
 import { BigNumber, Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
@@ -203,11 +202,7 @@ describe('Limit order tests', function () {
     );
     // Create the limit order position.
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const positionId = getMintedPositionIdFromTxReceipt(
-      txReceipt,
-      eoa,
-      chainId,
-    )!;
+    const positionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
     const basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
@@ -308,11 +303,7 @@ describe('Limit order tests', function () {
     );
     // Create the limit order position.
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const positionId = getMintedPositionIdFromTxReceipt(
-      txReceipt,
-      eoa,
-      chainId,
-    )!;
+    const positionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
     const basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
@@ -383,7 +374,6 @@ describe('Limit order tests', function () {
     const nativeEthPositionId = getMintedPositionIdFromTxReceipt(
       nativeEthTxReceipt,
       eoa,
-      chainId,
     )!;
     expect(
       await getBasicPositionInfo(
@@ -706,7 +696,6 @@ describe('Position liquidity management tests', function () {
     const createdPositionId = getMintedPositionIdFromTxReceipt(
       createPositionTxReceipt,
       eoa,
-      chainId,
     )!;
     expect(
       await getBasicPositionInfo(
@@ -784,11 +773,7 @@ describe('Automan transaction tests', function () {
     const txReceipt = await (
       await impersonatedOwnerSigner.sendTransaction(txRequest)
     ).wait();
-    const newPositionId = getMintedPositionIdFromTxReceipt(
-      txReceipt,
-      eoa,
-      chainId,
-    )!;
+    const newPositionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
     expect(
       await getBasicPositionInfo(chainId, newPositionId, hardhatForkProvider),
     ).to.deep.equal({
