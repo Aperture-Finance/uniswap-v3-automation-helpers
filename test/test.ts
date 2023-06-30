@@ -25,6 +25,7 @@ import axios from 'axios';
 import Big from 'big.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import exp from 'constants';
 import { BigNumber, Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
@@ -54,6 +55,7 @@ import {
   getCollectedFeesFromReceipt,
   getPosition,
   getPositionFromBasicInfo,
+  getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
 } from '../position';
@@ -1028,6 +1030,39 @@ describe('Util tests', function () {
       gte: undefined,
       durationSec: undefined,
     });
+  });
+
+  it('Test getRebalancedPosition', async function () {
+    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
+    // rebalance to an out of range position
+    const newTickLower =
+      inRangePosition.tickUpper + TICK_SPACINGS[FeeAmount.MEDIUM];
+    const newTickUpper =
+      inRangePosition.tickUpper + 100 * TICK_SPACINGS[FeeAmount.MEDIUM];
+    const newPosition = getRebalancedPosition(
+      inRangePosition,
+      newTickLower,
+      newTickUpper,
+    );
+    expect(JSBI.toNumber(newPosition.amount1.quotient)).to.equal(0);
+    const revertedPosition = getRebalancedPosition(
+      newPosition,
+      inRangePosition.tickLower,
+      inRangePosition.tickUpper,
+    );
+    const amount0 = JSBI.toNumber(inRangePosition.amount0.quotient);
+    expect(
+      JSBI.toNumber(revertedPosition.amount0.quotient),
+    ).to.be.approximately(amount0, amount0 / 1e6);
+    const amount1 = JSBI.toNumber(inRangePosition.amount1.quotient);
+    expect(
+      JSBI.toNumber(revertedPosition.amount1.quotient),
+    ).to.be.approximately(amount1, amount1 / 1e6);
+    const liquidity = JSBI.toNumber(inRangePosition.liquidity);
+    expect(JSBI.toNumber(revertedPosition.liquidity)).to.be.approximately(
+      liquidity,
+      liquidity / 1e6,
+    );
   });
 });
 
