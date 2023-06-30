@@ -770,7 +770,7 @@ describe('Automan transaction tests', function () {
       positionId,
       hardhatForkProvider,
     );
-    const txRequest = await getRebalanceTx(
+    const { tx: txRequest } = await getRebalanceTx(
       chainId,
       eoa,
       positionId,
@@ -805,7 +805,7 @@ describe('Automan transaction tests', function () {
     const liquidityBeforeReinvest = (
       await getBasicPositionInfo(chainId, positionId, hardhatForkProvider)
     ).liquidity!;
-    const txRequest = await getReinvestTx(
+    const { tx: txRequest } = await getReinvestTx(
       chainId,
       eoa,
       positionId,
