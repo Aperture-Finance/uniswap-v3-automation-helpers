@@ -6,6 +6,8 @@ import JSBI from 'jsbi';
 
 import { getChainInfo } from './chain';
 
+// Let Big use 30 decimal places of precision since 2^96 < 10^29.
+Big.DP = 30;
 const Q96 = new Big('2').pow(96);
 
 /**
@@ -115,8 +117,6 @@ export function getRawRelativePriceFromTokenValueProportion(
   }
   const sqrtRatioAtTickLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
   const sqrtRatioAtTickUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
-  // Let Big use 30 decimal places of precision since 2^96 < 10^29.
-  Big.DP = 30;
   const L = new Big(sqrtRatioAtTickLowerX96.toString()).div(Q96);
   const U = new Big(sqrtRatioAtTickUpperX96.toString()).div(Q96);
   return U.minus(token0ValueProportion.times(U).times(2))
@@ -147,7 +147,7 @@ export function getTokenValueProportionFromPriceRatio(
   priceRatio: Big,
 ): Big {
   const sqrtPriceX96 = JSBI.BigInt(
-    priceRatio.sqrt().times(Q96).toFixed(0).toString(),
+    priceRatio.times(Q96).times(Q96).sqrt().toFixed(0).toString(),
   );
   const tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
   // only token0
