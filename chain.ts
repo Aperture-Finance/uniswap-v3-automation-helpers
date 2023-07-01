@@ -91,9 +91,8 @@ export const CHAIN_ID_TO_INFO: {
     uniswap_v3_nonfungible_position_manager: getAddress(
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
     ),
-    // WARNING: This is a placeholder. Automan has not been deployed on Arbitrum mainnet.
     aperture_uniswap_v3_automan: getAddress(
-      '0xE81df2Fc4f54D96e5f209e2D135f34E75725f34f',
+      '0x00000000F43c5264bA236DD7a49224F1241858e4',
     ),
     coingecko_asset_platform_id: 'arbitrum-one',
     infura_network_id: 'arbitrum',
