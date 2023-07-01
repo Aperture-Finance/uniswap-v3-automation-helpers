@@ -967,7 +967,7 @@ describe('Util tests', function () {
 
   it('Token value proportion to price conversion', async function () {
     const position = await getPosition(chainId, 4, hardhatForkProvider);
-    const price = await getRawRelativePriceFromTokenValueProportion(
+    const price = getRawRelativePriceFromTokenValueProportion(
       position.tickLower,
       position.tickUpper,
       new Big('0.3'),
@@ -1015,6 +1015,20 @@ describe('Util tests', function () {
       gte: undefined,
       durationSec: undefined,
     });
+    const ratio = new Big('0.299999999999999999999998780740');
+    const pp = getRawRelativePriceFromTokenValueProportion(
+      -887220,
+      27720,
+      ratio,
+    );
+    const DP = ratio.toString().length - 3;
+    Big.DP = DP;
+    const ratio2 = getTokenValueProportionFromPriceRatio(
+      -887220,
+      27720,
+      new Big(pp.toString()),
+    );
+    expect(ratio.toFixed(DP)).to.equal(ratio2.toFixed(DP));
   });
 
   it('Test getRebalancedPosition', async function () {
