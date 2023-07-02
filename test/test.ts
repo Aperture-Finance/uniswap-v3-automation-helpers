@@ -115,6 +115,7 @@ describe('Limit order tests', function () {
   const poolFee = FeeAmount.MEDIUM;
 
   before(async function () {
+    await resetHardhatNetwork();
     WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
     WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
   });
