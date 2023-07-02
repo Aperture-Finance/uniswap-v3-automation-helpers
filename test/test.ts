@@ -105,7 +105,7 @@ const TEST_WALLET_PRIVATE_KEY =
 
 async function resetHardhatNetwork() {
   await hardhatReset(
-    `${process.env.MAINNET_RPC_URL}`,
+    `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
     /*blockNumber=*/ 17188000,
   );
 }

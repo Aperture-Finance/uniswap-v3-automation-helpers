@@ -89,27 +89,12 @@ export async function getPoolFromBasicPositionInfo(
   chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Pool> {
-  const chainInfo = getChainInfo(chainId);
-  const poolContract = IUniswapV3Pool__factory.connect(
-    computePoolAddress(
-      chainInfo.uniswap_v3_factory,
-      basicInfo.token0,
-      basicInfo.token1,
-      basicInfo.fee,
-    ),
-    provider,
-  );
-  const [slot0, inRangeLiquidity] = await Promise.all([
-    poolContract.slot0(),
-    poolContract.liquidity(),
-  ]);
-  return new Pool(
+  return getPool(
     basicInfo.token0,
     basicInfo.token1,
     basicInfo.fee,
-    slot0.sqrtPriceX96.toString(),
-    inRangeLiquidity.toString(),
-    slot0.tick,
+    chainId,
+    provider,
   );
 }
 
