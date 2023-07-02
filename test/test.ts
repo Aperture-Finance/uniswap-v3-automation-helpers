@@ -6,6 +6,7 @@ import {
   IERC20__factory,
   INonfungiblePositionManager__factory,
   PriceConditionSchema,
+  UniV3Automan,
   UniV3Automan__factory,
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
@@ -716,7 +717,7 @@ describe('Position liquidity management tests', function () {
 
 describe('Automan transaction tests', function () {
   const positionId = 4;
-  let automanContract: Contract;
+  let automanContract: UniV3Automan;
   let impersonatedOwnerSigner: Signer;
 
   beforeEach(async function () {
@@ -732,14 +733,14 @@ describe('Automan transaction tests', function () {
     ).deploy(
       getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
       /*owner=*/ WHALE_ADDRESS,
-      /*controller=*/ WHALE_ADDRESS,
-      /*feeConfig=*/ {
-        // Set the max fee deduction to 50%.
-        feeLimitPips: BigNumber.from('500000000000000000'),
-        feeCollector: WHALE_ADDRESS,
-      },
     );
     await automanContract.deployed();
+    await automanContract.setFeeConfig({
+      feeCollector: WHALE_ADDRESS,
+      // Set the max fee deduction to 50%.
+      feeLimitPips: BigNumber.from('500000000000000000'),
+    });
+    await automanContract.setControllers([WHALE_ADDRESS], [true]);
 
     // Set Automan address in CHAIN_ID_TO_INFO.
     CHAIN_ID_TO_INFO[chainId].aperture_uniswap_v3_automan =
