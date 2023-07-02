@@ -3,8 +3,6 @@ import {
   INonfungiblePositionManager,
   INonfungiblePositionManager__factory,
   IUniV3Automan__factory,
-  IUniswapV3Factory__factory,
-  IUniswapV3Pool__factory,
   PermitInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import {
@@ -42,7 +40,7 @@ import {
 } from './automan';
 import { ChainInfo, getChainInfo } from './chain';
 import { getNativeCurrency } from './currency';
-import { getPoolFromBasicPositionInfo } from './pool';
+import { getPool, getPoolFromBasicPositionInfo } from './pool';
 import {
   BasicPositionInfo,
   getBasicPositionInfo,
@@ -177,23 +175,23 @@ export async function getCreatePositionTx(
   provider: Provider,
 ): Promise<TransactionRequest> {
   const chainInfo = getChainInfo(chainId);
-  const poolAddress = await IUniswapV3Factory__factory.connect(
-    chainInfo.uniswap_v3_factory,
-    provider,
-  ).getPool(
-    position.pool.token0.address,
-    position.pool.token1.address,
-    position.pool.fee,
-  );
+  let createPool = false;
+  try {
+    await getPool(
+      position.pool.token0,
+      position.pool.token1,
+      position.pool.fee,
+      chainId,
+      provider,
+    );
+  } catch (e) {
+    createPool = true;
+  }
   const { calldata, value } = NonfungiblePositionManager.addCallParameters(
     position,
     {
       ...options,
-      createPool:
-        poolAddress == ADDRESS_ZERO ||
-        (
-          await IUniswapV3Pool__factory.connect(poolAddress, provider).slot0()
-        ).sqrtPriceX96.isZero(),
+      createPool,
     },
   );
   return getTxToNonfungiblePositionManager(chainInfo, calldata, value);
@@ -369,13 +367,7 @@ export async function getCollectTx(
     chainId,
     positionId.toString(),
     provider,
-    {
-      token0: basicPositionInfo.token0,
-      token1: basicPositionInfo.token1,
-      tickLower: basicPositionInfo.tickLower,
-      tickUpper: basicPositionInfo.tickUpper,
-      fee: basicPositionInfo.fee,
-    },
+    basicPositionInfo,
   );
   const { calldata, value } = NonfungiblePositionManager.collectCallParameters({
     tokenId: positionId.toString(),
