@@ -1,12 +1,12 @@
 import {
   ApertureSupportedChainId,
-  INonfungiblePositionManager__factory,
   PermitInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
 import { BigNumberish, TypedDataDomain, TypedDataField, ethers } from 'ethers';
 
 import { getChainInfo } from './chain';
+import { getNPM } from './position';
 
 export interface PositionApprovalStatus {
   hasAuthority: boolean;
@@ -30,10 +30,7 @@ export async function checkPositionApprovalStatus(
   provider: ethers.providers.Provider,
 ): Promise<PositionApprovalStatus> {
   const chainInfo = getChainInfo(chainId);
-  const npm = INonfungiblePositionManager__factory.connect(
-    chainInfo.uniswap_v3_nonfungible_position_manager,
-    provider,
-  );
+  const npm = getNPM(chainId, provider);
   const [owner, approved] = await Promise.all([
     npm.ownerOf(positionId),
     npm.getApproved(positionId),
@@ -93,10 +90,7 @@ export async function checkPositionPermit(
   provider: ethers.providers.Provider,
 ) {
   const chainInfo = getChainInfo(chainId);
-  const npm = INonfungiblePositionManager__factory.connect(
-    chainInfo.uniswap_v3_nonfungible_position_manager,
-    provider,
-  );
+  const npm = getNPM(chainId, provider);
   try {
     const permitSignature = ethers.utils.splitSignature(permitInfo.signature);
     await npm.callStatic.permit(
@@ -151,12 +145,7 @@ export async function generateTypedDataForPermit(
     value: {
       spender: chainInfo.aperture_uniswap_v3_automan,
       tokenId: positionId,
-      nonce: (
-        await INonfungiblePositionManager__factory.connect(
-          chainInfo.uniswap_v3_nonfungible_position_manager,
-          provider,
-        ).positions(positionId)
-      ).nonce,
+      nonce: (await getNPM(chainId, provider).positions(positionId)).nonce,
       deadline: deadlineEpochSeconds,
     },
   };
