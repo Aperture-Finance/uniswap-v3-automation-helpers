@@ -149,14 +149,14 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@aperture_finance/uniswap-v3-automation-sdk@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-0.4.2.tgz#f80a81e5b1286b00ad466d7af89ed03c34b33d2a"
-  integrity sha512-g2Xyp2Jzx2LUEi9JCcKonhlQRjN9RlOXRkJEkbd7Q15Cs97MEByp1Eopi103qdfPu3h2PmTQiODpJ3pe51nfLw==
+"@aperture_finance/uniswap-v3-automation-sdk@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-0.5.0.tgz#1848a3c250e2f029c526ff65e6e8fed09a378bbc"
+  integrity sha512-d1/lC3pjAqaTsuxwd/JvcfQMwSoksHDY1WAER0kcNTYihG5zTM2UuT4WI92iebTmf/xbQYVbvtO1xFKOYcLwrA==
   dependencies:
     "@uniswap/v3-sdk" "^3.9.0"
     axios "^1.4.0"
-    ethers "^5.7.2"
+    ethers "5.7.2"
     jest "^29.5.0"
     json-stable-stringify "^1.0.2"
     ts-node "^10.9.1"
@@ -3951,7 +3951,7 @@ ethereumjs-util@^7.1.4:
     ethereum-cryptography "^0.1.3"
     rlp "^2.2.4"
 
-ethers@5.7.2, ethers@^5.7.1, ethers@^5.7.2:
+ethers@5.7.2, ethers@^5.7.1:
   version "5.7.2"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
   integrity sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==
