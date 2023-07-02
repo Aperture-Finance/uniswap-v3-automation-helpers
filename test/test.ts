@@ -1,4 +1,3 @@
-import { providers } from '@0xsequence/multicall';
 import {
   ActionTypeEnum,
   ApertureSupportedChainId,
@@ -26,7 +25,7 @@ import axios from 'axios';
 import Big from 'big.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BigNumber, Contract, Signer } from 'ethers';
+import { BigNumber, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
@@ -86,9 +85,8 @@ import {
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const hardhatForkProvider = new providers.MulticallProvider(ethers.provider, {
-  timeWindow: 0,
-});
+// The hardhat fork provider uses `eth_getStorageAt` instead of `eth_call` so there is no benefit to using the `MulticallProvider`.
+const hardhatForkProvider = ethers.provider;
 const chainId = ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID;
 // A whale address (Avax bridge) on Ethereum mainnet with a lot of ethers and token balances.
 const WHALE_ADDRESS = '0x8EB8a3b98659Cce290402893d0123abb75E3ab28';
@@ -117,10 +115,8 @@ describe('Limit order tests', function () {
   const poolFee = FeeAmount.MEDIUM;
 
   before(async function () {
-    [WBTC, WETH] = await Promise.all([
-      getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
-      getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
-    ]);
+    WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
+    WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
   });
 
   it('Selling WBTC for WETH', async function () {
@@ -439,10 +435,8 @@ describe('Position liquidity management tests', function () {
 
   before(async function () {
     await resetHardhatNetwork();
-    [wbtcBalanceBefore, wethBalanceBefore] = await Promise.all([
-      wbtcContract.balanceOf(eoa),
-      wethContract.balanceOf(eoa),
-    ]);
+    wbtcBalanceBefore = await wbtcContract.balanceOf(eoa);
+    wethBalanceBefore = await wethContract.balanceOf(eoa);
     nativeEtherBalanceBefore = await hardhatForkProvider.getBalance(eoa);
     position4BasicInfo = await getBasicPositionInfo(
       chainId,
@@ -456,10 +450,8 @@ describe('Position liquidity management tests', function () {
       position4BasicInfo,
     );
 
-    [WBTC, WETH] = await Promise.all([
-      getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
-      getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
-    ]);
+    WBTC = await getToken(WBTC_ADDRESS, chainId, hardhatForkProvider);
+    WETH = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
   });
 
   beforeEach(async function () {
@@ -951,10 +943,12 @@ describe('Util tests', function () {
   });
 
   it('Position in-range', async function () {
-    const [inRangePosition, outOfRangePosition] = await Promise.all([
-      getPosition(chainId, 4, hardhatForkProvider),
-      getPosition(chainId, 7, hardhatForkProvider),
-    ]);
+    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
+    const outOfRangePosition = await getPosition(
+      chainId,
+      7,
+      hardhatForkProvider,
+    );
     expect(isPositionInRange(inRangePosition)).to.equal(true);
     expect(isPositionInRange(outOfRangePosition)).to.equal(false);
   });
