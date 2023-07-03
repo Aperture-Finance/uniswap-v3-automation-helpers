@@ -8,13 +8,18 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/@aperture_finance/uni-v3-lib/src/interfaces/INonfungiblePositionManager';
 import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
-import { FeeAmount, Position } from '@uniswap/v3-sdk';
+import { FeeAmount, Position, PositionLibrary } from '@uniswap/v3-sdk';
 import Big from 'big.js';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish, Signer, utils } from 'ethers';
+import JSBI from 'jsbi';
 
 import { getChainInfo } from './chain';
 import { getToken } from './currency';
-import { getPoolFromBasicPositionInfo, getPoolPrice } from './pool';
+import {
+  getPoolContract,
+  getPoolFromBasicPositionInfo,
+  getPoolPrice,
+} from './pool';
 import { getTokenValueProportionFromPriceRatio } from './price';
 
 export interface BasicPositionInfo {
@@ -26,7 +31,10 @@ export interface BasicPositionInfo {
   fee: FeeAmount;
 }
 
-function getNPM(chainId: ApertureSupportedChainId, provider: Provider) {
+export function getNPM(
+  chainId: ApertureSupportedChainId,
+  provider: Provider | Signer,
+) {
   return INonfungiblePositionManager__factory.connect(
     getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
     provider,
@@ -131,6 +139,65 @@ export async function getCollectableTokenAmounts(
     token1Amount: CurrencyAmount.fromRawAmount(
       basicPositionInfo.token1,
       amount1.toString(),
+    ),
+  };
+}
+
+/**
+ * View the amount of collectable tokens in the position. May not be up-to-date.
+ * The collectable amount is most likely accrued fees accumulated in the position, but can be from a prior decreaseLiquidity() call which has not been collected.
+ * @param chainId Chain id.
+ * @param positionId Position id.
+ * @param provider Ethers provider.
+ * @param basicPositionInfo Basic position info, optional; if undefined, one will be constructed.
+ * @returns A promise that resolves to collectable amount of the two tokens in the position.
+ */
+export async function viewCollectableTokenAmounts(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  provider: Provider,
+  basicPositionInfo?: BasicPositionInfo,
+): Promise<CollectableTokenAmounts> {
+  if (basicPositionInfo === undefined) {
+    basicPositionInfo = await getBasicPositionInfo(
+      chainId,
+      positionId,
+      provider,
+    );
+  }
+  const pool = getPoolContract(
+    basicPositionInfo.token0,
+    basicPositionInfo.token1,
+    basicPositionInfo.fee,
+    chainId,
+    provider,
+  );
+  const npm = getNPM(chainId, provider);
+  const positionKey = utils.keccak256(
+    utils.solidityPack(
+      ['address', 'int24', 'int24'],
+      [npm.address, basicPositionInfo.tickLower, basicPositionInfo.tickUpper],
+    ),
+  );
+  const [poolPosition, position] = await Promise.all([
+    pool.positions(positionKey),
+    npm.positions(positionId),
+  ]);
+  const [tokensOwed0, tokensOwed1] = PositionLibrary.getTokensOwed(
+    JSBI.BigInt(position.feeGrowthInside0LastX128.toString()),
+    JSBI.BigInt(position.feeGrowthInside1LastX128.toString()),
+    JSBI.BigInt(position.liquidity.toString()),
+    JSBI.BigInt(poolPosition.feeGrowthInside0LastX128.toString()),
+    JSBI.BigInt(poolPosition.feeGrowthInside1LastX128.toString()),
+  );
+  return {
+    token0Amount: CurrencyAmount.fromRawAmount(
+      basicPositionInfo.token0,
+      tokensOwed0.toString(),
+    ),
+    token1Amount: CurrencyAmount.fromRawAmount(
+      basicPositionInfo.token1,
+      tokensOwed1.toString(),
     ),
   };
 }

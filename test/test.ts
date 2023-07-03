@@ -3,7 +3,6 @@ import {
   ApertureSupportedChainId,
   ConditionTypeEnum,
   IERC20__factory,
-  INonfungiblePositionManager__factory,
   PriceConditionSchema,
   UniV3Automan,
   UniV3Automan__factory,
@@ -25,7 +24,7 @@ import axios from 'axios';
 import Big from 'big.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BigNumber, Signer } from 'ethers';
+import { BigNumber, Signer, utils } from 'ethers';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
@@ -45,6 +44,7 @@ import {
   getFeeTierDistribution,
   getLiquidityArrayForPool,
   getPool,
+  getPoolContract,
   getTickToLiquidityMapForPool,
 } from '../pool';
 import {
@@ -52,11 +52,13 @@ import {
   getBasicPositionInfo,
   getCollectableTokenAmounts,
   getCollectedFeesFromReceipt,
+  getNPM,
   getPosition,
   getPositionFromBasicInfo,
   getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
+  viewCollectableTokenAmounts,
 } from '../position';
 import {
   getRawRelativePriceFromTokenValueProportion,
@@ -741,10 +743,10 @@ describe('Automan transaction tests', function () {
 
     // Owner of position id 4 sets Automan as operator.
     impersonatedOwnerSigner = await ethers.getImpersonatedSigner(eoa);
-    await INonfungiblePositionManager__factory.connect(
-      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
-      impersonatedOwnerSigner,
-    ).setApprovalForAll(automanContract.address, true);
+    await getNPM(chainId, impersonatedOwnerSigner).setApprovalForAll(
+      automanContract.address,
+      true,
+    );
   });
 
   it('Rebalance', async function () {
@@ -849,13 +851,8 @@ describe('Util tests', function () {
       reason: 'missingSignedPermission',
     });
 
-    const npm = INonfungiblePositionManager__factory.connect(
-      chainInfo.uniswap_v3_nonfungible_position_manager,
-      hardhatForkProvider,
-    );
-    const impersonatedOwnerSigner = await ethers.getImpersonatedSigner(eoa);
-    const npmImpersonated = npm.connect(impersonatedOwnerSigner);
-    await npmImpersonated.setApprovalForAll(automanAddress, true);
+    const npm = getNPM(chainId, await ethers.getImpersonatedSigner(eoa));
+    await npm.setApprovalForAll(automanAddress, true);
     expect(
       await checkPositionApprovalStatus(
         positionId,
@@ -869,7 +866,7 @@ describe('Util tests', function () {
       reason: 'onChainUserLevelApproval',
     });
 
-    await npmImpersonated.approve(automanAddress, positionId);
+    await npm.approve(automanAddress, positionId);
     expect(
       await checkPositionApprovalStatus(
         positionId,
@@ -897,7 +894,7 @@ describe('Util tests', function () {
     );
 
     // Transfer position id 4 from `eoa` to the test wallet.
-    await npmImpersonated.transferFrom(eoa, wallet.address, positionId);
+    await npm.transferFrom(eoa, wallet.address, positionId);
 
     // Check test wallet's permit.
     expect(
@@ -1057,6 +1054,54 @@ describe('Util tests', function () {
     expect(JSBI.toNumber(revertedPosition.liquidity)).to.be.approximately(
       liquidity,
       liquidity / 1e6,
+    );
+  });
+
+  it('Test viewCollectableTokenAmounts', async function () {
+    await resetHardhatNetwork();
+    const positionId = 4;
+    const position = await getBasicPositionInfo(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    const colletableTokenAmounts = await getCollectableTokenAmounts(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+      position,
+    );
+    const npmAddress =
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
+    // send ether to WETH first because we can only send ether to NPM from WETH
+    await (
+      await ethers.getImpersonatedSigner(eoa)
+    ).sendTransaction({
+      to: WETH_ADDRESS,
+      value: utils.parseEther('1'),
+    });
+    await (
+      await ethers.getImpersonatedSigner(WETH_ADDRESS)
+    ).sendTransaction({
+      to: npmAddress,
+      value: utils.parseEther('1'),
+    });
+    // trigger an update of the position fees owed
+    await getPoolContract(
+      position.token0,
+      position.token1,
+      position.fee,
+      chainId,
+      await ethers.getImpersonatedSigner(npmAddress),
+    ).burn(position.tickLower, position.tickUpper, 0);
+    const viewOnlyColletableTokenAmounts = await viewCollectableTokenAmounts(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+      position,
+    );
+    expect(colletableTokenAmounts).to.deep.equal(
+      viewOnlyColletableTokenAmounts,
     );
   });
 });

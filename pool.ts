@@ -11,6 +11,7 @@ import {
   tickToPrice,
 } from '@uniswap/v3-sdk';
 import axios from 'axios';
+import { Signer } from 'ethers';
 import JSBI from 'jsbi';
 
 import { getChainInfo } from './chain';
@@ -99,6 +100,27 @@ export async function getPoolFromBasicPositionInfo(
 }
 
 /**
+ * Get the `IUniswapV3Pool` contract.
+ */
+export function getPoolContract(
+  tokenA: Token | string,
+  tokenB: Token | string,
+  fee: FeeAmount,
+  chainId: ApertureSupportedChainId,
+  provider: Provider | Signer,
+) {
+  return IUniswapV3Pool__factory.connect(
+    computePoolAddress(
+      getChainInfo(chainId).uniswap_v3_factory,
+      tokenA,
+      tokenB,
+      fee,
+    ),
+    provider,
+  );
+}
+
+/**
  * Constructs a Uniswap SDK Pool object for an existing and initialized pool.
  * Note that the constructed pool's `token0` and `token1` will be sorted, but the input `tokenA` and `tokenB` don't have to be.
  * @param tokenA One of the tokens in the pool.
@@ -115,15 +137,7 @@ export async function getPool(
   chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Pool> {
-  const poolContract = IUniswapV3Pool__factory.connect(
-    computePoolAddress(
-      getChainInfo(chainId).uniswap_v3_factory,
-      tokenA,
-      tokenB,
-      fee,
-    ),
-    provider,
-  );
+  const poolContract = getPoolContract(tokenA, tokenB, fee, chainId, provider);
   // If the specified pool has not been created yet, then the slot0() and liquidity() calls should fail (and throw an error).
   // Also update the tokens to the canonical type.
   const [slot0, inRangeLiquidity, tokenACanon, tokenBCanon] = await Promise.all(
