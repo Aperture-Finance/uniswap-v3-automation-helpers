@@ -345,18 +345,9 @@ export function getRebalancedPosition(
   newTickUpper: number,
 ): Position {
   const price = getPoolPrice(position.pool);
-  const positionBefore = new Position({
-    pool: position.pool,
-    liquidity: position.liquidity!,
-    tickLower: position.tickLower,
-    tickUpper: position.tickUpper,
-  });
   // Calculate the position equity denominated in token1 before rebalance.
   const equityBefore = new Big(
-    price
-      .quote(positionBefore.amount0)
-      .add(positionBefore.amount1)
-      .quotient.toString(),
+    price.quote(position.amount0).add(position.amount1).quotient.toString(),
   );
   const token0Proportion = getTokenValueProportionFromPriceRatio(
     newTickLower,
