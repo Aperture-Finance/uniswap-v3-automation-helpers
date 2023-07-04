@@ -208,7 +208,8 @@ export async function viewCollectableTokenAmounts(
  * @param positionId Position id.
  * @param receipt Transaction receipt.
  * @param provider Ethers provider.
- * @param basicPositionInfo Basic position info, optional; if undefined, one will be constructed.
+ * @param token0Address Checksum address of token0 in the position.
+ * @param token1Address Checksum address of token1 in the position.
  * @returns A promise that resolves to the collected amount of the two tokens in the position.
  */
 export async function getCollectedFeesFromReceipt(
@@ -216,15 +217,9 @@ export async function getCollectedFeesFromReceipt(
   positionId: BigNumberish,
   receipt: TransactionReceipt,
   provider: Provider,
-  basicPositionInfo?: BasicPositionInfo,
+  token0Address: string,
+  token1Address: string,
 ): Promise<CollectableTokenAmounts> {
-  if (basicPositionInfo === undefined) {
-    basicPositionInfo = await getBasicPositionInfo(
-      chainId,
-      positionId,
-      provider,
-    );
-  }
   const npmInterface = INonfungiblePositionManager__factory.createInterface();
   let collectArgs: CollectEventObject;
   let decreaseLiquidityArgs: DecreaseLiquidityEventObject | undefined;
@@ -243,13 +238,17 @@ export async function getCollectedFeesFromReceipt(
   const principal1 = decreaseLiquidityArgs?.amount1 ?? 0;
   const total0 = collectArgs!.amount0;
   const total1 = collectArgs!.amount1;
+  const [token0, token1] = await Promise.all([
+    getToken(token0Address, chainId, provider),
+    getToken(token1Address, chainId, provider),
+  ]);
   return {
     token0Amount: CurrencyAmount.fromRawAmount(
-      basicPositionInfo.token0,
+      token0,
       total0.sub(principal0).toString(),
     ),
     token1Amount: CurrencyAmount.fromRawAmount(
-      basicPositionInfo.token1,
+      token1,
       total1.sub(principal1).toString(),
     ),
   };
