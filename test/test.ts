@@ -477,7 +477,8 @@ describe('Position liquidity management tests', function () {
       positionId,
       txReceipt,
       hardhatForkProvider,
-      position4BasicInfo,
+      position4BasicInfo.token0.address,
+      position4BasicInfo.token1.address,
     );
     expect(collectedFees).deep.equal(position4ColletableTokenAmounts);
     expect(
@@ -527,7 +528,8 @@ describe('Position liquidity management tests', function () {
       positionId,
       removeLiquidityTxReceipt,
       hardhatForkProvider,
-      position4BasicInfo,
+      position4BasicInfo.token0.address,
+      position4BasicInfo.token1.address,
     );
     expect(collectedFees).deep.equal(position4ColletableTokenAmounts);
     expect(
