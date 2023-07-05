@@ -62,6 +62,9 @@ import {
 } from '../position';
 import {
   getRawRelativePriceFromTokenValueProportion,
+  getTokenHistoricalPricesFromCoingecko,
+  getTokenPriceFromCoingecko,
+  getTokenPriceListFromCoingecko,
   getTokenValueProportionFromPriceRatio,
   parsePrice,
 } from '../price';
@@ -1105,6 +1108,53 @@ describe('Util tests', function () {
     expect(colletableTokenAmounts).to.deep.equal(
       viewOnlyColletableTokenAmounts,
     );
+  });
+});
+
+describe('CoinGecko tests', function () {
+  beforeEach(async function () {
+    await resetHardhatNetwork();
+  });
+
+  it('Test CoinGecko single price', async function () {
+    const token = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
+    const usdPrice = await getTokenPriceFromCoingecko(
+      token,
+      'usd',
+      process.env.COINGECKO_API_KEY,
+    );
+    expect(usdPrice).to.be.greaterThan(0);
+    const ethPrice = await getTokenPriceFromCoingecko(
+      token,
+      'eth',
+      process.env.COINGECKO_API_KEY,
+    );
+    expect(ethPrice).to.be.closeTo(1, 0.001);
+  });
+
+  it('Test CoinGecko price list', async function () {
+    const prices = await getTokenPriceListFromCoingecko(
+      await Promise.all([
+        getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
+        getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
+      ]),
+      'eth',
+      process.env.COINGECKO_API_KEY,
+    );
+    for (const price of Object.values(prices)) {
+      expect(price).to.be.greaterThan(0);
+    }
+  });
+
+  it('Test CoinGecko historical price list', async function () {
+    const token = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
+    const prices = await getTokenHistoricalPricesFromCoingecko(
+      token,
+      30,
+      'usd',
+      process.env.COINGECKO_API_KEY,
+    );
+    expect(prices.length).to.be.greaterThan(0);
   });
 });
 

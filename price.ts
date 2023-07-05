@@ -1,6 +1,6 @@
 import { Price, Token } from '@uniswap/sdk-core';
 import { SqrtPriceMath, TickMath } from '@uniswap/v3-sdk';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import Big from 'big.js';
 import JSBI from 'jsbi';
 
@@ -9,6 +9,11 @@ import { getChainInfo } from './chain';
 // Let Big use 30 decimal places of precision since 2^96 < 10^29.
 Big.DP = 30;
 const Q96 = new Big('2').pow(96);
+
+// A list of two numbers representing a historical price datapoint provided by Coingecko.
+// Example of a datapoint: [1679886183997, 1767.0953789568498] where the first element is the
+// timestamp in milliseconds, and the second element is the price at that timestamp.
+type CoingeckoHistoricalPriceDatapoint = [number, number];
 
 /**
  * Parses the specified price string for the price of `baseToken` denominated in `quoteToken`.
@@ -52,48 +57,107 @@ export function parsePrice(
 }
 
 /**
- * Fetches the specified token's current USD price from Coingecko.
+ * Fetches the specified token's current price from Coingecko.
  * @param token The token to fetch price information for.
+ * @param vsCurrencies The denominated currencies to fetch price information for. Defaults to 'usd'.
+ * @param apiKey The Coingecko API key to use. Use the free api if not specified.
  * @returns The token's current USD price as a number. For example, USDC's price may be 0.999695.
  */
-export async function getTokenUSDPriceFromCoingecko(
+export async function getTokenPriceFromCoingecko(
   token: Token,
+  vsCurrencies?: string,
+  apiKey?: string,
 ): Promise<number> {
   const chainInfo = getChainInfo(token.chainId);
   if (chainInfo.coingecko_asset_platform_id === undefined) return 0;
-  const priceResponse = await axios.get(
-    `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}?contract_addresses=${token.address}&vs_currencies=usd`,
-  );
+  vsCurrencies = vsCurrencies ?? 'usd';
+  let priceResponse: AxiosResponse;
+  if (apiKey) {
+    priceResponse = await axios.get(
+      `https://pro-api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}` +
+        `?contract_addresses=${token.address}&vs_currencies=${vsCurrencies}&x_cg_pro_api_key=${apiKey}`,
+    );
+  } else {
+    priceResponse = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}` +
+        `?contract_addresses=${token.address}&vs_currencies=${vsCurrencies}`,
+    );
+  }
   // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&vs_currencies=usd
-  return priceResponse.data[token.address.toLowerCase()]['usd'];
+  return priceResponse.data[token.address.toLowerCase()][vsCurrencies];
 }
 
 /**
- * Fetches tokens' current USD price from Coingecko in a batch.
+ * Fetches tokens' current price from Coingecko in a batch.
  * @param tokens The tokens to fetch price information for.
+ * @param vsCurrencies The denominated currencies to fetch price information for. Defaults to 'usd'.
+ * @param apiKey The Coingecko API key to use. Use the free api if not specified.
  * @returns The tokens' current USD price. For example,
  * {
  *    0xbe9895146f7af43049ca1c1ae358b0541ea49704: 1783.17,
  *    0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce: 0.00000681
  * }
  */
-export async function getTokenUSDPriceListFromCoingecko(
+export async function getTokenPriceListFromCoingecko(
   tokens: Token[],
+  vsCurrencies?: string,
+  apiKey?: string,
 ): Promise<{ [address: string]: number }> {
   const chainInfo = getChainInfo(tokens[0].chainId);
   if (chainInfo.coingecko_asset_platform_id === undefined) return {};
+  vsCurrencies = vsCurrencies ?? 'usd';
+  let priceResponse: AxiosResponse;
   const addresses = tokens.map((token) => token.address).toString();
-  const priceResponse = await axios.get(
-    `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}?contract_addresses=${addresses}&vs_currencies=usd`,
-  );
+  if (apiKey) {
+    priceResponse = await axios.get(
+      `https://pro-api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}` +
+        `?contract_addresses=${addresses}&vs_currencies=${vsCurrencies}&x_cg_pro_api_key=${apiKey}`,
+    );
+  } else {
+    priceResponse = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}` +
+        `?contract_addresses=${addresses}&vs_currencies=${vsCurrencies}`,
+    );
+  }
   // Coingecko call example: https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&vs_currencies=usd
   return Object.keys(priceResponse.data).reduce(
     (obj: { [address: string]: number }, address: string) => {
-      obj[address] = priceResponse.data[address]['usd'];
+      obj[address] = priceResponse.data[address][vsCurrencies!];
       return obj;
     },
     {},
   );
+}
+
+/**
+ * Fetch historical price information from Coingecko.
+ * @param token The token to fetch price information for.
+ * @param durationDays The duration of historical price information to fetch.
+ * @param vsCurrency The denominated currency to fetch price information for. Defaults to 'usd'.
+ * @param apiKey The Coingecko API key to use. Use the free api if not specified.
+ */
+export async function getTokenHistoricalPricesFromCoingecko(
+  token: Token,
+  durationDays: number,
+  vsCurrency?: string,
+  apiKey?: string,
+): Promise<CoingeckoHistoricalPriceDatapoint[]> {
+  const chainInfo = getChainInfo(token.chainId);
+  if (chainInfo.coingecko_asset_platform_id === undefined) return [];
+  vsCurrency = vsCurrency ?? 'usd';
+  let priceResponse: AxiosResponse;
+  if (apiKey) {
+    priceResponse = await axios.get(
+      `https://pro-api.coingecko.com/api/v3/coins/${chainInfo.coingecko_asset_platform_id}/contract/` +
+        `${token.address}/market_chart?vs_currency=${vsCurrency}&days=${durationDays}&x_cg_pro_api_key=${apiKey}`,
+    );
+  } else {
+    priceResponse = await axios.get(
+      `https://api.coingecko.com/api/v3/coins/${chainInfo.coingecko_asset_platform_id}/contract/` +
+        `${token.address}/market_chart?vs_currency=${vsCurrency}&days=${durationDays}`,
+    );
+  }
+  return priceResponse.data['prices'];
 }
 
 /**
