@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'fs';
 
 import { getChainInfo } from '../chain';
 import { computePoolAddress } from '../pool';
-import { getTokenUSDPriceListFromCoingecko } from '../price';
+import { getTokenPriceListFromCoingecko } from '../price';
 import { Pool } from '../whitelist';
 
 dotenvConfig();
@@ -102,7 +102,7 @@ async function generateWhitelistedPools(chainId: number) {
   );
 
   // call coingecko API for all tokens at once
-  const priceList = await getTokenUSDPriceListFromCoingecko(tokenArray);
+  const priceList = await getTokenPriceListFromCoingecko(tokenArray);
 
   // loop over priceList and print information
   for (const token in priceList) {
