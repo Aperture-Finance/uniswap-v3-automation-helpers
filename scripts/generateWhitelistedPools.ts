@@ -75,17 +75,26 @@ async function generateWhitelistedPools(chainId: number) {
             // Pool involves RNDT (Radiant) token which isn't on Coingecko.
             pool.id != '0x2334d412da299a21486b663d12c392185b313aaa',
         );
+
+  const USDCe = '0xff970a61a04b1ca14834a43f5de4533ebddb5cc8';
+  // create a set of unique token ids
+  const tokens: Set<string> = new Set();
+  for (const pool of filteredPools) {
+    if (pool.token0.id.toLowerCase() == USDCe) {
+      pool.token0.symbol = 'USDC.e';
+      pool.token0.name = 'Bridged USDC (USDC.e)';
+    } else if (pool.token1.id.toLowerCase() == USDCe) {
+      pool.token1.symbol = 'USDC.e';
+      pool.token1.name = 'Bridged USDC (USDC.e)';
+    }
+    tokens.add(pool.token0.id);
+    tokens.add(pool.token1.id);
+  }
+
   writeFileSync(
     `data/whitelistedPools-${chainId}.json`,
     JSON.stringify(filteredPools),
   );
-
-  // create a set of unique token ids
-  const tokens: Set<string> = new Set();
-  for (const pool of filteredPools) {
-    tokens.add(pool.token0.id);
-    tokens.add(pool.token1.id);
-  }
 
   // Convert the Set to an Array of Token objects, then pass to the function
   const tokenArray = Array.from(tokens).map(
