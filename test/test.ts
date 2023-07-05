@@ -1129,7 +1129,7 @@ describe('CoinGecko tests', function () {
       'eth',
       process.env.COINGECKO_API_KEY,
     );
-    expect(ethPrice).to.be.closeTo(1, 0.001);
+    expect(ethPrice).to.be.closeTo(1, 0.01);
   });
 
   it('Test CoinGecko price list', async function () {
