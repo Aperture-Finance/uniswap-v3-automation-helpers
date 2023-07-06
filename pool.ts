@@ -257,11 +257,13 @@ export async function getTickToLiquidityMapForPool(
   chainId: ApertureSupportedChainId,
   pool: Pool | PoolKey,
 ): Promise<TickToLiquidityMap> {
-  if (chainId !== ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID) {
-    throw 'Unsupported chain id for fetching liquidity for all ticks from subgraph';
+  const subgraph_url = getChainInfo(chainId).uniswap_subgraph_url;
+  if (subgraph_url === undefined) {
+    throw 'Subgraph URL is not defined for the specified chain id';
   }
   let rawData: AllV3TicksQuery['ticks'] = [];
-  const numTicksPerQuery = 2000;
+  // Note that Uniswap subgraph returns a maximum of 1000 ticks per query, even if `numTicksPerQuery` is set to a larger value.
+  const numTicksPerQuery = 1000;
   const chainInfo = getChainInfo(chainId);
   const poolAddress = computePoolAddress(
     chainInfo.uniswap_v3_factory,
@@ -271,7 +273,7 @@ export async function getTickToLiquidityMapForPool(
   ).toLowerCase();
   for (let skip = 0; ; skip += numTicksPerQuery) {
     const response: AllV3TicksQuery | undefined = (
-      await axios.post(chainInfo.uniswap_subgraph_url!, {
+      await axios.post(subgraph_url, {
         operationName: 'AllV3Ticks',
         variables: {
           poolAddress,
@@ -291,7 +293,7 @@ export async function getTickToLiquidityMapForPool(
     if (numItems > 0) {
       rawData = rawData.concat(response!.ticks);
     }
-    // We fetch 1000 items per query, so if we get less than that, then we know that we have fetched all the items.
+    // We fetch `numTicksPerQuery` items per query, so if we get less than that, then we know that we have fetched all the items.
     if (numItems < numTicksPerQuery) {
       break;
     }

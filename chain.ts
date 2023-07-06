@@ -97,7 +97,7 @@ export const CHAIN_ID_TO_INFO: {
     coingecko_asset_platform_id: 'arbitrum-one',
     infura_network_id: 'arbitrum',
     uniswap_subgraph_url:
-      'https://api.thegraph.com/subgraphs/name/ianlapham/arbitrum-minimal',
+      'https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-arbitrum-one',
     whitelistedPools: getWhitelistedPools(
       ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
       whitelistedPoolsArbitrum,

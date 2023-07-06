@@ -25,6 +25,7 @@ import Big from 'big.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BigNumber, Signer, utils } from 'ethers';
+import { getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
@@ -1306,7 +1307,7 @@ describe('Pool subgraph query tests', function () {
     ).to.be.approximately(/*expected=*/ 1, /*delta=*/ 1e-9);
   });
 
-  it('Tick liquidity distribution', async function () {
+  it('Tick liquidity distribution - Ethereum mainnet', async function () {
     const provider = getPublicProvider(chainId);
     const [WBTC, WETH] = await Promise.all([
       getToken(WBTC_ADDRESS, chainId, provider),
@@ -1349,11 +1350,79 @@ describe('Pool subgraph query tests', function () {
       Math.floor(Number(poolResponse.tick) / tickSpacing) * tickSpacing;
     expect(
       JSBI.equal(
-        JSBI.BigInt(inRangeLiquidity),
+        inRangeLiquidity,
         readTickToLiquidityMap(tickToLiquidityMap, tickCurrentAligned)!,
       ),
     ).to.equal(true);
     const liquidityArr = await getLiquidityArrayForPool(chainId, pool);
+    for (const element of liquidityArr) {
+      if (JSBI.equal(element.liquidityActive, inRangeLiquidity)) {
+        console.log(element);
+      }
+    }
+  });
+
+  it('Tick liquidity distribution - Arbitrum mainnet', async function () {
+    const arbitrumChainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
+    const provider = getPublicProvider(arbitrumChainId);
+    const WETH_ARBITRUM = getAddress(
+      '0x82af49447d8a07e3bd95bd0d56f35241523fbab1',
+    );
+    const USDC_ARBITRUM = getAddress(
+      '0xff970a61a04b1ca14834a43f5de4533ebddb5cc8',
+    );
+    const [WETH, USDC] = await Promise.all([
+      getToken(WETH_ARBITRUM, arbitrumChainId, provider),
+      getToken(USDC_ARBITRUM, arbitrumChainId, provider),
+    ]);
+    const pool = await getPool(
+      WETH,
+      USDC,
+      FeeAmount.LOW,
+      arbitrumChainId,
+      provider,
+    );
+    const tickToLiquidityMap = await getTickToLiquidityMapForPool(
+      arbitrumChainId,
+      pool,
+    );
+    expect(tickToLiquidityMap.size).to.be.greaterThan(0);
+    for (const liquidity of tickToLiquidityMap.values()) {
+      expect(JSBI.greaterThanOrEqual(liquidity, JSBI.BigInt(0))).to.equal(true);
+    }
+
+    // Fetch current in-range liquidity from subgraph.
+    const chainInfo = getChainInfo(arbitrumChainId);
+    const poolAddress = computePoolAddress({
+      factoryAddress: chainInfo.uniswap_v3_factory!,
+      tokenA: WETH,
+      tokenB: USDC,
+      fee: FeeAmount.LOW,
+    });
+    const poolResponse = (
+      await axios.post(chainInfo.uniswap_subgraph_url!, {
+        operationName: 'PoolLiquidity',
+        variables: {},
+        query: `
+          query PoolLiquidity {
+            pool(id: "${poolAddress.toLowerCase()}") {
+              liquidity
+              tick
+            }
+          }`,
+      })
+    ).data.data.pool;
+    const inRangeLiquidity = JSBI.BigInt(poolResponse.liquidity);
+    const tickSpacing = TICK_SPACINGS[FeeAmount.LOW];
+    const tickCurrentAligned =
+      Math.floor(Number(poolResponse.tick) / tickSpacing) * tickSpacing;
+    expect(
+      JSBI.equal(
+        inRangeLiquidity,
+        readTickToLiquidityMap(tickToLiquidityMap, tickCurrentAligned)!,
+      ),
+    ).to.equal(true);
+    const liquidityArr = await getLiquidityArrayForPool(arbitrumChainId, pool);
     for (const element of liquidityArr) {
       if (JSBI.equal(element.liquidityActive, inRangeLiquidity)) {
         console.log(element);
