@@ -61,6 +61,7 @@ import {
   viewCollectableTokenAmounts,
 } from '../position';
 import {
+  Q96,
   getRawRelativePriceFromTokenValueProportion,
   getTokenHistoricalPricesFromCoingecko,
   getTokenPriceFromCoingecko,
@@ -973,6 +974,32 @@ describe('Util tests', function () {
     expect(price.toString()).to.equal(
       '226996287752.678057810335753063814267017558211732849518876855922215569664',
     );
+    expect(
+      getRawRelativePriceFromTokenValueProportion(
+        position.tickLower,
+        position.tickUpper,
+        new Big('0'),
+      ).toString(),
+    ).to.equal(
+      new Big(TickMath.getSqrtRatioAtTick(position.tickUpper).toString())
+        .pow(2)
+        .div(Q96)
+        .div(Q96)
+        .toString(),
+    );
+    expect(
+      getRawRelativePriceFromTokenValueProportion(
+        position.tickLower,
+        position.tickUpper,
+        new Big('1'),
+      ).toString(),
+    ).to.equal(
+      new Big(TickMath.getSqrtRatioAtTick(position.tickLower).toString())
+        .pow(2)
+        .div(Q96)
+        .div(Q96)
+        .toString(),
+    );
 
     // Verify that the calculated price indeed corresponds to ~30% of the position value in token0.
     const token0ValueProportion = getTokenValueProportionFromPriceRatio(
@@ -986,9 +1013,9 @@ describe('Util tests', function () {
 
     // Verify that price condition is generated correctly.
     const condition = generatePriceConditionFromTokenValueProportion(
-      position.pool.tickCurrent,
       position.tickLower,
       position.tickUpper,
+      false,
       new Big('0.3'),
       /*durationSec=*/ 7200,
     );
@@ -1001,9 +1028,9 @@ describe('Util tests', function () {
     });
     expect(
       generatePriceConditionFromTokenValueProportion(
-        position.pool.tickCurrent,
         position.tickLower,
         position.tickUpper,
+        true,
         new Big('0.95'),
         /*durationSec=*/ undefined,
       ),

@@ -8,7 +8,7 @@ import { getChainInfo } from './chain';
 
 // Let Big use 30 decimal places of precision since 2^96 < 10^29.
 Big.DP = 30;
-const Q96 = new Big('2').pow(96);
+export const Q96 = new Big('2').pow(96);
 
 // A list of two numbers representing a historical price datapoint provided by Coingecko.
 // Example of a datapoint: [1679886183997, 1767.0953789568498] where the first element is the
@@ -174,6 +174,11 @@ export function getRawRelativePriceFromTokenValueProportion(
   tickUpper: number,
   token0ValueProportion: Big,
 ): Big {
+  if (tickUpper <= tickLower) {
+    throw new Error(
+      'Invalid tick range: tickUpper must be greater than tickLower',
+    );
+  }
   if (token0ValueProportion.lt(0) || token0ValueProportion.gt(1)) {
     throw new Error(
       'Invalid token0ValueProportion: must be a value between 0 and 1, inclusive',
@@ -181,6 +186,12 @@ export function getRawRelativePriceFromTokenValueProportion(
   }
   const sqrtRatioAtTickLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
   const sqrtRatioAtTickUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+  if (token0ValueProportion.eq(0)) {
+    return new Big(sqrtRatioAtTickUpperX96.toString()).pow(2).div(Q96).div(Q96);
+  }
+  if (token0ValueProportion.eq(1)) {
+    return new Big(sqrtRatioAtTickLowerX96.toString()).pow(2).div(Q96).div(Q96);
+  }
   const L = new Big(sqrtRatioAtTickLowerX96.toString()).div(Q96);
   const U = new Big(sqrtRatioAtTickUpperX96.toString()).div(Q96);
   return U.minus(token0ValueProportion.times(U).times(2))
@@ -210,6 +221,11 @@ export function getTokenValueProportionFromPriceRatio(
   tickUpper: number,
   priceRatio: Big,
 ): Big {
+  if (tickUpper <= tickLower) {
+    throw new Error(
+      'Invalid tick range: tickUpper must be greater than tickLower',
+    );
+  }
   const sqrtPriceX96 = JSBI.BigInt(
     priceRatio.times(Q96).times(Q96).sqrt().toFixed(0).toString(),
   );
