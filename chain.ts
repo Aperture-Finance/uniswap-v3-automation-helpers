@@ -22,6 +22,7 @@ export interface ChainInfo {
   // Only populated for mainnets. Map from pool addresses to `WhitelistedPool` with information about the two tokens and pool fee tier.
   whitelistedPools?: Map<string, WhitelistedPool>;
   whitelistedTokens?: Map<string, string>;
+  maxGasCeiling: number;
 }
 
 export const CHAIN_ID_TO_INFO: {
@@ -46,6 +47,7 @@ export const CHAIN_ID_TO_INFO: {
       ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID,
       whitelistedPoolsGoerli,
     ),
+    maxGasCeiling: 0.05,
   },
   [ApertureSupportedChainId.ARBITRUM_GOERLI_TESTNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
@@ -58,6 +60,7 @@ export const CHAIN_ID_TO_INFO: {
       '0xcd9002c47348c54B1C044e30E449CdAe44124139',
     ),
     infura_network_id: 'arbitrum-goerli',
+    maxGasCeiling: 0.05,
   },
 
   [ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID]: {
@@ -83,6 +86,7 @@ export const CHAIN_ID_TO_INFO: {
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       whitelistedPoolsEthereum,
     ),
+    maxGasCeiling: 0.5,
   },
   [ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
@@ -106,6 +110,7 @@ export const CHAIN_ID_TO_INFO: {
       ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
       whitelistedPoolsArbitrum,
     ),
+    maxGasCeiling: 0.2,
   },
 };
 
