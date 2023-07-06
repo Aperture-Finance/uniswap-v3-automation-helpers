@@ -47,7 +47,11 @@ async function generateWhitelistedPools(chainId: number) {
     },
   );
   const pools = response.data.data.pools.filter(
-    (pool: { volumeUSD: string }) => pool.volumeUSD != '0',
+    (pool: { id: string; volumeUSD: string }) =>
+      pool.volumeUSD !== '0' ||
+      (chainId === ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID &&
+        // ARB/USDC 0.05% pool on Arbitrum. Subgraph erroneously reports 0 volume. https://info.uniswap.org/#/arbitrum/pools/0xb0f6ca40411360c03d41c5ffc5f179b8403cdcf8
+        pool.id === '0xb0f6ca40411360c03d41c5ffc5f179b8403cdcf8'),
   );
   const filteredPools =
     chainId === ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID
@@ -93,7 +97,8 @@ async function generateWhitelistedPools(chainId: number) {
 
   writeFileSync(
     `data/whitelistedPools-${chainId}.json`,
-    JSON.stringify(filteredPools),
+    JSON.stringify(filteredPools, null, 2),
+    'utf-8',
   );
 
   // Convert the Set to an Array of Token objects, then pass to the function
@@ -119,8 +124,8 @@ async function generateWhitelistedPools(chainId: number) {
 
 generateWhitelistedPools(ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID);
 generateWhitelistedPools(ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID);
-// There are 43 whitelisted pools involving 29 tokens on Ethereum mainnet.
-// There are 26 whitelisted pools involving 20 tokens on Arbitrum.
+// There are 43 whitelisted pools involving 27 tokens on Ethereum mainnet.
+// There are 38 whitelisted pools involving 21 tokens on Arbitrum.
 
 /**
  * Generate the pool addresses for the whitelisted pools on testnet.
