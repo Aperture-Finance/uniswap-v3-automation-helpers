@@ -11,7 +11,7 @@ import Big, { BigSource } from 'big.js';
 import { BigNumberish } from 'ethers';
 import JSBI from 'jsbi';
 
-import { getRawRelativePriceFromTokenValueProportion } from './price';
+import { Q96, getRawRelativePriceFromTokenValueProportion } from './price';
 
 export function generateLimitOrderCloseRequestPayload(
   ownerAddr: string,
@@ -70,10 +70,20 @@ export function generateAutoCompoundRequestPayload(
   };
 }
 
+/**
+ * Generate a price condition from a token value proportion.
+ * @param tickLower The lower tick of the range.
+ * @param tickUpper The upper tick of the range.
+ * @param isAbove Whether the proportion is above or below the target.
+ * @param token0ValueProportion The proportion of the position value that is held in token0, as a `Big` number between 0
+ * and 1, inclusive.
+ * @param durationSec The duration of the condition, in seconds.
+ * @returns The generated price condition.
+ */
 export function generatePriceConditionFromTokenValueProportion(
-  tickCurrent: number,
   tickLower: number,
   tickUpper: number,
+  isAbove: boolean,
   token0ValueProportion: BigSource,
   durationSec?: number,
 ): PriceCondition {
@@ -82,16 +92,11 @@ export function generatePriceConditionFromTokenValueProportion(
     tickUpper,
     new Big(token0ValueProportion),
   );
-  const tickTreshold = TickMath.getTickAtSqrtRatio(
-    JSBI.BigInt(
-      priceThreshold.sqrt().mul(new Big(2).pow(96)).toFixed(0).toString(),
-    ),
-  );
   let lte: string | undefined, gte: string | undefined;
-  if (tickTreshold > tickCurrent) {
-    gte = priceThreshold.toString();
-  } else {
+  if (isAbove) {
     lte = priceThreshold.toString();
+  } else {
+    gte = priceThreshold.toString();
   }
   return {
     type: ConditionTypeEnum.enum.Price,
