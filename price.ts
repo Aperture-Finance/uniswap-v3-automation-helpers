@@ -13,7 +13,7 @@ const Q96 = new Big('2').pow(96);
 // A list of two numbers representing a historical price datapoint provided by Coingecko.
 // Example of a datapoint: [1679886183997, 1767.0953789568498] where the first element is the
 // timestamp in milliseconds, and the second element is the price at that timestamp.
-type CoingeckoHistoricalPriceDatapoint = [number, number];
+export type CoingeckoHistoricalPriceDatapoint = [number, number];
 
 /**
  * Parses the specified price string for the price of `baseToken` denominated in `quoteToken`.
