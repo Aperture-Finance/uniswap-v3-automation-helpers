@@ -15,7 +15,6 @@ import {
   Position,
   TICK_SPACINGS,
   TickMath,
-  computePoolAddress,
   nearestUsableTick,
   priceToClosestTick,
   tickToPrice,
@@ -1309,11 +1308,13 @@ describe('Pool subgraph query tests', function () {
 
   it('Tick liquidity distribution - Ethereum mainnet', async function () {
     const provider = getPublicProvider(chainId);
-    const [WBTC, WETH] = await Promise.all([
-      getToken(WBTC_ADDRESS, chainId, provider),
-      getToken(WETH_ADDRESS, chainId, provider),
-    ]);
-    const pool = await getPool(WETH, WBTC, FeeAmount.LOW, chainId, provider);
+    const pool = await getPool(
+      WBTC_ADDRESS,
+      WETH_ADDRESS,
+      FeeAmount.LOW,
+      chainId,
+      provider,
+    );
     const tickToLiquidityMap = await getTickToLiquidityMapForPool(
       chainId,
       pool,
@@ -1325,19 +1326,13 @@ describe('Pool subgraph query tests', function () {
 
     // Fetch current in-range liquidity from subgraph.
     const chainInfo = getChainInfo(chainId);
-    const poolAddress = computePoolAddress({
-      factoryAddress: chainInfo.uniswap_v3_factory!,
-      tokenA: WBTC,
-      tokenB: WETH,
-      fee: FeeAmount.LOW,
-    });
     const poolResponse = (
       await axios.post(chainInfo.uniswap_subgraph_url!, {
         operationName: 'PoolLiquidity',
         variables: {},
         query: `
           query PoolLiquidity {
-            pool(id: "${poolAddress.toLowerCase()}") {
+            pool(id: "0x4585fe77225b41b697c938b018e2ac67ac5a20c0") {
               liquidity
               tick
             }
@@ -1371,13 +1366,9 @@ describe('Pool subgraph query tests', function () {
     const USDC_ARBITRUM = getAddress(
       '0xff970a61a04b1ca14834a43f5de4533ebddb5cc8',
     );
-    const [WETH, USDC] = await Promise.all([
-      getToken(WETH_ARBITRUM, arbitrumChainId, provider),
-      getToken(USDC_ARBITRUM, arbitrumChainId, provider),
-    ]);
     const pool = await getPool(
-      WETH,
-      USDC,
+      WETH_ARBITRUM,
+      USDC_ARBITRUM,
       FeeAmount.LOW,
       arbitrumChainId,
       provider,
@@ -1393,19 +1384,13 @@ describe('Pool subgraph query tests', function () {
 
     // Fetch current in-range liquidity from subgraph.
     const chainInfo = getChainInfo(arbitrumChainId);
-    const poolAddress = computePoolAddress({
-      factoryAddress: chainInfo.uniswap_v3_factory!,
-      tokenA: WETH,
-      tokenB: USDC,
-      fee: FeeAmount.LOW,
-    });
     const poolResponse = (
       await axios.post(chainInfo.uniswap_subgraph_url!, {
         operationName: 'PoolLiquidity',
         variables: {},
         query: `
           query PoolLiquidity {
-            pool(id: "${poolAddress.toLowerCase()}") {
+            pool(id: "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443") {
               liquidity
               tick
             }
