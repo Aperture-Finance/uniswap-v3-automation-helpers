@@ -16,6 +16,7 @@ import JSBI from 'jsbi';
 import { getChainInfo } from './chain';
 import { getToken } from './currency';
 import {
+  getPool,
   getPoolContract,
   getPoolFromBasicPositionInfo,
   getPoolPrice,
@@ -83,11 +84,21 @@ export async function getPosition(
   positionId: BigNumberish,
   provider: Provider,
 ) {
-  return getPositionFromBasicInfo(
-    await getBasicPositionInfo(chainId, positionId, provider),
+  const npm = getNPM(chainId, provider);
+  const positionInfo = await npm.positions(positionId);
+  const pool = await getPool(
+    positionInfo.token0,
+    positionInfo.token1,
+    positionInfo.fee,
     chainId,
     provider,
   );
+  return new Position({
+    pool,
+    liquidity: positionInfo.liquidity.toString(),
+    tickLower: positionInfo.tickLower,
+    tickUpper: positionInfo.tickUpper,
+  });
 }
 
 export interface CollectableTokenAmounts {
