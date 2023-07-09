@@ -45,6 +45,7 @@ import {
   getLiquidityArrayForPool,
   getPool,
   getPoolContract,
+  getPoolPrice,
   getTickToLiquidityMapForPool,
 } from '../pool';
 import {
@@ -58,6 +59,7 @@ import {
   getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
+  projectRebalancedPositionAtPrice,
   viewCollectableTokenAmounts,
 } from '../position';
 import {
@@ -68,6 +70,8 @@ import {
   getTokenPriceListFromCoingecko,
   getTokenValueProportionFromPriceRatio,
   parsePrice,
+  priceToBig,
+  priceToSqrtRatioX96,
 } from '../price';
 import { getPublicProvider } from '../provider';
 import {
@@ -1059,10 +1063,8 @@ describe('Util tests', function () {
   it('Test getRebalancedPosition', async function () {
     const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     // rebalance to an out of range position
-    const newTickLower =
-      inRangePosition.tickUpper + TICK_SPACINGS[FeeAmount.MEDIUM];
-    const newTickUpper =
-      inRangePosition.tickUpper + 100 * TICK_SPACINGS[FeeAmount.MEDIUM];
+    const newTickLower = inRangePosition.tickUpper;
+    const newTickUpper = newTickLower + 10 * TICK_SPACINGS[FeeAmount.MEDIUM];
     const newPosition = getRebalancedPosition(
       inRangePosition,
       newTickLower,
@@ -1087,6 +1089,40 @@ describe('Util tests', function () {
       liquidity,
       liquidity / 1e6,
     );
+  });
+
+  it('Test projectRebalancedPositionAtPrice', async function () {
+    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
+    const priceUpper = tickToPrice(
+      inRangePosition.pool.token0,
+      inRangePosition.pool.token1,
+      inRangePosition.tickUpper,
+    );
+    // rebalance to an out of range position
+    const newTickLower = inRangePosition.tickUpper;
+    const newTickUpper = newTickLower + 10 * TICK_SPACINGS[FeeAmount.MEDIUM];
+    const positionRebalancedAtCurrentPrice = getRebalancedPosition(
+      inRangePosition,
+      newTickLower,
+      newTickUpper,
+    );
+    const positionRebalancedAtTickUpper = projectRebalancedPositionAtPrice(
+      inRangePosition,
+      priceToBig(priceUpper),
+      newTickLower,
+      newTickUpper,
+    );
+    expect(
+      JSBI.toNumber(positionRebalancedAtTickUpper.amount1.quotient),
+    ).to.equal(0);
+    // if rebalancing at the upper tick, `token0` are bought back at a higher price, hence `amount0` will be lower
+    expect(
+      JSBI.toNumber(
+        positionRebalancedAtCurrentPrice.amount0.subtract(
+          positionRebalancedAtTickUpper.amount0,
+        ).quotient,
+      ),
+    ).to.greaterThan(0);
   });
 
   it('Test viewCollectableTokenAmounts', async function () {
@@ -1253,6 +1289,18 @@ describe('Price to tick conversion', function () {
     expect(
       sqrtRatioToPrice(TickMath.getSqrtRatioAtTick(tick), token0, token1),
     ).to.deep.equal(price);
+  });
+
+  it('Price to sqrt ratio', function () {
+    const tick = priceToClosestUsableTick(
+      alignPriceToClosestUsableTick(maxPrice, fee),
+      fee,
+    );
+    const sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
+    const price = sqrtRatioToPrice(sqrtRatioX96, token0, token1);
+    expect(priceToSqrtRatioX96(priceToBig(price)).toString()).to.equal(
+      sqrtRatioX96.toString(),
+    );
   });
 });
 

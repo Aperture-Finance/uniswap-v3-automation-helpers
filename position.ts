@@ -8,7 +8,13 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/@aperture_finance/uni-v3-lib/src/interfaces/INonfungiblePositionManager';
 import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
-import { FeeAmount, Position, PositionLibrary } from '@uniswap/v3-sdk';
+import {
+  FeeAmount,
+  Pool,
+  Position,
+  PositionLibrary,
+  TickMath,
+} from '@uniswap/v3-sdk';
 import Big from 'big.js';
 import { BigNumber, BigNumberish, Signer, utils } from 'ethers';
 import JSBI from 'jsbi';
@@ -21,7 +27,11 @@ import {
   getPoolFromBasicPositionInfo,
   getPoolPrice,
 } from './pool';
-import { getTokenValueProportionFromPriceRatio } from './price';
+import {
+  getTokenValueProportionFromPriceRatio,
+  priceToBig,
+  priceToSqrtRatioX96,
+} from './price';
 
 export interface BasicPositionInfo {
   token0: Token;
@@ -359,17 +369,15 @@ export function getRebalancedPosition(
   const equityBefore = new Big(
     price.quote(position.amount0).add(position.amount1).quotient.toString(),
   );
+  const bigPrice = priceToBig(price);
   const token0Proportion = getTokenValueProportionFromPriceRatio(
     newTickLower,
     newTickUpper,
-    new Big(price.numerator.toString()).div(price.denominator.toString()),
+    bigPrice,
   );
   const amount1After = new Big(1).sub(token0Proportion).mul(equityBefore);
   // token0's equity denominated in token1 divided by the price
-  const amount0After = new Big(equityBefore)
-    .sub(amount1After)
-    .mul(price.denominator.toString())
-    .div(price.numerator.toString());
+  const amount0After = new Big(equityBefore).sub(amount1After).div(bigPrice);
   return Position.fromAmounts({
     pool: position.pool,
     tickLower: newTickLower,
@@ -378,4 +386,52 @@ export function getRebalancedPosition(
     amount1: amount1After.toFixed(0),
     useFullPrecision: false,
   });
+}
+
+/**
+ * Predict the position if the pool price becomes the specified price.
+ * @param position Position info.
+ * @param newPrice The new pool price.
+ * @returns The position info after the pool price becomes the specified price.
+ */
+export function getPositionAtPrice(
+  position: Position,
+  newPrice: Big,
+): Position {
+  const sqrtPriceX96 = priceToSqrtRatioX96(newPrice);
+  const poolAtNewPrice = new Pool(
+    position.pool.token0,
+    position.pool.token1,
+    position.pool.fee,
+    sqrtPriceX96,
+    position.pool.liquidity,
+    TickMath.getTickAtSqrtRatio(sqrtPriceX96),
+  );
+  return new Position({
+    pool: poolAtNewPrice,
+    liquidity: position.liquidity,
+    tickLower: position.tickLower,
+    tickUpper: position.tickUpper,
+  });
+}
+
+/**
+ * Predict the position after rebalance assuming the pool price becomes the specified price.
+ * @param position Position info before rebalance.
+ * @param newPrice The pool price at rebalance.
+ * @param newTickLower The new lower tick.
+ * @param newTickUpper The new upper tick.
+ * @returns The position info after rebalance.
+ */
+export function projectRebalancedPositionAtPrice(
+  position: Position,
+  newPrice: Big,
+  newTickLower: number,
+  newTickUpper: number,
+): Position {
+  return getRebalancedPosition(
+    getPositionAtPrice(position, newPrice),
+    newTickLower,
+    newTickUpper,
+  );
 }
