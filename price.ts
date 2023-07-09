@@ -1,4 +1,4 @@
-import { Price, Token } from '@uniswap/sdk-core';
+import { Fraction, Price, Token } from '@uniswap/sdk-core';
 import { SqrtPriceMath, TickMath } from '@uniswap/v3-sdk';
 import axios, { AxiosResponse } from 'axios';
 import Big from 'big.js';
@@ -210,9 +210,9 @@ export function getRawRelativePriceFromTokenValueProportion(
 }
 
 /**
- * Convert a `Price` object to a `Big` number.
+ * Convert a `Fraction` object to a `Big` number.
  */
-export function priceToBig(price: Price<Token, Token>): Big {
+export function fractionToBig(price: Fraction): Big {
   const DP = Big.DP;
   const denominator = price.denominator.toString();
   // prevent precision loss

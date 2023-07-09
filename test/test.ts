@@ -18,6 +18,7 @@ import {
 } from '@uniswap/sdk-core';
 import {
   FeeAmount,
+  Pool,
   Position,
   TICK_SPACINGS,
   TickMath,
@@ -60,6 +61,7 @@ import {
   getCollectedFeesFromReceipt,
   getNPM,
   getPosition,
+  getPositionAtPrice,
   getPositionFromBasicInfo,
   getRebalancedPosition,
   getTokenSvg,
@@ -69,13 +71,13 @@ import {
 } from '../position';
 import {
   Q192,
+  fractionToBig,
   getRawRelativePriceFromTokenValueProportion,
   getTokenHistoricalPricesFromCoingecko,
   getTokenPriceFromCoingecko,
   getTokenPriceListFromCoingecko,
   getTokenValueProportionFromPriceRatio,
   parsePrice,
-  priceToBig,
   priceToSqrtRatioX96,
 } from '../price';
 import { getPublicProvider } from '../provider';
@@ -1106,6 +1108,45 @@ describe('Util tests', function () {
     );
   });
 
+  it.only('Test getPositionAtPrice', async function () {
+    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
+    // corresponds to tick -870686
+    const smallPrice = new Big('1.5434597458370203830544e-38');
+    const position = new Position({
+      pool: new Pool(
+        inRangePosition.pool.token0,
+        inRangePosition.pool.token1,
+        3000,
+        '797207963837958202618833735859',
+        '4923530363713842',
+        46177,
+      ),
+      liquidity: 68488980,
+      tickLower: -887220,
+      tickUpper: 52980,
+    });
+    const position1 = getPositionAtPrice(position, smallPrice);
+    expect(JSBI.toNumber(position1.amount0.quotient)).to.greaterThan(0);
+    expect(JSBI.toNumber(position1.amount1.quotient)).to.equal(0);
+    const position2 = getPositionAtPrice(
+      position,
+      fractionToBig(
+        tickToPrice(
+          inRangePosition.pool.token0,
+          inRangePosition.pool.token1,
+          inRangePosition.tickUpper,
+        ),
+      ),
+    );
+    expect(JSBI.toNumber(position2.amount0.quotient)).to.equal(0);
+    expect(JSBI.toNumber(position2.amount1.quotient)).to.greaterThan(0);
+    const rebalancedPosition = getRebalancedPosition(position1, 46080, 62160);
+    expect(JSBI.toNumber(rebalancedPosition.amount0.quotient)).to.greaterThan(
+      0,
+    );
+    expect(JSBI.toNumber(rebalancedPosition.amount1.quotient)).to.equal(0);
+  });
+
   it('Test projectRebalancedPositionAtPrice', async function () {
     const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     const priceUpper = tickToPrice(
@@ -1123,7 +1164,7 @@ describe('Util tests', function () {
     );
     const positionRebalancedAtTickUpper = projectRebalancedPositionAtPrice(
       inRangePosition,
-      priceToBig(priceUpper),
+      fractionToBig(priceUpper),
       newTickLower,
       newTickUpper,
     );
@@ -1318,14 +1359,14 @@ describe('Price to tick conversion', function () {
     );
     const sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
     const price = sqrtRatioToPrice(sqrtRatioX96, token0, token1);
-    expect(priceToSqrtRatioX96(priceToBig(price)).toString()).to.equal(
+    expect(priceToSqrtRatioX96(fractionToBig(price)).toString()).to.equal(
       sqrtRatioX96.toString(),
     );
   });
 
   it('Price to Big', function () {
     const minPrice = tickToPrice(token0, token1, TickMath.MIN_TICK);
-    const bigPrice = priceToBig(minPrice);
+    const bigPrice = fractionToBig(minPrice);
     expect(
       minPrice.equalTo(
         new Fraction(bigPrice.mul(Q192).toFixed(0), Q192.toFixed(0)),
