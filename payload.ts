@@ -6,12 +6,10 @@ import {
   PriceCondition,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Price, Token } from '@uniswap/sdk-core';
-import { TickMath } from '@uniswap/v3-sdk';
 import Big, { BigSource } from 'big.js';
 import { BigNumberish } from 'ethers';
-import JSBI from 'jsbi';
 
-import { Q96, getRawRelativePriceFromTokenValueProportion } from './price';
+import { getRawRelativePriceFromTokenValueProportion } from './price';
 
 export function generateLimitOrderCloseRequestPayload(
   ownerAddr: string,

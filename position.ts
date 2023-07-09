@@ -28,8 +28,8 @@ import {
   getPoolPrice,
 } from './pool';
 import {
+  fractionToBig,
   getTokenValueProportionFromPriceRatio,
-  priceToBig,
   priceToSqrtRatioX96,
 } from './price';
 
@@ -309,7 +309,7 @@ export async function getPositionIdsByOwner(
 }
 
 /**
- * Fetches basic info of all positions of the specified owner.
+ * Fetches basic info for all positions of the specified owner.
  * @param owner The owner.
  * @param chainId Chain id.
  * @param provider Ethers provider.
@@ -366,10 +366,11 @@ export function getRebalancedPosition(
 ): Position {
   const price = getPoolPrice(position.pool);
   // Calculate the position equity denominated in token1 before rebalance.
-  const equityBefore = new Big(
-    price.quote(position.amount0).add(position.amount1).quotient.toString(),
-  );
-  const bigPrice = priceToBig(price);
+  const equityInToken1Before = price
+    .quote(position.amount0)
+    .add(position.amount1);
+  const equityBefore = fractionToBig(equityInToken1Before);
+  const bigPrice = fractionToBig(price);
   const token0Proportion = getTokenValueProportionFromPriceRatio(
     newTickLower,
     newTickUpper,

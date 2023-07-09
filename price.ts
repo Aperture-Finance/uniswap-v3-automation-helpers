@@ -1,4 +1,4 @@
-import { Price, Token } from '@uniswap/sdk-core';
+import { Fraction, Price, Token } from '@uniswap/sdk-core';
 import { SqrtPriceMath, TickMath } from '@uniswap/v3-sdk';
 import axios, { AxiosResponse } from 'axios';
 import Big from 'big.js';
@@ -9,6 +9,7 @@ import { getChainInfo } from './chain';
 // Let Big use 30 decimal places of precision since 2^96 < 10^29.
 Big.DP = 30;
 export const Q96 = new Big('2').pow(96);
+export const Q192 = Q96.times(Q96);
 
 // A list of two numbers representing a historical price datapoint provided by Coingecko.
 // Example of a datapoint: [1679886183997, 1767.0953789568498] where the first element is the
@@ -187,10 +188,10 @@ export function getRawRelativePriceFromTokenValueProportion(
   const sqrtRatioAtTickLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
   const sqrtRatioAtTickUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
   if (token0ValueProportion.eq(0)) {
-    return new Big(sqrtRatioAtTickUpperX96.toString()).pow(2).div(Q96).div(Q96);
+    return new Big(sqrtRatioAtTickUpperX96.toString()).pow(2).div(Q192);
   }
   if (token0ValueProportion.eq(1)) {
-    return new Big(sqrtRatioAtTickLowerX96.toString()).pow(2).div(Q96).div(Q96);
+    return new Big(sqrtRatioAtTickLowerX96.toString()).pow(2).div(Q192);
   }
   const L = new Big(sqrtRatioAtTickLowerX96.toString()).div(Q96);
   const U = new Big(sqrtRatioAtTickUpperX96.toString()).div(Q96);
@@ -209,10 +210,16 @@ export function getRawRelativePriceFromTokenValueProportion(
 }
 
 /**
- * Convert a `Price` object to a `Big` number.
+ * Convert a `Fraction` object to a `Big` number.
  */
-export function priceToBig(price: Price<Token, Token>): Big {
-  return new Big(price.numerator.toString()).div(price.denominator.toString());
+export function fractionToBig(price: Fraction): Big {
+  const DP = Big.DP;
+  const denominator = price.denominator.toString();
+  // prevent precision loss
+  Big.DP = denominator.length;
+  const quotient = new Big(price.numerator.toString()).div(denominator);
+  Big.DP = DP;
+  return quotient;
 }
 
 /**
@@ -221,7 +228,14 @@ export function priceToBig(price: Price<Token, Token>): Big {
  * @returns The sqrt ratio of token1/token0, as a `JSBI` number.
  */
 export function priceToSqrtRatioX96(price: Big): JSBI {
-  return JSBI.BigInt(price.times(Q96).times(Q96).sqrt().toFixed(0));
+  const sqrtRatioX96 = JSBI.BigInt(price.times(Q192).sqrt().toFixed(0));
+  if (JSBI.lessThan(sqrtRatioX96, TickMath.MIN_SQRT_RATIO)) {
+    return TickMath.MIN_SQRT_RATIO;
+  } else if (JSBI.greaterThanOrEqual(sqrtRatioX96, TickMath.MAX_SQRT_RATIO)) {
+    return JSBI.subtract(TickMath.MAX_SQRT_RATIO, JSBI.BigInt(1));
+  } else {
+    return sqrtRatioX96;
+  }
 }
 
 /**

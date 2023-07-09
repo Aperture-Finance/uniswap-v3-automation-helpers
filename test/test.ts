@@ -9,9 +9,16 @@ import {
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
-import { CurrencyAmount, Percent, Price, Token } from '@uniswap/sdk-core';
+import {
+  CurrencyAmount,
+  Fraction,
+  Percent,
+  Price,
+  Token,
+} from '@uniswap/sdk-core';
 import {
   FeeAmount,
+  Pool,
   Position,
   TICK_SPACINGS,
   TickMath,
@@ -45,7 +52,6 @@ import {
   getLiquidityArrayForPool,
   getPool,
   getPoolContract,
-  getPoolPrice,
   getTickToLiquidityMapForPool,
 } from '../pool';
 import {
@@ -55,6 +61,7 @@ import {
   getCollectedFeesFromReceipt,
   getNPM,
   getPosition,
+  getPositionAtPrice,
   getPositionFromBasicInfo,
   getRebalancedPosition,
   getTokenSvg,
@@ -63,14 +70,14 @@ import {
   viewCollectableTokenAmounts,
 } from '../position';
 import {
-  Q96,
+  Q192,
+  fractionToBig,
   getRawRelativePriceFromTokenValueProportion,
   getTokenHistoricalPricesFromCoingecko,
   getTokenPriceFromCoingecko,
   getTokenPriceListFromCoingecko,
   getTokenValueProportionFromPriceRatio,
   parsePrice,
-  priceToBig,
   priceToSqrtRatioX96,
 } from '../price';
 import { getPublicProvider } from '../provider';
@@ -999,8 +1006,7 @@ describe('Util tests', function () {
     ).to.equal(
       new Big(TickMath.getSqrtRatioAtTick(position.tickUpper).toString())
         .pow(2)
-        .div(Q96)
-        .div(Q96)
+        .div(Q192)
         .toString(),
     );
     expect(
@@ -1012,8 +1018,7 @@ describe('Util tests', function () {
     ).to.equal(
       new Big(TickMath.getSqrtRatioAtTick(position.tickLower).toString())
         .pow(2)
-        .div(Q96)
-        .div(Q96)
+        .div(Q192)
         .toString(),
     );
 
@@ -1103,6 +1108,45 @@ describe('Util tests', function () {
     );
   });
 
+  it('Test getPositionAtPrice', async function () {
+    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
+    // corresponds to tick -870686
+    const smallPrice = new Big('1.5434597458370203830544e-38');
+    const position = new Position({
+      pool: new Pool(
+        inRangePosition.pool.token0,
+        inRangePosition.pool.token1,
+        3000,
+        '797207963837958202618833735859',
+        '4923530363713842',
+        46177,
+      ),
+      liquidity: 68488980,
+      tickLower: -887220,
+      tickUpper: 52980,
+    });
+    const position1 = getPositionAtPrice(position, smallPrice);
+    expect(JSBI.toNumber(position1.amount0.quotient)).to.greaterThan(0);
+    expect(JSBI.toNumber(position1.amount1.quotient)).to.equal(0);
+    const position2 = getPositionAtPrice(
+      position,
+      fractionToBig(
+        tickToPrice(
+          inRangePosition.pool.token0,
+          inRangePosition.pool.token1,
+          inRangePosition.tickUpper,
+        ),
+      ),
+    );
+    expect(JSBI.toNumber(position2.amount0.quotient)).to.equal(0);
+    expect(JSBI.toNumber(position2.amount1.quotient)).to.greaterThan(0);
+    const rebalancedPosition = getRebalancedPosition(position1, 46080, 62160);
+    expect(JSBI.toNumber(rebalancedPosition.amount0.quotient)).to.greaterThan(
+      0,
+    );
+    expect(JSBI.toNumber(rebalancedPosition.amount1.quotient)).to.equal(0);
+  });
+
   it('Test projectRebalancedPositionAtPrice', async function () {
     const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     const priceUpper = tickToPrice(
@@ -1120,7 +1164,7 @@ describe('Util tests', function () {
     );
     const positionRebalancedAtTickUpper = projectRebalancedPositionAtPrice(
       inRangePosition,
-      priceToBig(priceUpper),
+      fractionToBig(priceUpper),
       newTickLower,
       newTickUpper,
     );
@@ -1301,6 +1345,11 @@ describe('Price to tick conversion', function () {
     expect(
       sqrtRatioToPrice(TickMath.getSqrtRatioAtTick(tick), token0, token1),
     ).to.deep.equal(price);
+
+    const minPrice = tickToPrice(token0, token1, TickMath.MIN_TICK);
+    expect(
+      sqrtRatioToPrice(TickMath.MIN_SQRT_RATIO, token0, token1),
+    ).to.deep.equal(minPrice);
   });
 
   it('Price to sqrt ratio', function () {
@@ -1310,9 +1359,19 @@ describe('Price to tick conversion', function () {
     );
     const sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
     const price = sqrtRatioToPrice(sqrtRatioX96, token0, token1);
-    expect(priceToSqrtRatioX96(priceToBig(price)).toString()).to.equal(
+    expect(priceToSqrtRatioX96(fractionToBig(price)).toString()).to.equal(
       sqrtRatioX96.toString(),
     );
+  });
+
+  it('Price to Big', function () {
+    const minPrice = tickToPrice(token0, token1, TickMath.MIN_TICK);
+    const bigPrice = fractionToBig(minPrice);
+    expect(
+      minPrice.equalTo(
+        new Fraction(bigPrice.mul(Q192).toFixed(0), Q192.toFixed(0)),
+      ),
+    ).to.be.true;
   });
 });
 
@@ -1410,11 +1469,11 @@ describe('Pool subgraph query tests', function () {
       ),
     ).to.equal(true);
     const liquidityArr = await getLiquidityArrayForPool(chainId, pool);
-    for (const element of liquidityArr) {
-      if (JSBI.equal(element.liquidityActive, inRangeLiquidity)) {
-        console.log(element);
-      }
-    }
+    expect(
+      liquidityArr.some((element) =>
+        JSBI.equal(element.liquidityActive, inRangeLiquidity),
+      ),
+    ).to.be.true;
   });
 
   it('Tick liquidity distribution - Arbitrum mainnet', async function () {
@@ -1467,11 +1526,5 @@ describe('Pool subgraph query tests', function () {
         readTickToLiquidityMap(tickToLiquidityMap, tickCurrentAligned)!,
       ),
     ).to.equal(true);
-    const liquidityArr = await getLiquidityArrayForPool(arbitrumChainId, pool);
-    for (const element of liquidityArr) {
-      if (JSBI.equal(element.liquidityActive, inRangeLiquidity)) {
-        console.log(element);
-      }
-    }
   });
 });
