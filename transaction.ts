@@ -140,7 +140,7 @@ export async function getCreatePositionTxForLimitOrder(
     (zeroToOne && JSBI.greaterThan(amount1, JSBI.BigInt(0))) ||
     (!zeroToOne && JSBI.greaterThan(amount0, JSBI.BigInt(0)))
   ) {
-    throw 'Specified limit price lower than current price';
+    throw 'Specified limit price not applicable';
   }
   const { calldata, value } = NonfungiblePositionManager.addCallParameters(
     position,
