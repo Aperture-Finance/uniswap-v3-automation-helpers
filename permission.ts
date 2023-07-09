@@ -31,10 +31,26 @@ export async function checkPositionApprovalStatus(
 ): Promise<PositionApprovalStatus> {
   const chainInfo = getChainInfo(chainId);
   const npm = getNPM(chainId, provider);
-  const [owner, approved] = await Promise.all([
-    npm.ownerOf(positionId),
-    npm.getApproved(positionId),
-  ]);
+  let owner, approved;
+  try {
+    [owner, approved] = await Promise.all([
+      npm.ownerOf(positionId),
+      npm.getApproved(positionId),
+    ]);
+  } catch (err: any) {
+    if (err.code === 'CALL_EXCEPTION') {
+      return {
+        owner: '',
+        hasAuthority: false,
+        reason: 'nonexistentPositionId',
+      };
+    }
+    return {
+      owner: '',
+      hasAuthority: false,
+      reason: 'unknownNPMQueryError',
+    };
+  }
   if (approved == chainInfo.aperture_uniswap_v3_automan) {
     return {
       owner,

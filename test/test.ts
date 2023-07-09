@@ -889,6 +889,18 @@ describe('Util tests', function () {
       reason: 'onChainPositionSpecificApproval',
     });
 
+    expect(
+      await checkPositionApprovalStatus(
+        0, // Nonexistent position id.
+        undefined,
+        chainId,
+        hardhatForkProvider,
+      ),
+    ).to.deep.include({
+      hasAuthority: false,
+      reason: 'nonexistentPositionId',
+    });
+
     // Construct and sign a permit digest that approves position id 4.
     const wallet = new ethers.Wallet(TEST_WALLET_PRIVATE_KEY);
     const permitTypedData = await generateTypedDataForPermit(
