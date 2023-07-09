@@ -1,3 +1,4 @@
+import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Fraction, Price, Token } from '@uniswap/sdk-core';
 import { SqrtPriceMath, TickMath } from '@uniswap/v3-sdk';
 import axios, { AxiosResponse } from 'axios';
@@ -90,7 +91,7 @@ export async function getTokenPriceFromCoingecko(
 
 /**
  * Fetches tokens' current price from Coingecko in a batch.
- * @param tokens The tokens to fetch price information for.
+ * @param tokens The tokens to fetch price information for. All tokens must have the same chain id.
  * @param vsCurrencies The denominated currencies to fetch price information for. Defaults to 'usd'.
  * @param apiKey The Coingecko API key to use. Use the free api if not specified.
  * @returns The tokens' current USD price. For example,
@@ -104,11 +105,43 @@ export async function getTokenPriceListFromCoingecko(
   vsCurrencies?: string,
   apiKey?: string,
 ): Promise<{ [address: string]: number }> {
-  const chainInfo = getChainInfo(tokens[0].chainId);
+  if (tokens.length === 0) return {};
+  const chainId = tokens[0].chainId;
+  for (const token of tokens) {
+    if (token.chainId !== chainId) {
+      throw new Error('All tokens must have the same chain id');
+    }
+  }
+  return getTokenPriceListFromCoingeckoWithAddresses(
+    chainId,
+    tokens.map((token) => token.address),
+    vsCurrencies,
+    apiKey,
+  );
+}
+
+/**
+ * Fetches tokens' current price from Coingecko in a batch.
+ * @param tokens The checksum addresses of tokens to fetch price information for.
+ * @param vsCurrencies The denominated currencies to fetch price information for. Defaults to 'usd'.
+ * @param apiKey The Coingecko API key to use. Use the free api if not specified.
+ * @returns The tokens' current USD price. For example,
+ * {
+ *    0xbe9895146f7af43049ca1c1ae358b0541ea49704: 1783.17,
+ *    0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce: 0.00000681
+ * }
+ */
+export async function getTokenPriceListFromCoingeckoWithAddresses(
+  chainId: ApertureSupportedChainId,
+  tokens: string[],
+  vsCurrencies?: string,
+  apiKey?: string,
+): Promise<{ [address: string]: number }> {
+  const chainInfo = getChainInfo(chainId);
   if (chainInfo.coingecko_asset_platform_id === undefined) return {};
   vsCurrencies = vsCurrencies ?? 'usd';
   let priceResponse: AxiosResponse;
-  const addresses = tokens.map((token) => token.address).toString();
+  const addresses = tokens.toString();
   if (apiKey) {
     priceResponse = await axios.get(
       `https://pro-api.coingecko.com/api/v3/simple/token_price/${chainInfo.coingecko_asset_platform_id}` +
