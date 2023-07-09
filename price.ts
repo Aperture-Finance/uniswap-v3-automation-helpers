@@ -209,6 +209,22 @@ export function getRawRelativePriceFromTokenValueProportion(
 }
 
 /**
+ * Convert a `Price` object to a `Big` number.
+ */
+export function priceToBig(price: Price<Token, Token>): Big {
+  return new Big(price.numerator.toString()).div(price.denominator.toString());
+}
+
+/**
+ * Given a price ratio of token1/token0, calculate the sqrt ratio of token1/token0.
+ * @param price The price ratio of token1/token0, as a `Big` number.
+ * @returns The sqrt ratio of token1/token0, as a `JSBI` number.
+ */
+export function priceToSqrtRatioX96(price: Big): JSBI {
+  return JSBI.BigInt(price.times(Q96).times(Q96).sqrt().toFixed(0));
+}
+
+/**
  * Given a price ratio of token1/token0, calculate the proportion of the position value that is held in token0 for a
  * given tick range. Inverse of `getRawRelativePriceFromTokenValueProportion`.
  * @param tickLower The lower tick of the range.
@@ -226,9 +242,7 @@ export function getTokenValueProportionFromPriceRatio(
       'Invalid tick range: tickUpper must be greater than tickLower',
     );
   }
-  const sqrtPriceX96 = JSBI.BigInt(
-    priceRatio.times(Q96).times(Q96).sqrt().toFixed(0).toString(),
-  );
+  const sqrtPriceX96 = priceToSqrtRatioX96(priceRatio);
   const tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
   // only token0
   if (tick < tickLower) {

@@ -12,7 +12,7 @@ import JSBI from 'jsbi';
 import { LiquidityAmount, TickNumber, TickToLiquidityMap } from './pool';
 
 const Q96 = JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(96));
-const Q192 = JSBI.exponentiate(Q96, JSBI.BigInt(2));
+const Q192 = JSBI.multiply(Q96, Q96);
 export const MIN_PRICE = new Fraction(
   JSBI.multiply(TickMath.MIN_SQRT_RATIO, TickMath.MIN_SQRT_RATIO),
   Q192,
