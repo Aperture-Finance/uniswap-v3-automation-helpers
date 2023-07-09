@@ -161,7 +161,7 @@ describe('Limit order tests', function () {
         chainId,
         hardhatForkProvider,
       ),
-    ).to.be.rejectedWith('Specified limit price lower than current price');
+    ).to.be.rejectedWith('Specified limit price not applicable');
 
     const pool = await getPool(
       WETH,
@@ -275,7 +275,7 @@ describe('Limit order tests', function () {
         chainId,
         hardhatForkProvider,
       ),
-    ).to.be.rejectedWith('Specified limit price lower than current price');
+    ).to.be.rejectedWith('Specified limit price not applicable');
 
     const alignedLimitPrice = alignPriceToClosestUsableTick(
       parsePrice(WBTC, WETH, '12.12').invert(),
