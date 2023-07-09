@@ -49,20 +49,6 @@ export const CHAIN_ID_TO_INFO: {
     ),
     maxGasCeiling: 0.05,
   },
-  [ApertureSupportedChainId.ARBITRUM_GOERLI_TESTNET_CHAIN_ID]: {
-    uniswap_v3_factory: getAddress(
-      '0x4893376342d5D7b3e31d4184c08b265e5aB2A3f6',
-    ),
-    uniswap_v3_nonfungible_position_manager: getAddress(
-      '0x622e4726a167799826d1E1D150b076A7725f5D81',
-    ),
-    aperture_uniswap_v3_automan: getAddress(
-      '0xcd9002c47348c54B1C044e30E449CdAe44124139',
-    ),
-    infura_network_id: 'arbitrum-goerli',
-    maxGasCeiling: 0.05,
-  },
-
   [ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
       '0x1F98431c8aD98523631AE4a59f267346ea31F984',
