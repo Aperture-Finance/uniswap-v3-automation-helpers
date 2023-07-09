@@ -1108,7 +1108,7 @@ describe('Util tests', function () {
     );
   });
 
-  it.only('Test getPositionAtPrice', async function () {
+  it('Test getPositionAtPrice', async function () {
     const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     // corresponds to tick -870686
     const smallPrice = new Big('1.5434597458370203830544e-38');
