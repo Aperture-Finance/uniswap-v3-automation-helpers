@@ -9,7 +9,13 @@ import {
   WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
-import { CurrencyAmount, Percent, Price, Token } from '@uniswap/sdk-core';
+import {
+  CurrencyAmount,
+  Fraction,
+  Percent,
+  Price,
+  Token,
+} from '@uniswap/sdk-core';
 import {
   FeeAmount,
   Position,
@@ -45,7 +51,6 @@ import {
   getLiquidityArrayForPool,
   getPool,
   getPoolContract,
-  getPoolPrice,
   getTickToLiquidityMapForPool,
 } from '../pool';
 import {
@@ -63,7 +68,7 @@ import {
   viewCollectableTokenAmounts,
 } from '../position';
 import {
-  Q96,
+  Q192,
   getRawRelativePriceFromTokenValueProportion,
   getTokenHistoricalPricesFromCoingecko,
   getTokenPriceFromCoingecko,
@@ -999,8 +1004,7 @@ describe('Util tests', function () {
     ).to.equal(
       new Big(TickMath.getSqrtRatioAtTick(position.tickUpper).toString())
         .pow(2)
-        .div(Q96)
-        .div(Q96)
+        .div(Q192)
         .toString(),
     );
     expect(
@@ -1012,8 +1016,7 @@ describe('Util tests', function () {
     ).to.equal(
       new Big(TickMath.getSqrtRatioAtTick(position.tickLower).toString())
         .pow(2)
-        .div(Q96)
-        .div(Q96)
+        .div(Q192)
         .toString(),
     );
 
@@ -1301,6 +1304,11 @@ describe('Price to tick conversion', function () {
     expect(
       sqrtRatioToPrice(TickMath.getSqrtRatioAtTick(tick), token0, token1),
     ).to.deep.equal(price);
+
+    const minPrice = tickToPrice(token0, token1, TickMath.MIN_TICK);
+    expect(
+      sqrtRatioToPrice(TickMath.MIN_SQRT_RATIO, token0, token1),
+    ).to.deep.equal(minPrice);
   });
 
   it('Price to sqrt ratio', function () {
@@ -1313,6 +1321,16 @@ describe('Price to tick conversion', function () {
     expect(priceToSqrtRatioX96(priceToBig(price)).toString()).to.equal(
       sqrtRatioX96.toString(),
     );
+  });
+
+  it('Price to Big', function () {
+    const minPrice = tickToPrice(token0, token1, TickMath.MIN_TICK);
+    const bigPrice = priceToBig(minPrice);
+    expect(
+      minPrice.equalTo(
+        new Fraction(bigPrice.mul(Q192).toFixed(0), Q192.toFixed(0)),
+      ),
+    ).to.be.true;
   });
 });
 
@@ -1410,11 +1428,11 @@ describe('Pool subgraph query tests', function () {
       ),
     ).to.equal(true);
     const liquidityArr = await getLiquidityArrayForPool(chainId, pool);
-    for (const element of liquidityArr) {
-      if (JSBI.equal(element.liquidityActive, inRangeLiquidity)) {
-        console.log(element);
-      }
-    }
+    expect(
+      liquidityArr.some((element) =>
+        JSBI.equal(element.liquidityActive, inRangeLiquidity),
+      ),
+    ).to.be.true;
   });
 
   it('Tick liquidity distribution - Arbitrum mainnet', async function () {
@@ -1467,11 +1485,5 @@ describe('Pool subgraph query tests', function () {
         readTickToLiquidityMap(tickToLiquidityMap, tickCurrentAligned)!,
       ),
     ).to.equal(true);
-    const liquidityArr = await getLiquidityArrayForPool(arbitrumChainId, pool);
-    for (const element of liquidityArr) {
-      if (JSBI.equal(element.liquidityActive, inRangeLiquidity)) {
-        console.log(element);
-      }
-    }
   });
 });

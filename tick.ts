@@ -37,7 +37,7 @@ export function sqrtRatioToPrice(
   baseToken: Token,
   quoteToken: Token,
 ): Price<Token, Token> {
-  const ratioX192 = JSBI.multiply(sqrtRatioX96, sqrtRatioX96);
+  const ratioX192 = JSBI.exponentiate(sqrtRatioX96, JSBI.BigInt(2));
   return baseToken.sortsBefore(quoteToken)
     ? new Price(baseToken, quoteToken, Q192, ratioX192)
     : new Price(baseToken, quoteToken, ratioX192, Q192);

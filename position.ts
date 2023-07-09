@@ -309,7 +309,7 @@ export async function getPositionIdsByOwner(
 }
 
 /**
- * Fetches basic info of all positions of the specified owner.
+ * Fetches basic info for all positions of the specified owner.
  * @param owner The owner.
  * @param chainId Chain id.
  * @param provider Ethers provider.
