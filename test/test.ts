@@ -76,6 +76,7 @@ import {
   getTokenHistoricalPricesFromCoingecko,
   getTokenPriceFromCoingecko,
   getTokenPriceListFromCoingecko,
+  getTokenPriceListFromCoingeckoWithAddresses,
   getTokenValueProportionFromPriceRatio,
   parsePrice,
   priceToSqrtRatioX96,
@@ -1252,17 +1253,49 @@ describe('CoinGecko tests', function () {
   });
 
   it('Test CoinGecko price list', async function () {
-    const prices = await getTokenPriceListFromCoingecko(
-      await Promise.all([
-        getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
-        getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
-      ]),
-      'eth',
-      process.env.COINGECKO_API_KEY,
-    );
-    for (const price of Object.values(prices)) {
-      expect(price).to.be.greaterThan(0);
+    {
+      const prices = await getTokenPriceListFromCoingecko(
+        await Promise.all([
+          getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
+          getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
+        ]),
+        'eth',
+        process.env.COINGECKO_API_KEY,
+      );
+      for (const price of Object.values(prices)) {
+        expect(price).to.be.greaterThan(0);
+      }
     }
+
+    {
+      const prices = await getTokenPriceListFromCoingeckoWithAddresses(
+        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+        [WBTC_ADDRESS, WETH_ADDRESS],
+        'usd',
+        process.env.COINGECKO_API_KEY,
+      );
+      for (const price of Object.values(prices)) {
+        expect(price).to.be.greaterThan(0);
+      }
+    }
+
+    expect(
+      getTokenPriceListFromCoingecko(
+        await Promise.all([
+          getToken(
+            WBTC_ADDRESS,
+            ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+            hardhatForkProvider,
+          ),
+          new Token(
+            ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
+            '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+            6,
+          ),
+        ]),
+        'usd',
+      ),
+    ).to.be.rejectedWith('All tokens must have the same chain id');
   });
 
   it('Test CoinGecko historical price list', async function () {
