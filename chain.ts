@@ -36,7 +36,7 @@ export const CHAIN_ID_TO_INFO: {
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
     ),
     aperture_uniswap_v3_automan: getAddress(
-      '0xdB1fE098232A00A8B81dd6c2A911f2486cb374EE',
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
     ),
     infura_network_id: 'goerli',
     whitelistedPools: getWhitelistedPools(
@@ -70,7 +70,7 @@ export const CHAIN_ID_TO_INFO: {
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
     ),
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000F43c5264bA236DD7a49224F1241858e4',
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
     ),
     coingecko_asset_platform_id: 'ethereum',
     infura_network_id: 'mainnet',
@@ -94,7 +94,7 @@ export const CHAIN_ID_TO_INFO: {
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
     ),
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000F43c5264bA236DD7a49224F1241858e4',
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
     ),
     coingecko_asset_platform_id: 'arbitrum-one',
     infura_network_id: 'arbitrum',
