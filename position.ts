@@ -16,7 +16,7 @@ import {
   TickMath,
 } from '@uniswap/v3-sdk';
 import Big from 'big.js';
-import { BigNumber, BigNumberish, Signer, utils } from 'ethers';
+import { BigNumber, BigNumberish, Signer } from 'ethers';
 import JSBI from 'jsbi';
 
 import { getChainInfo } from './chain';
@@ -193,32 +193,74 @@ export async function viewCollectableTokenAmounts(
     chainId,
     provider,
   );
-  const npm = getNPM(chainId, provider);
-  const positionKey = utils.keccak256(
-    utils.solidityPack(
-      ['address', 'int24', 'int24'],
-      [npm.address, basicPositionInfo.tickLower, basicPositionInfo.tickUpper],
-    ),
-  );
-  const [poolPosition, position] = await Promise.all([
-    pool.positions(positionKey),
-    npm.positions(positionId),
+  const [
+    slot0,
+    feeGrowthGlobal0X128,
+    feeGrowthGlobal1X128,
+    lowerTickInfo,
+    upperTickInfo,
+    position,
+  ] = await Promise.all([
+    pool.slot0(),
+    pool.feeGrowthGlobal0X128(),
+    pool.feeGrowthGlobal1X128(),
+    pool.ticks(basicPositionInfo.tickLower),
+    pool.ticks(basicPositionInfo.tickUpper),
+    getNPM(chainId, provider).positions(positionId),
   ]);
+
+  // calculate fee growth below
+  let feeGrowthBelow0X128: BigNumber;
+  let feeGrowthBelow1X128: BigNumber;
+  if (slot0.tick >= basicPositionInfo.tickLower) {
+    feeGrowthBelow0X128 = lowerTickInfo.feeGrowthOutside0X128;
+    feeGrowthBelow1X128 = lowerTickInfo.feeGrowthOutside1X128;
+  } else {
+    feeGrowthBelow0X128 = feeGrowthGlobal0X128.sub(
+      lowerTickInfo.feeGrowthOutside0X128,
+    );
+    feeGrowthBelow1X128 = feeGrowthGlobal1X128.sub(
+      lowerTickInfo.feeGrowthOutside1X128,
+    );
+  }
+
+  // calculate fee growth above
+  let feeGrowthAbove0X128: BigNumber;
+  let feeGrowthAbove1X128: BigNumber;
+  if (slot0.tick < basicPositionInfo.tickUpper) {
+    feeGrowthAbove0X128 = upperTickInfo.feeGrowthOutside0X128;
+    feeGrowthAbove1X128 = upperTickInfo.feeGrowthOutside1X128;
+  } else {
+    feeGrowthAbove0X128 = feeGrowthGlobal0X128.sub(
+      upperTickInfo.feeGrowthOutside0X128,
+    );
+    feeGrowthAbove1X128 = feeGrowthGlobal1X128.sub(
+      upperTickInfo.feeGrowthOutside1X128,
+    );
+  }
+
+  const feeGrowthInside0X128 = feeGrowthGlobal0X128
+    .sub(feeGrowthBelow0X128)
+    .sub(feeGrowthAbove0X128);
+  const feeGrowthInside1X128 = feeGrowthGlobal1X128
+    .sub(feeGrowthBelow1X128)
+    .sub(feeGrowthAbove1X128);
+
   const [tokensOwed0, tokensOwed1] = PositionLibrary.getTokensOwed(
     JSBI.BigInt(position.feeGrowthInside0LastX128.toString()),
     JSBI.BigInt(position.feeGrowthInside1LastX128.toString()),
     JSBI.BigInt(position.liquidity.toString()),
-    JSBI.BigInt(poolPosition.feeGrowthInside0LastX128.toString()),
-    JSBI.BigInt(poolPosition.feeGrowthInside1LastX128.toString()),
+    JSBI.BigInt(feeGrowthInside0X128.toString()),
+    JSBI.BigInt(feeGrowthInside1X128.toString()),
   );
   return {
     token0Amount: CurrencyAmount.fromRawAmount(
       basicPositionInfo.token0,
-      tokensOwed0.toString(),
+      position.tokensOwed0.add(tokensOwed0.toString()).toString(),
     ),
     token1Amount: CurrencyAmount.fromRawAmount(
       basicPositionInfo.token1,
-      tokensOwed1.toString(),
+      position.tokensOwed1.add(tokensOwed1.toString()).toString(),
     ),
   };
 }

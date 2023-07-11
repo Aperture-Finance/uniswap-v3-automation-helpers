@@ -30,7 +30,7 @@ import axios from 'axios';
 import Big from 'big.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BigNumber, Signer, utils } from 'ethers';
+import { BigNumber, Signer } from 'ethers';
 import { getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
@@ -1196,29 +1196,6 @@ describe('Util tests', function () {
       hardhatForkProvider,
       position,
     );
-    const npmAddress =
-      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
-    // send ether to WETH first because we can only send ether to NPM from WETH
-    await (
-      await ethers.getImpersonatedSigner(eoa)
-    ).sendTransaction({
-      to: WETH_ADDRESS,
-      value: utils.parseEther('1'),
-    });
-    await (
-      await ethers.getImpersonatedSigner(WETH_ADDRESS)
-    ).sendTransaction({
-      to: npmAddress,
-      value: utils.parseEther('1'),
-    });
-    // trigger an update of the position fees owed
-    await getPoolContract(
-      position.token0,
-      position.token1,
-      position.fee,
-      chainId,
-      await ethers.getImpersonatedSigner(npmAddress),
-    ).burn(position.tickLower, position.tickUpper, 0);
     const viewOnlyColletableTokenAmounts = await viewCollectableTokenAmounts(
       chainId,
       positionId,
