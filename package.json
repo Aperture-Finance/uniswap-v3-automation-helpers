@@ -1,6 +1,6 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
   "author": "Aperture Finance <engineering@aperture.finance>",
   "license": "MIT",
@@ -34,7 +34,7 @@
   ],
   "dependencies": {
     "@0xsequence/multicall": "^0.43.34",
-    "@aperture_finance/uniswap-v3-automation-sdk": "^1.0.1",
+    "@aperture_finance/uniswap-v3-automation-sdk": "1.0.1",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@uniswap/v3-sdk": "^3.9.0",

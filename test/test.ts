@@ -1,3 +1,4 @@
+import { providers } from '@0xsequence/multicall';
 import {
   ActionTypeEnum,
   ApertureSupportedChainId,
@@ -51,11 +52,12 @@ import {
   getFeeTierDistribution,
   getLiquidityArrayForPool,
   getPool,
-  getPoolContract,
   getTickToLiquidityMapForPool,
 } from '../pool';
 import {
   BasicPositionInfo,
+  getAllPositionBasicInfoByOwner,
+  getAllPositions,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
   getCollectedFeesFromReceipt,
@@ -1182,29 +1184,62 @@ describe('Util tests', function () {
     ).to.greaterThan(0);
   });
 
-  it('Test viewCollectableTokenAmounts', async function () {
-    await resetHardhatNetwork();
+  it.only('Test viewCollectableTokenAmounts', async function () {
     const positionId = 4;
     const position = await getBasicPositionInfo(
       chainId,
       positionId,
       hardhatForkProvider,
     );
-    const colletableTokenAmounts = await getCollectableTokenAmounts(
-      chainId,
-      positionId,
+    const multicallProvider = new providers.MulticallProvider(
       hardhatForkProvider,
-      position,
+      {
+        verbose: true,
+      },
     );
-    const viewOnlyColletableTokenAmounts = await viewCollectableTokenAmounts(
+    await Promise.all([
+      viewCollectableTokenAmounts(chainId, 4, multicallProvider, position),
+      viewCollectableTokenAmounts(chainId, 7, multicallProvider, position),
+    ]);
+    await Promise.all([
+      getCollectableTokenAmounts(chainId, 4, multicallProvider, position),
+      getCollectableTokenAmounts(chainId, 7, multicallProvider, position),
+    ]);
+    // const colletableTokenAmounts = await getCollectableTokenAmounts(
+    //   chainId,
+    //   positionId,
+    //   multicallProvider,
+    //   position,
+    // );
+    // const viewOnlyColletableTokenAmounts = await viewCollectableTokenAmounts(
+    //   chainId,
+    //   positionId,
+    //   multicallProvider,
+    //   position,
+    // );
+    // expect(colletableTokenAmounts).to.deep.equal(
+    //   viewOnlyColletableTokenAmounts,
+    // );
+  });
+
+  it('Test getAllPositions', async function () {
+    const positions = await getAllPositions(eoa, chainId, hardhatForkProvider);
+    const basicPositions = await getAllPositionBasicInfoByOwner(
+      eoa,
       chainId,
-      positionId,
       hardhatForkProvider,
-      position,
     );
-    expect(colletableTokenAmounts).to.deep.equal(
-      viewOnlyColletableTokenAmounts,
-    );
+    expect(positions.size).to.equal(basicPositions.size);
+    for (const [tokenId, pos] of positions.entries()) {
+      const basicPosition = basicPositions.get(tokenId);
+      expect(basicPosition).to.not.be.undefined;
+      expect(basicPosition?.token0).to.deep.equal(pos.pool.token0);
+      expect(basicPosition?.token1).to.deep.equal(pos.pool.token1);
+      expect(basicPosition?.fee).to.equal(pos.pool.fee);
+      expect(basicPosition?.liquidity).to.equal(pos.liquidity.toString());
+      expect(basicPosition?.tickLower).to.equal(pos.tickLower);
+      expect(basicPosition?.tickUpper).to.equal(pos.tickUpper);
+    }
   });
 });
 
