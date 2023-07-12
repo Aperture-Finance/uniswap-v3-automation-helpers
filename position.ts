@@ -1,11 +1,14 @@
 import {
   ApertureSupportedChainId,
+  EphemeralAllPositions__factory,
+  EphemeralGetPosition__factory,
   INonfungiblePositionManager__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import {
   CollectEventObject,
   DecreaseLiquidityEventObject,
 } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/@aperture_finance/uni-v3-lib/src/interfaces/INonfungiblePositionManager';
+import { PositionStateStructOutput } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralPositionLens.sol/EphemeralGetPosition';
 import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import {
@@ -16,7 +19,7 @@ import {
   TickMath,
 } from '@uniswap/v3-sdk';
 import Big from 'big.js';
-import { BigNumber, BigNumberish, Signer } from 'ethers';
+import { BigNumber, BigNumberish, Signer, utils } from 'ethers';
 import JSBI from 'jsbi';
 
 import { getChainInfo } from './chain';
@@ -36,10 +39,10 @@ import {
 export interface BasicPositionInfo {
   token0: Token;
   token1: Token;
+  fee: FeeAmount;
   liquidity?: BigintIsh;
   tickLower: number;
   tickUpper: number;
-  fee: FeeAmount;
 }
 
 export function getNPM(
@@ -111,6 +114,49 @@ export async function getPosition(
   });
 }
 
+/**
+ * Get the position state in a single call by deploying an ephemeral contract via `eth_call`
+ * @param chainId Chain id.
+ * @param positionId Position id.
+ * @param provider Ethers provider.
+ * @returns The position state.
+ */
+export async function getPositionSingleCall(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  provider: Provider,
+): Promise<Position> {
+  const constructorArgs = utils.defaultAbiCoder.encode(
+    ['address', 'uint256'],
+    [getChainInfo(chainId).uniswap_v3_nonfungible_position_manager, positionId],
+  );
+  const returnData = await provider.call({
+    data: utils.hexConcat([
+      EphemeralGetPosition__factory.bytecode,
+      constructorArgs,
+    ]),
+  });
+  const iface = EphemeralGetPosition__factory.createInterface();
+  const { position, slot0, activeLiquidity, decimals0, decimals1 } =
+    iface.decodeFunctionResult(
+      'getPosition',
+      returnData,
+    )[0] as PositionStateStructOutput;
+  return new Position({
+    pool: new Pool(
+      new Token(chainId, position.token0, decimals0),
+      new Token(chainId, position.token1, decimals1),
+      position.fee,
+      slot0.sqrtPriceX96.toString(),
+      activeLiquidity.toString(),
+      slot0.tick,
+    ),
+    liquidity: position.liquidity.toString(),
+    tickLower: position.tickLower,
+    tickUpper: position.tickUpper,
+  });
+}
+
 export interface CollectableTokenAmounts {
   token0Amount: CurrencyAmount<Token>;
   token1Amount: CurrencyAmount<Token>;
@@ -165,12 +211,12 @@ export async function getCollectableTokenAmounts(
 }
 
 /**
- * View the amount of collectable tokens in the position. May not be up-to-date.
+ * View the amount of collectable tokens in a position without specifying the owner as `from` which isn't multicallable.
  * The collectable amount is most likely accrued fees accumulated in the position, but can be from a prior decreaseLiquidity() call which has not been collected.
  * @param chainId Chain id.
  * @param positionId Position id.
  * @param provider Ethers provider.
- * @param basicPositionInfo Basic position info, optional; if undefined, one will be constructed.
+ * @param basicPositionInfo Basic position info, optional.
  * @returns A promise that resolves to collectable amount of the two tokens in the position.
  */
 export async function viewCollectableTokenAmounts(
@@ -197,8 +243,8 @@ export async function viewCollectableTokenAmounts(
     slot0,
     feeGrowthGlobal0X128,
     feeGrowthGlobal1X128,
-    lowerTickInfo,
-    upperTickInfo,
+    lower,
+    upper,
     position,
   ] = await Promise.all([
     pool.slot0(),
@@ -209,43 +255,30 @@ export async function viewCollectableTokenAmounts(
     getNPM(chainId, provider).positions(positionId),
   ]);
 
-  // calculate fee growth below
-  let feeGrowthBelow0X128: BigNumber;
-  let feeGrowthBelow1X128: BigNumber;
-  if (slot0.tick >= basicPositionInfo.tickLower) {
-    feeGrowthBelow0X128 = lowerTickInfo.feeGrowthOutside0X128;
-    feeGrowthBelow1X128 = lowerTickInfo.feeGrowthOutside1X128;
+  // https://github.com/Uniswap/v4-core/blob/f630c8ca8c669509d958353200953762fd15761a/contracts/libraries/Pool.sol#L566
+  let feeGrowthInside0X128: BigNumber, feeGrowthInside1X128: BigNumber;
+  if (slot0.tick < basicPositionInfo.tickLower) {
+    feeGrowthInside0X128 = lower.feeGrowthOutside0X128.sub(
+      upper.feeGrowthOutside0X128,
+    );
+    feeGrowthInside1X128 = lower.feeGrowthOutside1X128.sub(
+      upper.feeGrowthOutside1X128,
+    );
+  } else if (slot0.tick >= basicPositionInfo.tickUpper) {
+    feeGrowthInside0X128 = upper.feeGrowthOutside0X128.sub(
+      lower.feeGrowthOutside0X128,
+    );
+    feeGrowthInside1X128 = upper.feeGrowthOutside1X128.sub(
+      lower.feeGrowthOutside1X128,
+    );
   } else {
-    feeGrowthBelow0X128 = feeGrowthGlobal0X128.sub(
-      lowerTickInfo.feeGrowthOutside0X128,
-    );
-    feeGrowthBelow1X128 = feeGrowthGlobal1X128.sub(
-      lowerTickInfo.feeGrowthOutside1X128,
-    );
+    feeGrowthInside0X128 = feeGrowthGlobal0X128
+      .sub(lower.feeGrowthOutside0X128)
+      .sub(upper.feeGrowthOutside0X128);
+    feeGrowthInside1X128 = feeGrowthGlobal1X128
+      .sub(lower.feeGrowthOutside1X128)
+      .sub(upper.feeGrowthOutside1X128);
   }
-
-  // calculate fee growth above
-  let feeGrowthAbove0X128: BigNumber;
-  let feeGrowthAbove1X128: BigNumber;
-  if (slot0.tick < basicPositionInfo.tickUpper) {
-    feeGrowthAbove0X128 = upperTickInfo.feeGrowthOutside0X128;
-    feeGrowthAbove1X128 = upperTickInfo.feeGrowthOutside1X128;
-  } else {
-    feeGrowthAbove0X128 = feeGrowthGlobal0X128.sub(
-      upperTickInfo.feeGrowthOutside0X128,
-    );
-    feeGrowthAbove1X128 = feeGrowthGlobal1X128.sub(
-      upperTickInfo.feeGrowthOutside1X128,
-    );
-  }
-
-  const feeGrowthInside0X128 = feeGrowthGlobal0X128
-    .sub(feeGrowthBelow0X128)
-    .sub(feeGrowthAbove0X128);
-  const feeGrowthInside1X128 = feeGrowthGlobal1X128
-    .sub(feeGrowthBelow1X128)
-    .sub(feeGrowthAbove1X128);
-
   const [tokensOwed0, tokensOwed1] = PositionLibrary.getTokensOwed(
     JSBI.BigInt(position.feeGrowthInside0LastX128.toString()),
     JSBI.BigInt(position.feeGrowthInside1LastX128.toString()),
@@ -361,7 +394,7 @@ export async function getAllPositionBasicInfoByOwner(
   owner: string,
   chainId: ApertureSupportedChainId,
   provider: Provider,
-): Promise<Map<BigNumber, BasicPositionInfo>> {
+): Promise<Map<string, BasicPositionInfo>> {
   const positionIds = await getPositionIdsByOwner(owner, chainId, provider);
   const positionInfos = await Promise.all(
     positionIds.map((positionId) =>
@@ -369,7 +402,62 @@ export async function getAllPositionBasicInfoByOwner(
     ),
   );
   return new Map(
-    positionIds.map((positionId, index) => [positionId, positionInfos[index]]),
+    positionIds.map((positionId, index) => [
+      positionId.toString(),
+      positionInfos[index],
+    ]),
+  );
+}
+
+/**
+ * Fetches the state and pool for all positions of the specified owner.
+ * @param owner The owner.
+ * @param chainId Chain id.
+ * @param provider Ethers provider.
+ * @returns A map where each key is a position id and its associated state and pool.
+ */
+export async function getAllPositions(
+  owner: string,
+  chainId: ApertureSupportedChainId,
+  provider: Provider,
+): Promise<Map<string, Position>> {
+  const constructorArgs = utils.defaultAbiCoder.encode(
+    ['address', 'address'],
+    [getChainInfo(chainId).uniswap_v3_nonfungible_position_manager, owner],
+  );
+  // Get all position states by deploying an ephemeral contract via `eth_call`
+  const returnData = await provider.call({
+    data: utils.hexConcat([
+      EphemeralAllPositions__factory.bytecode,
+      constructorArgs,
+    ]),
+  });
+  const iface = EphemeralAllPositions__factory.createInterface();
+  const [tokenIds, positions] = iface.decodeFunctionResult(
+    'allPositions',
+    returnData,
+  ) as [BigNumber[], PositionStateStructOutput[]];
+  return new Map(
+    tokenIds.map((tokenId, index) => {
+      const { position, slot0, activeLiquidity, decimals0, decimals1 } =
+        positions[index];
+      return [
+        tokenId.toString(),
+        new Position({
+          pool: new Pool(
+            new Token(chainId, position.token0, decimals0),
+            new Token(chainId, position.token1, decimals1),
+            position.fee,
+            slot0.sqrtPriceX96.toString(),
+            activeLiquidity.toString(),
+            slot0.tick,
+          ),
+          liquidity: position.liquidity.toString(),
+          tickLower: position.tickLower,
+          tickUpper: position.tickUpper,
+        }),
+      ] as const;
+    }),
   );
 }
 

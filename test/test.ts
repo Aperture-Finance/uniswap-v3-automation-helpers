@@ -51,11 +51,12 @@ import {
   getFeeTierDistribution,
   getLiquidityArrayForPool,
   getPool,
-  getPoolContract,
   getTickToLiquidityMapForPool,
 } from '../pool';
 import {
   BasicPositionInfo,
+  getAllPositionBasicInfoByOwner,
+  getAllPositions,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
   getCollectedFeesFromReceipt,
@@ -63,6 +64,7 @@ import {
   getPosition,
   getPositionAtPrice,
   getPositionFromBasicInfo,
+  getPositionSingleCall,
   getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
@@ -1183,7 +1185,6 @@ describe('Util tests', function () {
   });
 
   it('Test viewCollectableTokenAmounts', async function () {
-    await resetHardhatNetwork();
     const positionId = 4;
     const position = await getBasicPositionInfo(
       chainId,
@@ -1205,6 +1206,32 @@ describe('Util tests', function () {
     expect(colletableTokenAmounts).to.deep.equal(
       viewOnlyColletableTokenAmounts,
     );
+  });
+
+  it('Test getPositionSingleCall', async function () {
+    expect(
+      await getPositionSingleCall(chainId, 4, hardhatForkProvider),
+    ).to.deep.equal(await getPosition(chainId, 4, hardhatForkProvider));
+  });
+
+  it('Test getAllPositions', async function () {
+    const positions = await getAllPositions(eoa, chainId, hardhatForkProvider);
+    const basicPositions = await getAllPositionBasicInfoByOwner(
+      eoa,
+      chainId,
+      hardhatForkProvider,
+    );
+    expect(positions.size).to.equal(basicPositions.size);
+    for (const [tokenId, pos] of positions.entries()) {
+      const basicPosition = basicPositions.get(tokenId);
+      expect(basicPosition).to.not.be.undefined;
+      expect(basicPosition?.token0).to.deep.equal(pos.pool.token0);
+      expect(basicPosition?.token1).to.deep.equal(pos.pool.token1);
+      expect(basicPosition?.fee).to.equal(pos.pool.fee);
+      expect(basicPosition?.liquidity).to.equal(pos.liquidity.toString());
+      expect(basicPosition?.tickLower).to.equal(pos.tickLower);
+      expect(basicPosition?.tickUpper).to.equal(pos.tickUpper);
+    }
   });
 });
 
