@@ -1,4 +1,3 @@
-import { providers } from '@0xsequence/multicall';
 import {
   ActionTypeEnum,
   ApertureSupportedChainId,
@@ -65,6 +64,7 @@ import {
   getPosition,
   getPositionAtPrice,
   getPositionFromBasicInfo,
+  getPositionSingleCall,
   getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
@@ -1184,42 +1184,34 @@ describe('Util tests', function () {
     ).to.greaterThan(0);
   });
 
-  it.only('Test viewCollectableTokenAmounts', async function () {
+  it('Test viewCollectableTokenAmounts', async function () {
     const positionId = 4;
     const position = await getBasicPositionInfo(
       chainId,
       positionId,
       hardhatForkProvider,
     );
-    const multicallProvider = new providers.MulticallProvider(
+    const colletableTokenAmounts = await getCollectableTokenAmounts(
+      chainId,
+      positionId,
       hardhatForkProvider,
-      {
-        verbose: true,
-      },
+      position,
     );
-    await Promise.all([
-      viewCollectableTokenAmounts(chainId, 4, multicallProvider, position),
-      viewCollectableTokenAmounts(chainId, 7, multicallProvider, position),
-    ]);
-    await Promise.all([
-      getCollectableTokenAmounts(chainId, 4, multicallProvider, position),
-      getCollectableTokenAmounts(chainId, 7, multicallProvider, position),
-    ]);
-    // const colletableTokenAmounts = await getCollectableTokenAmounts(
-    //   chainId,
-    //   positionId,
-    //   multicallProvider,
-    //   position,
-    // );
-    // const viewOnlyColletableTokenAmounts = await viewCollectableTokenAmounts(
-    //   chainId,
-    //   positionId,
-    //   multicallProvider,
-    //   position,
-    // );
-    // expect(colletableTokenAmounts).to.deep.equal(
-    //   viewOnlyColletableTokenAmounts,
-    // );
+    const viewOnlyColletableTokenAmounts = await viewCollectableTokenAmounts(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+      position,
+    );
+    expect(colletableTokenAmounts).to.deep.equal(
+      viewOnlyColletableTokenAmounts,
+    );
+  });
+
+  it('Test getPositionSingleCall', async function () {
+    expect(
+      await getPositionSingleCall(chainId, 4, hardhatForkProvider),
+    ).to.deep.equal(await getPosition(chainId, 4, hardhatForkProvider));
   });
 
   it('Test getAllPositions', async function () {
