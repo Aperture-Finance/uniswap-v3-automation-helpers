@@ -19,7 +19,7 @@ import {
   TickMath,
 } from '@uniswap/v3-sdk';
 import Big from 'big.js';
-import { BigNumber, BigNumberish, Signer, utils } from 'ethers';
+import { BigNumber, BigNumberish, Signer } from 'ethers';
 import JSBI from 'jsbi';
 
 import { getChainInfo } from './chain';
@@ -126,19 +126,14 @@ export async function getPositionSingleCall(
   positionId: BigNumberish,
   provider: Provider,
 ): Promise<Position> {
-  const constructorArgs = utils.defaultAbiCoder.encode(
-    ['address', 'uint256'],
-    [getChainInfo(chainId).uniswap_v3_nonfungible_position_manager, positionId],
+  const returnData = await provider.call(
+    new EphemeralGetPosition__factory().getDeployTransaction(
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+      positionId,
+    ),
   );
-  const returnData = await provider.call({
-    data: utils.hexConcat([
-      EphemeralGetPosition__factory.bytecode,
-      constructorArgs,
-    ]),
-  });
-  const iface = EphemeralGetPosition__factory.createInterface();
   const { position, slot0, activeLiquidity, decimals0, decimals1 } =
-    iface.decodeFunctionResult(
+    EphemeralGetPosition__factory.createInterface().decodeFunctionResult(
       'getPosition',
       returnData,
     )[0] as PositionStateStructOutput;
@@ -410,7 +405,9 @@ export async function getAllPositionBasicInfoByOwner(
 }
 
 /**
- * Fetches the state and pool for all positions of the specified owner.
+ * Get the state and pool for all positions of the specified owner by deploying an ephemeral contract via `eth_call`.
+ * Each position consumes about 200k gas, so this method may fail if the number of positions exceeds 1500 assuming the
+ * provider gas limit is 300m.
  * @param owner The owner.
  * @param chainId Chain id.
  * @param provider Ethers provider.
@@ -421,17 +418,12 @@ export async function getAllPositions(
   chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<Map<string, Position>> {
-  const constructorArgs = utils.defaultAbiCoder.encode(
-    ['address', 'address'],
-    [getChainInfo(chainId).uniswap_v3_nonfungible_position_manager, owner],
+  const returnData = await provider.call(
+    new EphemeralAllPositions__factory().getDeployTransaction(
+      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+      owner,
+    ),
   );
-  // Get all position states by deploying an ephemeral contract via `eth_call`
-  const returnData = await provider.call({
-    data: utils.hexConcat([
-      EphemeralAllPositions__factory.bytecode,
-      constructorArgs,
-    ]),
-  });
   const iface = EphemeralAllPositions__factory.createInterface();
   const [tokenIds, positions] = iface.decodeFunctionResult(
     'allPositions',
