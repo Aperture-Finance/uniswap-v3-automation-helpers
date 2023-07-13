@@ -122,6 +122,7 @@ export async function getTokenPriceListFromCoingecko(
 
 /**
  * Fetches tokens' current price from Coingecko in a batch.
+ * @param chainId The chain id.
  * @param tokens The checksum addresses of tokens to fetch price information for.
  * @param vsCurrencies The denominated currencies to fetch price information for. Defaults to 'usd'.
  * @param apiKey The Coingecko API key to use. Use the free api if not specified.
