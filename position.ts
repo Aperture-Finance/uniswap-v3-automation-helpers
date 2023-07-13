@@ -114,44 +114,6 @@ export async function getPosition(
   });
 }
 
-/**
- * Get the position state in a single call by deploying an ephemeral contract via `eth_call`
- * @param chainId Chain id.
- * @param positionId Position id.
- * @param provider Ethers provider.
- * @returns The position state.
- */
-export async function getPositionSingleCall(
-  chainId: ApertureSupportedChainId,
-  positionId: BigNumberish,
-  provider: Provider,
-): Promise<Position> {
-  const returnData = await provider.call(
-    new EphemeralGetPosition__factory().getDeployTransaction(
-      getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
-      positionId,
-    ),
-  );
-  const { position, slot0, activeLiquidity, decimals0, decimals1 } =
-    EphemeralGetPosition__factory.createInterface().decodeFunctionResult(
-      'getPosition',
-      returnData,
-    )[0] as PositionStateStructOutput;
-  return new Position({
-    pool: new Pool(
-      new Token(chainId, position.token0, decimals0),
-      new Token(chainId, position.token1, decimals1),
-      position.fee,
-      slot0.sqrtPriceX96.toString(),
-      activeLiquidity.toString(),
-      slot0.tick,
-    ),
-    liquidity: position.liquidity.toString(),
-    tickLower: position.tickLower,
-    tickUpper: position.tickUpper,
-  });
-}
-
 export interface CollectableTokenAmounts {
   token0Amount: CurrencyAmount<Token>;
   token1Amount: CurrencyAmount<Token>;
@@ -411,13 +373,13 @@ export async function getAllPositionBasicInfoByOwner(
  * @param owner The owner.
  * @param chainId Chain id.
  * @param provider Ethers provider.
- * @returns A map where each key is a position id and its associated state and pool.
+ * @returns A map where each key is a position id and its associated value is PositionDetails of that position.
  */
-export async function getAllPositions(
+export async function getAllPositionsDetails(
   owner: string,
   chainId: ApertureSupportedChainId,
   provider: Provider,
-): Promise<Map<string, Position>> {
+): Promise<Map<string, PositionDetails>> {
   const returnData = await provider.call(
     new EphemeralAllPositions__factory().getDeployTransaction(
       getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
@@ -431,23 +393,13 @@ export async function getAllPositions(
   ) as [BigNumber[], PositionStateStructOutput[]];
   return new Map(
     tokenIds.map((tokenId, index) => {
-      const { position, slot0, activeLiquidity, decimals0, decimals1 } =
-        positions[index];
       return [
         tokenId.toString(),
-        new Position({
-          pool: new Pool(
-            new Token(chainId, position.token0, decimals0),
-            new Token(chainId, position.token1, decimals1),
-            position.fee,
-            slot0.sqrtPriceX96.toString(),
-            activeLiquidity.toString(),
-            slot0.tick,
-          ),
-          liquidity: position.liquidity.toString(),
-          tickLower: position.tickLower,
-          tickUpper: position.tickUpper,
-        }),
+        PositionDetails.fromPositionStateStruct(
+          chainId,
+          tokenId,
+          positions[index],
+        ),
       ] as const;
     }),
   );
@@ -557,4 +509,161 @@ export function projectRebalancedPositionAtPrice(
     newTickLower,
     newTickUpper,
   );
+}
+
+/**
+ * Contains the full position details including the corresponding pool and real-time collectable token amounts.
+ */
+export class PositionDetails implements BasicPositionInfo {
+  public readonly tokenId: string;
+  public readonly token0: Token;
+  public readonly token1: Token;
+  public readonly fee: FeeAmount;
+  public readonly liquidity: string;
+  public readonly tickLower: number;
+  public readonly tickUpper: number;
+  public readonly pool: Pool;
+  public readonly position: Position;
+  private readonly _tokensOwed0: BigNumber;
+  private readonly _tokensOwed1: BigNumber;
+
+  public constructor(
+    tokenId: BigNumberish,
+    basicPositionInfo: BasicPositionInfo,
+    sqrtRatioX96: BigintIsh,
+    tick: number,
+    activeLiquidity: BigintIsh,
+    tokensOwed0: BigNumber,
+    tokensOwed1: BigNumber,
+  ) {
+    this.tokenId = tokenId.toString();
+    this.token0 = basicPositionInfo.token0;
+    this.token1 = basicPositionInfo.token1;
+    this.fee = basicPositionInfo.fee;
+    this.liquidity = basicPositionInfo.liquidity!.toString();
+    this.tickLower = basicPositionInfo.tickLower;
+    this.tickUpper = basicPositionInfo.tickUpper;
+    this.pool = new Pool(
+      this.token0,
+      this.token1,
+      this.fee,
+      sqrtRatioX96.toString(),
+      activeLiquidity.toString(),
+      tick,
+    );
+    this.position = new Position({
+      pool: this.pool,
+      liquidity: this.liquidity,
+      tickLower: this.tickLower,
+      tickUpper: this.tickUpper,
+    });
+    this._tokensOwed0 = tokensOwed0;
+    this._tokensOwed1 = tokensOwed1;
+  }
+
+  /**
+   * Get the position details in a single call by deploying an ephemeral contract via `eth_call`
+   * @param chainId Chain id.
+   * @param positionId Position id.
+   * @param provider Ethers provider.
+   * @returns The position details.
+   */
+  public static async fromPositionId(
+    chainId: ApertureSupportedChainId,
+    positionId: BigNumberish,
+    provider: Provider,
+  ): Promise<PositionDetails> {
+    const returnData = await provider.call(
+      new EphemeralGetPosition__factory().getDeployTransaction(
+        getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
+        positionId,
+      ),
+    );
+    return PositionDetails.fromPositionStateStruct(
+      chainId,
+      positionId,
+      EphemeralGetPosition__factory.createInterface().decodeFunctionResult(
+        'getPosition',
+        returnData,
+      )[0],
+    );
+  }
+
+  /**
+   * Get the position details from the position state struct.
+   * @param chainId The chain ID.
+   * @param tokenId The token ID.
+   * @param position NonfungiblePositionManager's position struct.
+   * @param slot0 The pool's slot0 struct.
+   * @param activeLiquidity The pool's active liquidity.
+   * @param decimals0 token0's decimals.
+   * @param decimals1 token1's decimals.
+   * @returns The position details.
+   */
+  public static fromPositionStateStruct(
+    chainId: ApertureSupportedChainId,
+    tokenId: BigNumberish,
+    {
+      position,
+      slot0,
+      activeLiquidity,
+      decimals0,
+      decimals1,
+    }: PositionStateStructOutput,
+  ): PositionDetails {
+    return new PositionDetails(
+      tokenId,
+      {
+        token0: new Token(chainId, position.token0, decimals0),
+        token1: new Token(chainId, position.token1, decimals1),
+        fee: position.fee,
+        liquidity: position.liquidity.toString(),
+        tickLower: position.tickLower,
+        tickUpper: position.tickUpper,
+      },
+      slot0.sqrtPriceX96.toString(),
+      slot0.tick,
+      activeLiquidity.toString(),
+      position.tokensOwed0,
+      position.tokensOwed1,
+    );
+  }
+
+  /**
+   * Returns the chain ID of the tokens in the pool.
+   */
+  public get chainId(): number {
+    return this.token0.chainId;
+  }
+
+  public get tokensOwed0(): CurrencyAmount<Token> {
+    return CurrencyAmount.fromRawAmount(
+      this.token0,
+      this._tokensOwed0.toString(),
+    );
+  }
+
+  public get tokensOwed1(): CurrencyAmount<Token> {
+    return CurrencyAmount.fromRawAmount(
+      this.token1,
+      this._tokensOwed1.toString(),
+    );
+  }
+
+  /**
+   * Get the real-time collectable token amounts.
+   * @param provider Ethers provider.
+   */
+  public getCollectableTokenAmounts(
+    provider: Provider,
+  ): Promise<CollectableTokenAmounts> {
+    return viewCollectableTokenAmounts(this.chainId, this.tokenId, provider, {
+      token0: this.token0,
+      token1: this.token1,
+      fee: this.fee,
+      tickLower: this.tickLower,
+      tickUpper: this.tickUpper,
+      liquidity: this.liquidity,
+    });
+  }
 }

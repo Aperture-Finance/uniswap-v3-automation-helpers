@@ -55,8 +55,9 @@ import {
 } from '../pool';
 import {
   BasicPositionInfo,
+  PositionDetails,
   getAllPositionBasicInfoByOwner,
-  getAllPositions,
+  getAllPositionsDetails,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
   getCollectedFeesFromReceipt,
@@ -64,7 +65,6 @@ import {
   getPosition,
   getPositionAtPrice,
   getPositionFromBasicInfo,
-  getPositionSingleCall,
   getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
@@ -1206,16 +1206,34 @@ describe('Util tests', function () {
     expect(colletableTokenAmounts).to.deep.equal(
       viewOnlyColletableTokenAmounts,
     );
+    const positionDetails = await PositionDetails.fromPositionId(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    expect(colletableTokenAmounts).to.deep.equal({
+      token0Amount: positionDetails.tokensOwed0,
+      token1Amount: positionDetails.tokensOwed1,
+    });
   });
 
-  it('Test getPositionSingleCall', async function () {
-    expect(
-      await getPositionSingleCall(chainId, 4, hardhatForkProvider),
-    ).to.deep.equal(await getPosition(chainId, 4, hardhatForkProvider));
+  it('Test get position details', async function () {
+    const { position } = await PositionDetails.fromPositionId(
+      chainId,
+      4,
+      hardhatForkProvider,
+    );
+    expect(position).to.deep.equal(
+      await getPosition(chainId, 4, hardhatForkProvider),
+    );
   });
 
   it('Test getAllPositions', async function () {
-    const positions = await getAllPositions(eoa, chainId, hardhatForkProvider);
+    const positions = await getAllPositionsDetails(
+      eoa,
+      chainId,
+      hardhatForkProvider,
+    );
     const basicPositions = await getAllPositionBasicInfoByOwner(
       eoa,
       chainId,
