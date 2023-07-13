@@ -406,6 +406,8 @@ export async function getAllPositionBasicInfoByOwner(
 
 /**
  * Get the state and pool for all positions of the specified owner by deploying an ephemeral contract via `eth_call`.
+ * Each position consumes about 200k gas, so this method may fail if the number of positions exceeds 1500 assuming the
+ * provider gas limit is 300m.
  * @param owner The owner.
  * @param chainId Chain id.
  * @param provider Ethers provider.
