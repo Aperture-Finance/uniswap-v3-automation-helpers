@@ -8,7 +8,7 @@ import {
   CollectEventObject,
   DecreaseLiquidityEventObject,
 } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/@aperture_finance/uni-v3-lib/src/interfaces/INonfungiblePositionManager';
-import { PositionStateStructOutput } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralPositionLens.sol/EphemeralGetPosition';
+import { PositionStateStructOutput } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralGetPosition';
 import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import {
@@ -387,19 +387,15 @@ export async function getAllPositionsDetails(
     ),
   );
   const iface = EphemeralAllPositions__factory.createInterface();
-  const [tokenIds, positions] = iface.decodeFunctionResult(
+  const positions = iface.decodeFunctionResult(
     'allPositions',
     returnData,
-  ) as [BigNumber[], PositionStateStructOutput[]];
+  )[0] as PositionStateStructOutput[];
   return new Map(
-    tokenIds.map((tokenId, index) => {
+    positions.map((pos) => {
       return [
-        tokenId.toString(),
-        PositionDetails.fromPositionStateStruct(
-          chainId,
-          tokenId,
-          positions[index],
-        ),
+        pos.tokenId.toString(),
+        PositionDetails.fromPositionStateStruct(chainId, pos),
       ] as const;
     }),
   );
@@ -527,7 +523,7 @@ export class PositionDetails implements BasicPositionInfo {
   private readonly _tokensOwed0: BigNumber;
   private readonly _tokensOwed1: BigNumber;
 
-  public constructor(
+  private constructor(
     tokenId: BigNumberish,
     basicPositionInfo: BasicPositionInfo,
     sqrtRatioX96: BigintIsh,
@@ -581,7 +577,6 @@ export class PositionDetails implements BasicPositionInfo {
     );
     return PositionDetails.fromPositionStateStruct(
       chainId,
-      positionId,
       EphemeralGetPosition__factory.createInterface().decodeFunctionResult(
         'getPosition',
         returnData,
@@ -602,8 +597,8 @@ export class PositionDetails implements BasicPositionInfo {
    */
   public static fromPositionStateStruct(
     chainId: ApertureSupportedChainId,
-    tokenId: BigNumberish,
     {
+      tokenId,
       position,
       slot0,
       activeLiquidity,

@@ -1229,15 +1229,14 @@ describe('Util tests', function () {
   });
 
   it('Test getAllPositions', async function () {
-    const positions = await getAllPositionsDetails(
-      eoa,
-      chainId,
-      hardhatForkProvider,
-    );
+    const provider = getPublicProvider(5);
+    // an address with 90+ positions
+    const address = '0xD68C7F0b57476D5C9e5686039FDFa03f51033a4f';
+    const positions = await getAllPositionsDetails(address, chainId, provider);
     const basicPositions = await getAllPositionBasicInfoByOwner(
-      eoa,
+      address,
       chainId,
-      hardhatForkProvider,
+      provider,
     );
     expect(positions.size).to.equal(basicPositions.size);
     for (const [tokenId, pos] of positions.entries()) {
