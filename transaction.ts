@@ -43,9 +43,9 @@ import { getNativeCurrency } from './currency';
 import { getPool, getPoolFromBasicPositionInfo } from './pool';
 import {
   BasicPositionInfo,
+  PositionDetails,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
-  getPosition,
 } from './position';
 import { priceToClosestUsableTick } from './tick';
 
@@ -216,11 +216,13 @@ export async function getAddLiquidityTx(
   position?: Position,
 ): Promise<TransactionRequest> {
   if (position === undefined) {
-    position = await getPosition(
-      chainId,
-      increaseLiquidityOptions.tokenId.toString(),
-      provider,
-    );
+    position = (
+      await PositionDetails.fromPositionId(
+        chainId,
+        increaseLiquidityOptions.tokenId.toString(),
+        provider,
+      )
+    ).position;
   }
   // Same as `position` except that the liquidity field represents the amount of liquidity to add to the existing `position`.
   const incrementalPosition = new Position({
@@ -297,11 +299,13 @@ export async function getRemoveLiquidityTx(
   position?: Position,
 ): Promise<TransactionRequest> {
   if (position === undefined) {
-    position = await getPosition(
-      chainId,
-      removeLiquidityOptions.tokenId.toString(),
-      provider,
-    );
+    position = (
+      await PositionDetails.fromPositionId(
+        chainId,
+        removeLiquidityOptions.tokenId.toString(),
+        provider,
+      )
+    ).position;
   }
   const collectableTokenAmount = await getCollectableTokenAmounts(
     chainId,
@@ -452,7 +456,12 @@ export async function getRebalanceTx(
   amounts: SimulatedAmounts;
 }> {
   if (existingPosition === undefined) {
-    existingPosition = await getPosition(chainId, existingPositionId, provider);
+    const { position } = await PositionDetails.fromPositionId(
+      chainId,
+      existingPositionId,
+      provider,
+    );
+    existingPosition = position;
   }
   const mintParams: INonfungiblePositionManager.MintParamsStruct = {
     token0: existingPosition.amount0.currency.address,

@@ -55,8 +55,9 @@ import {
 } from '../pool';
 import {
   BasicPositionInfo,
+  PositionDetails,
   getAllPositionBasicInfoByOwner,
-  getAllPositions,
+  getAllPositionsDetails,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
   getCollectedFeesFromReceipt,
@@ -64,7 +65,6 @@ import {
   getPosition,
   getPositionAtPrice,
   getPositionFromBasicInfo,
-  getPositionSingleCall,
   getRebalancedPosition,
   getTokenSvg,
   isPositionInRange,
@@ -1206,20 +1206,37 @@ describe('Util tests', function () {
     expect(colletableTokenAmounts).to.deep.equal(
       viewOnlyColletableTokenAmounts,
     );
+    const positionDetails = await PositionDetails.fromPositionId(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    expect(colletableTokenAmounts).to.deep.equal({
+      token0Amount: positionDetails.tokensOwed0,
+      token1Amount: positionDetails.tokensOwed1,
+    });
   });
 
-  it('Test getPositionSingleCall', async function () {
-    expect(
-      await getPositionSingleCall(chainId, 4, hardhatForkProvider),
-    ).to.deep.equal(await getPosition(chainId, 4, hardhatForkProvider));
+  it('Test get position details', async function () {
+    const { position } = await PositionDetails.fromPositionId(
+      chainId,
+      4,
+      hardhatForkProvider,
+    );
+    expect(position).to.deep.equal(
+      await getPosition(chainId, 4, hardhatForkProvider),
+    );
   });
 
   it('Test getAllPositions', async function () {
-    const positions = await getAllPositions(eoa, chainId, hardhatForkProvider);
+    const provider = getPublicProvider(5);
+    // an address with 90+ positions
+    const address = '0xD68C7F0b57476D5C9e5686039FDFa03f51033a4f';
+    const positions = await getAllPositionsDetails(address, chainId, provider);
     const basicPositions = await getAllPositionBasicInfoByOwner(
-      eoa,
+      address,
       chainId,
-      hardhatForkProvider,
+      provider,
     );
     expect(positions.size).to.equal(basicPositions.size);
     for (const [tokenId, pos] of positions.entries()) {
