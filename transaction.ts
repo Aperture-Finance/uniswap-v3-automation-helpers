@@ -323,6 +323,12 @@ export async function getRemoveLiquidityTx(
     position,
     {
       ...removeLiquidityOptions,
+      // Note that the `collect()` function of the NPM contract takes `CollectOptions` with
+      // `expectedCurrencyOwed0` and `expectedCurrencyOwed1` that should include both the
+      // decreased principal liquidity and the accrued fees.
+      // However, here we only pass the accrued fees in `collectOptions` because the principal
+      // liquidity is added to what is passed here by `NonfungiblePositionManager.removeCallParameters()`
+      // when constructing the `collect()` call.
       collectOptions: {
         recipient,
         ...convertCollectableTokenAmountToExpectedCurrencyOwed(
