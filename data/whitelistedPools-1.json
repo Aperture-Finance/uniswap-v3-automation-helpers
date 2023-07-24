@@ -772,5 +772,59 @@
       "decimals": "6",
       "name": "USD Coin"
     }
+  },
+  {
+    "id": "0x08f68110f1e0ca67c80a24b4bd206675610f445d",
+    "totalValueLockedUSD": "1510918.71927132205096310490352685",
+    "feeTier": "3000",
+    "volumeUSD": "73000810.76476",
+    "token0": {
+      "id": "0x0ab87046fbb341d058f17cbc4c1133f25a20a52f",
+      "symbol": "gOHM",
+      "decimals": "18",
+      "name": "Governance OHM"
+    },
+    "token1": {
+      "id": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "symbol": "USDC",
+      "decimals": "6",
+      "name": "USD Coin"
+    }
+  },
+  {
+    "id": "0x78235d08b2ae7a3e00184329212a4d7acd2f9985",
+    "totalValueLockedUSD": "1297822.331630009267285544249206954",
+    "feeTier": "10000",
+    "volumeUSD": "21421807.662581",
+    "token0": {
+      "id": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
+      "symbol": "LDO",
+      "decimals": "18",
+      "name": "Lido DAO Token"
+    },
+    "token1": {
+      "id": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "symbol": "USDC",
+      "decimals": "6",
+      "name": "USD Coin"
+    }
+  },
+  {
+    "id": "0x893f503fac2ee1e5b78665db23f9c94017aae97d",
+    "totalValueLockedUSD": "929642.4644631791894689044606095112",
+    "feeTier": "3000",
+    "volumeUSD": "69114575.383546",
+    "token0": {
+      "id": "0x64aa3364f17a4d01c6f1751fd97c2bd3d7e7f1d5",
+      "symbol": "OHM",
+      "decimals": "9",
+      "name": "Olympus"
+    },
+    "token1": {
+      "id": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "symbol": "USDC",
+      "decimals": "6",
+      "name": "USD Coin"
+    }
   }
 ]

@@ -6,19 +6,10 @@ import { writeFileSync } from 'fs';
 import { getChainInfo } from '../chain';
 import { getTokenPriceListFromCoingecko } from '../price';
 
-async function generateWhitelistOfSpecificPools(chainId: number) {
-  const poolsToFetch = [
-    '0x6f38e884725a116c9c7fbf208e79fe8828a2595f', // WETH-USDC 0.01%
-    '0xc473e2aee3441bf9240be85eb122abb059a3b57c', // WETH-USDC 0.3%
-    '0x42fc852a750ba93d5bf772ecdc857e87a86403a9', // WETH-USDC 1%
-    '0xfeaa137f43f88b7f767f5a67978fff8ec11cc6ef', // WETH-FXS (Frax Share) 1%
-    '0x2fe69fc0383ca71f5d76c4c858540cb2be2e10be', // WETH-STG (Stargate) 0.3%
-    '0x04a8cddbb62e3499c8e84ccf77192ed6292bf29d', // gOHM-USDC.e 0.3%
-    '0x25ab7dc4ddcacb6fe75694904db27602175245f1', // LDO-WETH 1%
-    '0x446bf9748b4ea044dd759d9b9311c70491df8f29', // RDNT-WETH 0.3%
-    '0x90d2fb08af9e9323d7cbd364181bda1e7d3c2c2f', // LDO-USDC 1%
-    '0xc94560e81ce1a78b2a5f686a9a913e8560c00234', // SPA-WETH 1%
-  ];
+async function generateWhitelistOfSpecificPools(
+  chainId: number,
+  poolsToFetch: string[],
+) {
   const response = await axios.post(
     getChainInfo(chainId).uniswap_subgraph_url!,
     {
@@ -92,4 +83,24 @@ async function generateWhitelistOfSpecificPools(chainId: number) {
 
 generateWhitelistOfSpecificPools(
   ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
+  [
+    '0x6f38e884725a116c9c7fbf208e79fe8828a2595f', // WETH-USDC 0.01%
+    '0xc473e2aee3441bf9240be85eb122abb059a3b57c', // WETH-USDC 0.3%
+    '0x42fc852a750ba93d5bf772ecdc857e87a86403a9', // WETH-USDC 1%
+    '0xfeaa137f43f88b7f767f5a67978fff8ec11cc6ef', // WETH-FXS (Frax Share) 1%
+    '0x2fe69fc0383ca71f5d76c4c858540cb2be2e10be', // WETH-STG (Stargate) 0.3%
+    '0x04a8cddbb62e3499c8e84ccf77192ed6292bf29d', // gOHM-USDC.e 0.3%
+    '0x25ab7dc4ddcacb6fe75694904db27602175245f1', // LDO-WETH 1%
+    '0x446bf9748b4ea044dd759d9b9311c70491df8f29', // RDNT-WETH 0.3%
+    '0x90d2fb08af9e9323d7cbd364181bda1e7d3c2c2f', // LDO-USDC 1%
+    '0xc94560e81ce1a78b2a5f686a9a913e8560c00234', // SPA-WETH 1%
+  ],
+);
+generateWhitelistOfSpecificPools(
+  ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+  [
+    '0x78235d08b2ae7a3e00184329212a4d7acd2f9985', // LDO-USDC 1%
+    '0x08f68110f1e0ca67c80a24b4bd206675610f445d', // gOHM-USDC 0.3%
+    '0x893f503fac2ee1e5b78665db23f9c94017aae97d', // OHM-USDC 0.3%
+  ],
 );
