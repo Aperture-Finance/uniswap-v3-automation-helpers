@@ -775,9 +775,9 @@
   },
   {
     "id": "0x08f68110f1e0ca67c80a24b4bd206675610f445d",
-    "totalValueLockedUSD": "1510918.71927132205096310490352685",
+    "totalValueLockedUSD": "1385106.034093203885368144604345631",
     "feeTier": "3000",
-    "volumeUSD": "73000810.76476",
+    "volumeUSD": "73156042.051358",
     "token0": {
       "id": "0x0ab87046fbb341d058f17cbc4c1133f25a20a52f",
       "symbol": "gOHM",
@@ -793,9 +793,9 @@
   },
   {
     "id": "0x78235d08b2ae7a3e00184329212a4d7acd2f9985",
-    "totalValueLockedUSD": "1297822.331630009267285544249206954",
+    "totalValueLockedUSD": "1284684.413537939495501601212769758",
     "feeTier": "10000",
-    "volumeUSD": "21421807.662581",
+    "volumeUSD": "21515307.968349",
     "token0": {
       "id": "0x5a98fcbea516cf06857215779fd812ca3bef1b32",
       "symbol": "LDO",
@@ -810,10 +810,28 @@
     }
   },
   {
+    "id": "0x841820459769cd629b10a36fd12e603938cc2679",
+    "totalValueLockedUSD": "785958.9484626069309657449588158017",
+    "feeTier": "10000",
+    "volumeUSD": "12607344.79786437151074108770817669",
+    "token0": {
+      "id": "0x163f8c2467924be0ae7b5347228cabf260318753",
+      "symbol": "WLD",
+      "decimals": "18",
+      "name": "Worldcoin"
+    },
+    "token1": {
+      "id": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "symbol": "WETH",
+      "decimals": "18",
+      "name": "Wrapped Ether"
+    }
+  },
+  {
     "id": "0x893f503fac2ee1e5b78665db23f9c94017aae97d",
-    "totalValueLockedUSD": "929642.4644631791894689044606095112",
+    "totalValueLockedUSD": "929059.2091287740512808400796121167",
     "feeTier": "3000",
-    "volumeUSD": "69114575.383546",
+    "volumeUSD": "69131539.268873",
     "token0": {
       "id": "0x64aa3364f17a4d01c6f1751fd97c2bd3d7e7f1d5",
       "symbol": "OHM",
