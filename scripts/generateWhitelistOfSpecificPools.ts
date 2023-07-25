@@ -102,5 +102,6 @@ generateWhitelistOfSpecificPools(
     '0x78235d08b2ae7a3e00184329212a4d7acd2f9985', // LDO-USDC 1%
     '0x08f68110f1e0ca67c80a24b4bd206675610f445d', // gOHM-USDC 0.3%
     '0x893f503fac2ee1e5b78665db23f9c94017aae97d', // OHM-USDC 0.3%
+    '0x841820459769cd629b10a36fd12e603938cc2679', // WLD-WETH 1%
   ],
 );
