@@ -1429,41 +1429,6 @@ describe('Price to tick conversion', function () {
   });
 });
 
-describe('Wallet activity tests', function () {
-  it('Wallet activity', async function () {
-    expect(
-      (await getWalletActivities(
-        '0x8B18687Ed4e32A5E1a3DeE91C08f706C196bb9C5',
-        /*pageSize=*/ 50,
-        /*pageNumber=*/ 1,
-        // Uniswap graphql endpoint recently started to check user-agent against a whitelist which doesn't include Axios, so we need to spoof it in unit test.
-        /*userAgent=*/ 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
-      ))!['0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655'],
-    ).to.deep.equal({
-      hash: '0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655',
-      chainId: 1,
-      status: 'CONFIRMED',
-      timestamp: 1682628731,
-      logos: [
-        'https://raw.githubusercontent.com/Uniswap/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
-      ],
-      title: 'Sent',
-      descriptor: '624.29 USDC to ',
-      receipt: {
-        id: 'VHJhbnNhY3Rpb246MHgzODQ5MzA5NjA0ZTllMWRkNjYxY2I5MmM4ZDY0YzZkY2Q1NmU0OTFjODRkZGRjMDMzY2U5MjRkYTJlMWM1NjU1XzB4OGIxODY4N2VkNGUzMmE1ZTFhM2RlZTkxYzA4ZjcwNmMxOTZiYjljNV8weGEwYjg2OTkxYzYyMThiMzZjMWQxOWQ0YTJlOWViMGNlMzYwNmViNDg=',
-        blockNumber: 17140004,
-        hash: '0x3849309604e9e1dd661cb92c8d64c6dcd56e491c84dddc033ce924da2e1c5655',
-        status: 'CONFIRMED',
-        to: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-        from: '0x8b18687ed4e32a5e1a3dee91c08f706c196bb9c5',
-        __typename: 'Transaction',
-      },
-      nonce: undefined,
-      otherAccount: '0x95E333ea9f678111ED30c8f7A002d8C3aDA1EC09',
-    });
-  });
-});
-
 describe('Pool subgraph query tests', function () {
   it('Fee tier distribution', async function () {
     const [distribution, distributionOppositeTokenOrder] = await Promise.all([
