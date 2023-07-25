@@ -395,6 +395,7 @@ function parseActivity(
   }
 }
 
+// TODO: Uniswap subgraph returns null `assetActivities` as of 7/25/2023. Consider removing the entire activity.ts file and the associated graphql files under `data/`.
 /**
  * Fetches wallet activities for the specified address. Activities include ERC-20 and NFT token transfers, approvals, and Uniswap trades and liquidity management.
  * @param address The wallet address to fetch activities for.
