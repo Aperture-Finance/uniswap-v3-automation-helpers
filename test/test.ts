@@ -89,6 +89,7 @@ import {
   priceToClosestUsableTick,
   readTickToLiquidityMap,
   sqrtRatioToPrice,
+  tickToLimitOrderRange,
 } from '../tick';
 import {
   getAddLiquidityTx,
@@ -1425,6 +1426,32 @@ describe('Price to tick conversion', function () {
         new Fraction(bigPrice.mul(Q192).toFixed(0), Q192.toFixed(0)),
       ),
     ).to.be.true;
+  });
+
+  it('Tick to limit order range', function () {
+    const tick = 18;
+    Object.entries(TICK_SPACINGS).forEach(([fee, tickSpacing]) => {
+      const { tickAvg, tickLower, tickUpper } = tickToLimitOrderRange(
+        tick,
+        Number(fee),
+      );
+      expect(Number.isInteger(tickAvg)).to.be.true;
+      expect(Number.isInteger(tickLower)).to.be.true;
+      expect(Number.isInteger(tickUpper)).to.be.true;
+      expect(Math.round(tick - tickAvg)).to.be.lessThan(tickSpacing);
+      expect(tickAvg).to.equal(Math.floor((tickLower + tickUpper) / 2));
+      expect(tickUpper - tickLower).to.equal(tickSpacing);
+    });
+    const widthMultiplier = 2;
+    const { tickAvg, tickLower, tickUpper } = tickToLimitOrderRange(
+      tick,
+      fee,
+      widthMultiplier,
+    );
+    const tickSpacing = TICK_SPACINGS[fee];
+    expect(Math.round(tick - tickAvg)).to.be.lessThan(tickSpacing);
+    expect(tickAvg).to.equal(Math.floor((tickLower + tickUpper) / 2));
+    expect(tickUpper - tickLower).to.equal(widthMultiplier * tickSpacing);
   });
 });
 
