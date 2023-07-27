@@ -6,6 +6,10 @@ import {
   PermitInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import {
+  CollectEventObject,
+  DecreaseLiquidityEventObject,
+} from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/@aperture_finance/uni-v3-lib/src/interfaces/INonfungiblePositionManager';
+import {
   Provider,
   TransactionReceipt,
   TransactionRequest,
@@ -39,10 +43,11 @@ import {
   getAutomanReinvestCallInfo,
 } from './automan';
 import { ChainInfo, getChainInfo } from './chain';
-import { getNativeCurrency } from './currency';
+import { getNativeCurrency, getToken } from './currency';
 import { getPool, getPoolFromBasicPositionInfo } from './pool';
 import {
   BasicPositionInfo,
+  CollectableTokenAmounts,
   PositionDetails,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
@@ -620,4 +625,56 @@ export function getMintedPositionIdFromTxReceipt(
     } catch (e) {}
   }
   return undefined;
+}
+
+/**
+ * Get the collected fees in the position from a transaction receipt.
+ * @param chainId Chain id.
+ * @param positionId Position id.
+ * @param receipt Transaction receipt.
+ * @param provider Ethers provider.
+ * @param token0Address Checksum address of token0 in the position.
+ * @param token1Address Checksum address of token1 in the position.
+ * @returns A promise that resolves to the collected amount of the two tokens in the position.
+ */
+export async function getCollectedFeesFromReceipt(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  receipt: TransactionReceipt,
+  provider: Provider,
+  token0Address: string,
+  token1Address: string,
+): Promise<CollectableTokenAmounts> {
+  const npmInterface = INonfungiblePositionManager__factory.createInterface();
+  let collectArgs: CollectEventObject;
+  let decreaseLiquidityArgs: DecreaseLiquidityEventObject | undefined;
+  for (const log of receipt.logs) {
+    try {
+      const event = npmInterface.parseLog(log);
+      if (event.name === 'Collect') {
+        collectArgs = event.args as unknown as CollectEventObject;
+      } else if (event.name === 'DecreaseLiquidity') {
+        decreaseLiquidityArgs =
+          event.args as unknown as DecreaseLiquidityEventObject;
+      }
+    } catch (e) {}
+  }
+  const principal0 = decreaseLiquidityArgs?.amount0 ?? 0;
+  const principal1 = decreaseLiquidityArgs?.amount1 ?? 0;
+  const total0 = collectArgs!.amount0;
+  const total1 = collectArgs!.amount1;
+  const [token0, token1] = await Promise.all([
+    getToken(token0Address, chainId, provider),
+    getToken(token1Address, chainId, provider),
+  ]);
+  return {
+    token0Amount: CurrencyAmount.fromRawAmount(
+      token0,
+      total0.sub(principal0).toString(),
+    ),
+    token1Amount: CurrencyAmount.fromRawAmount(
+      token1,
+      total1.sub(principal1).toString(),
+    ),
+  };
 }

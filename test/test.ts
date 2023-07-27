@@ -35,7 +35,6 @@ import { getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
-import { getWalletActivities } from '../activity';
 import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
 import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
 import {
@@ -60,7 +59,6 @@ import {
   getAllPositionsDetails,
   getBasicPositionInfo,
   getCollectableTokenAmounts,
-  getCollectedFeesFromReceipt,
   getNPM,
   getPosition,
   getPositionAtPrice,
@@ -95,6 +93,7 @@ import {
 import {
   getAddLiquidityTx,
   getCollectTx,
+  getCollectedFeesFromReceipt,
   getCreatePositionTx,
   getCreatePositionTxForLimitOrder,
   getMintedPositionIdFromTxReceipt,
