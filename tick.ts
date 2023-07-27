@@ -24,6 +24,8 @@ export const MAX_PRICE = new Fraction(
   ),
   Q192,
 );
+// log_1.0001(2) = ln(2) / ln(1.0001) ~= 6932
+export const DOUBLE_TICK = 6932;
 
 /**
  * Returns a price object corresponding to the sqrt ratio and the base/quote token
