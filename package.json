@@ -32,6 +32,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@0xsequence/multicall": "0.43.34",
     "@aperture_finance/uniswap-v3-automation-sdk": "1.1.3",

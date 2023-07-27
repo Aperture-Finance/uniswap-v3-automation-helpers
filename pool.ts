@@ -286,6 +286,33 @@ function reconstructLiquidityArray(
   return liquidityArray;
 }
 
+/**
+ * Normalizes the specified tick range.
+ * @param pool The liquidity pool.
+ * @param tickLower The lower tick.
+ * @param tickUpper The upper tick.
+ * @returns The normalized tick range.
+ */
+function normalizeTicks(
+  pool: Pool,
+  tickLower: number,
+  tickUpper: number,
+): { tickCurrentAligned: number; tickLower: number; tickUpper: number } {
+  if (tickLower > tickUpper) throw 'tickLower > tickUpper';
+  // The current tick must be within the specified tick range.
+  const tickCurrentAligned =
+    Math.floor(pool.tickCurrent / pool.tickSpacing) * pool.tickSpacing;
+  tickLower = Math.min(
+    Math.max(tickLower, TickMath.MIN_TICK),
+    tickCurrentAligned,
+  );
+  tickUpper = Math.max(
+    Math.min(tickUpper, TickMath.MAX_TICK),
+    tickCurrentAligned,
+  );
+  return { tickCurrentAligned, tickLower, tickUpper };
+}
+
 export type TickNumber = number;
 export type LiquidityAmount = JSBI;
 export type TickToLiquidityMap = Map<TickNumber, LiquidityAmount>;
@@ -294,21 +321,22 @@ export type TickToLiquidityMap = Map<TickNumber, LiquidityAmount>;
  * Fetches the liquidity for all ticks for the specified pool.
  * @param chainId Chain id.
  * @param pool The liquidity pool to fetch the tick to liquidity map for.
- * @param tickLower The lower tick to fetch liquidity for, defaults to `TickMath.MIN_TICK`.
- * @param tickUpper The upper tick to fetch liquidity for, defaults to `TickMath.MAX_TICK`.
+ * @param _tickLower The lower tick to fetch liquidity for, defaults to `TickMath.MIN_TICK`.
+ * @param _tickUpper The upper tick to fetch liquidity for, defaults to `TickMath.MAX_TICK`.
  * @returns A map from tick numbers to liquidity amounts for the specified pool.
  */
 export async function getTickToLiquidityMapForPool(
   chainId: ApertureSupportedChainId,
   pool: Pool,
-  tickLower = TickMath.MIN_TICK,
-  tickUpper = TickMath.MAX_TICK,
+  _tickLower = TickMath.MIN_TICK,
+  _tickUpper = TickMath.MAX_TICK,
 ): Promise<TickToLiquidityMap> {
   // The current tick must be within the specified tick range.
-  const tickCurrentAligned =
-    Math.floor(pool.tickCurrent / pool.tickSpacing) * pool.tickSpacing;
-  tickLower = Math.min(tickLower, tickCurrentAligned);
-  tickUpper = Math.max(tickUpper, tickCurrentAligned);
+  const { tickCurrentAligned, tickLower, tickUpper } = normalizeTicks(
+    pool,
+    _tickLower,
+    _tickUpper,
+  );
   const { uniswap_v3_factory, uniswap_subgraph_url } = getChainInfo(chainId);
   if (uniswap_subgraph_url === undefined) {
     throw 'Subgraph URL is not defined for the specified chain id';
@@ -383,32 +411,24 @@ export interface Liquidity {
  * gas limit is 300m.
  * @param chainId Chain id.
  * @param pool The liquidity pool to fetch the tick to liquidity map for.
- * @param tickLower The lower tick to fetch liquidity for, defaults to half of the current price.
- * @param tickUpper The upper tick to fetch liquidity for, defaults to twice of the current price.
+ * @param _tickLower The lower tick to fetch liquidity for, defaults to half of the current price.
+ * @param _tickUpper The upper tick to fetch liquidity for, defaults to twice of the current price.
  * @param provider Ethers provider.
  * @returns An array of liquidity objects.
  */
 export async function getLiquidityArrayForPool(
   chainId: ApertureSupportedChainId,
   pool: Pool,
-  tickLower?: number,
-  tickUpper?: number,
+  _tickLower = pool.tickCurrent - DOUBLE_TICK,
+  _tickUpper = pool.tickCurrent + DOUBLE_TICK,
   provider?: Provider,
 ): Promise<Liquidity[]> {
-  const tickCurrentAligned =
-    Math.floor(pool.tickCurrent / pool.tickSpacing) * pool.tickSpacing;
-  tickLower = Math.max(
-    tickLower ?? pool.tickCurrent - DOUBLE_TICK,
-    TickMath.MIN_TICK,
-  );
-  tickUpper = Math.min(
-    tickUpper ?? pool.tickCurrent + DOUBLE_TICK,
-    TickMath.MAX_TICK,
-  );
-  if (tickLower > tickUpper) throw 'tickLower > tickUpper';
   // The current tick must be within the specified tick range.
-  tickLower = Math.min(tickLower, tickCurrentAligned);
-  tickUpper = Math.max(tickUpper, tickCurrentAligned);
+  const { tickCurrentAligned, tickLower, tickUpper } = normalizeTicks(
+    pool,
+    _tickLower,
+    _tickUpper,
+  );
   const { token0, token1 } = pool;
   // Deploy the ephemeral contract to query the liquidity within the specified tick range.
   const returnData = await (provider ?? getPublicProvider(chainId)).call(
