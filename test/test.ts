@@ -86,9 +86,11 @@ import {
   MAX_PRICE,
   MIN_PRICE,
   alignPriceToClosestUsableTick,
+  priceToClosestTickSafe,
   priceToClosestUsableTick,
   readTickToLiquidityMap,
   sqrtRatioToPrice,
+  tickToLimitOrderRange,
 } from '../tick';
 import {
   getAddLiquidityTx,
@@ -146,18 +148,6 @@ describe('Limit order tests', function () {
     expect(price.quote(tenWBTC as CurrencyAmount<Token>).toExact()).to.equal(
       '102.34',
     );
-
-    await expect(
-      getCreatePositionTxForLimitOrder(
-        eoa,
-        price,
-        tenWBTC,
-        poolFee,
-        deadline,
-        chainId,
-        hardhatForkProvider,
-      ),
-    ).to.be.rejectedWith('Outer limit price not aligned');
     const alignedPrice = alignPriceToClosestUsableTick(price, poolFee);
     expect(alignedPrice.toFixed(9)).to.equal('10.205039374');
     await expect(
@@ -203,7 +193,7 @@ describe('Limit order tests', function () {
       getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
     expect(tx).to.deep.equal({
       to: npmAddress,
-      data: '0x883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000bb8000000000000000000000000000000000000000000000000000000000003f00c000000000000000000000000000000000000000000000000000000000003f048000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004bd047ca72fa05f0b89ad08fe5ba5ccdc07dffbf00000000000000000000000000000000000000000000000000000000f3fd9d70',
+      data: '0x883164560000000000000000000000002260fac5e5542a773aa44fbcfedf7c193bc2c599000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000bb8000000000000000000000000000000000000000000000000000000000003f048000000000000000000000000000000000000000000000000000000000003f084000000000000000000000000000000000000000000000000000000003b9aca000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b9aca0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004bd047ca72fa05f0b89ad08fe5ba5ccdc07dffbf00000000000000000000000000000000000000000000000000000000f3fd9d70',
       value: '0x00',
     });
     // Top up 10 WBTC to `eoa` from `impersonatedWhale`.
@@ -225,12 +215,16 @@ describe('Limit order tests', function () {
       positionId,
       hardhatForkProvider,
     );
+    const { tickLower, tickUpper } = tickToLimitOrderRange(
+      priceToClosestTickSafe(alignedLimitPrice),
+      poolFee,
+    );
     expect(basicPositionInfo).to.deep.equal({
       token0: WBTC,
       token1: WETH,
-      liquidity: '133959413978504760',
-      tickLower: priceToClosestTick(alignedLimitPrice) - TICK_SPACINGS[poolFee],
-      tickUpper: priceToClosestTick(alignedLimitPrice),
+      liquidity: '134361875488133608',
+      tickLower,
+      tickUpper,
       fee: poolFee,
     });
     const position = await getPositionFromBasicInfo(
@@ -238,7 +232,7 @@ describe('Limit order tests', function () {
       chainId,
       hardhatForkProvider,
     );
-    // The user actually provided 9.99999999 WBTC due to liquidity precision, i.e. 10 WBTC would have yielded the exact same liquidity amount of 133959413978504760.
+    // The user actually provided 9.99999999 WBTC due to liquidity precision, i.e. 10 WBTC would have yielded the exact same liquidity amount of 134361875488133608.
     expect(position.amount0.quotient.toString()).to.equal('999999999');
     expect(position.amount1.quotient.toString()).to.equal('0');
     expect(
@@ -598,7 +592,7 @@ describe('Position liquidity management tests', function () {
       tickUpper: position.tickUpper,
       amount0: oneWETH.quotient,
       amount1: wbtcRawAmount,
-      useFullPrecision: true,
+      useFullPrecision: false,
     }).liquidity;
 
     // Approve Uniswap NPM to spend WBTC. Since we are providing native ether in this example, we don't need to approve WETH.
@@ -663,7 +657,7 @@ describe('Position liquidity management tests', function () {
       tickLower,
       tickUpper,
       amount0: wbtcAmount.quotient,
-      useFullPrecision: true,
+      useFullPrecision: false,
     });
     // Now we know that we need to provide 0.1 WBTC and 0.568256298587835347 WETH.
     expect(
@@ -1425,6 +1419,32 @@ describe('Price to tick conversion', function () {
         new Fraction(bigPrice.mul(Q192).toFixed(0), Q192.toFixed(0)),
       ),
     ).to.be.true;
+  });
+
+  it('Tick to limit order range', function () {
+    const tick = 18;
+    Object.entries(TICK_SPACINGS).forEach(([fee, tickSpacing]) => {
+      const { tickAvg, tickLower, tickUpper } = tickToLimitOrderRange(
+        tick,
+        Number(fee),
+      );
+      expect(Number.isInteger(tickAvg)).to.be.true;
+      expect(Number.isInteger(tickLower)).to.be.true;
+      expect(Number.isInteger(tickUpper)).to.be.true;
+      expect(Math.round(tick - tickAvg)).to.be.lessThan(tickSpacing);
+      expect(tickAvg).to.equal(Math.floor((tickLower + tickUpper) / 2));
+      expect(tickUpper - tickLower).to.equal(tickSpacing);
+    });
+    const widthMultiplier = 2;
+    const { tickAvg, tickLower, tickUpper } = tickToLimitOrderRange(
+      tick,
+      fee,
+      widthMultiplier,
+    );
+    const tickSpacing = TICK_SPACINGS[fee];
+    expect(Math.round(tick - tickAvg)).to.be.lessThan(tickSpacing);
+    expect(tickAvg).to.equal(Math.floor((tickLower + tickUpper) / 2));
+    expect(tickUpper - tickLower).to.equal(widthMultiplier * tickSpacing);
   });
 });
 

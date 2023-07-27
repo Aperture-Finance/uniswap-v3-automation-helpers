@@ -44,8 +44,23 @@ export function sqrtRatioToPrice(
 }
 
 /**
+ * Same as `priceToClosestTick` but returns `MIN_TICK` or `MAX_TICK` if the price is outside Uniswap's range.
+ */
+export function priceToClosestTickSafe(price: Price<Token, Token>): number {
+  const sorted = price.baseCurrency.sortsBefore(price.quoteCurrency);
+  if (price.lessThan(MIN_PRICE)) {
+    return sorted ? TickMath.MIN_TICK : TickMath.MAX_TICK;
+  } else if (price.greaterThan(MAX_PRICE)) {
+    return sorted ? TickMath.MAX_TICK : TickMath.MIN_TICK;
+  } else {
+    return priceToClosestTick(price);
+  }
+}
+
+/**
  * Finds the closest usable tick for the specified price and pool fee tier.
- * Price may be specified in either direction, i.e. price of token1 denominated in token0 and price of token0 denominated in token1 both work.
+ * Price may be specified in either direction, i.e. both price of token1 denominated in token0 and price of token0
+ * denominated in token1 work.
  * @param price Price of two tokens in the liquidity pool. Either token0 or token1 may be the base token.
  * @param poolFee Liquidity pool fee tier.
  * @returns The closest usable tick.
@@ -54,16 +69,10 @@ export function priceToClosestUsableTick(
   price: Price<Token, Token>,
   poolFee: FeeAmount,
 ): number {
-  let tick: number;
-  const sorted = price.baseCurrency.sortsBefore(price.quoteCurrency);
-  if (price.lessThan(MIN_PRICE)) {
-    tick = sorted ? TickMath.MIN_TICK : TickMath.MAX_TICK;
-  } else if (price.greaterThan(MAX_PRICE)) {
-    tick = sorted ? TickMath.MAX_TICK : TickMath.MIN_TICK;
-  } else {
-    tick = priceToClosestTick(price);
-  }
-  return nearestUsableTick(tick, TICK_SPACINGS[poolFee]);
+  return nearestUsableTick(
+    priceToClosestTickSafe(price),
+    TICK_SPACINGS[poolFee],
+  );
 }
 
 /**
@@ -81,6 +90,38 @@ export function alignPriceToClosestUsableTick(
     price.quoteCurrency,
     priceToClosestUsableTick(price, poolFee),
   );
+}
+
+/**
+ * Returns the tick range for a limit order LP given a tick and width multiplier.
+ * @param tick The desired average fill price of the limit order, not necessarily aligned to a usable tick.
+ * @param poolFee The fee tier of the liquidity pool.
+ * @param widthMultiplier The width multiplier of the tick range in terms of tick spacing.
+ * @returns The tick range for the limit order.
+ */
+export function tickToLimitOrderRange(
+  tick: number,
+  poolFee: FeeAmount,
+  widthMultiplier = 1,
+): { tickAvg: number; tickLower: number; tickUpper: number } {
+  if (!Number.isInteger(widthMultiplier) && widthMultiplier > 0)
+    throw new Error('widthMultiplier must be a positive integer');
+  const tickSpacing = TICK_SPACINGS[poolFee];
+  const alignedTick = nearestUsableTick(tick, tickSpacing);
+  const halfWidth = tickSpacing * (widthMultiplier / 2);
+  const tickAvg =
+    widthMultiplier % 2
+      ? Math.floor(
+          alignedTick > tick
+            ? alignedTick - tickSpacing / 2
+            : alignedTick + tickSpacing / 2,
+        )
+      : alignedTick;
+  return {
+    tickAvg,
+    tickLower: Math.round(tickAvg - halfWidth),
+    tickUpper: Math.round(tickAvg + halfWidth),
+  };
 }
 
 /**

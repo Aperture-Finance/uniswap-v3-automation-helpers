@@ -30,8 +30,6 @@ import {
   NonfungiblePositionManager,
   Position,
   RemoveLiquidityOptions,
-  TICK_SPACINGS,
-  tickToPrice,
 } from '@uniswap/v3-sdk';
 import { BigNumber, BigNumberish } from 'ethers';
 import JSBI from 'jsbi';
@@ -44,15 +42,15 @@ import {
 } from './automan';
 import { ChainInfo, getChainInfo } from './chain';
 import { getNativeCurrency, getToken } from './currency';
-import { getPool, getPoolFromBasicPositionInfo } from './pool';
+import { getPool } from './pool';
 import {
   BasicPositionInfo,
   CollectableTokenAmounts,
   PositionDetails,
   getBasicPositionInfo,
-  getCollectableTokenAmounts,
+  viewCollectableTokenAmounts,
 } from './position';
-import { priceToClosestUsableTick } from './tick';
+import { priceToClosestTickSafe, tickToLimitOrderRange } from './tick';
 
 function getTxToNonfungiblePositionManager(
   chainInfo: ChainInfo,
@@ -77,12 +75,14 @@ function getTxToNonfungiblePositionManager(
  * the user chooses to provide.
  *
  * @param recipient The recipient address (connected wallet address).
- * @param outerLimitPrice The outer limit price where the base currency is the input asset (what the user wants to sell) and the quote currency is the output asset (what the user wants to buy).
+ * @param outerLimitPrice The outer limit price where the base currency is the input asset (what the user wants to sell)
+ * and the quote currency is the output asset (what the user wants to buy).
  * @param inputCurrencyAmount The amount of input asset that the user wants to sell.
  * @param poolFee The fee tier of the liquidity pool that the limit order position should be created on.
  * @param deadlineEpochSeconds Transaction deadline in seconds since UNIX epoch.
  * @param chainId Chain id.
  * @param provider Ethers provider.
+ * @param widthMultiplier The width multiplier of the tick range in terms of tick spacing.
  * @returns The unsigned transaction that creates such a position.
  */
 export async function getCreatePositionTxForLimitOrder(
@@ -93,6 +93,7 @@ export async function getCreatePositionTxForLimitOrder(
   deadlineEpochSeconds: BigNumberish,
   chainId: ApertureSupportedChainId,
   provider: Provider,
+  widthMultiplier = 1,
 ): Promise<TransactionRequest> {
   if (
     inputCurrencyAmount.currency.isNative &&
@@ -100,44 +101,33 @@ export async function getCreatePositionTxForLimitOrder(
   ) {
     throw 'Input currency is native ether but base currency is not WETH';
   }
-  const outerTick = priceToClosestUsableTick(outerLimitPrice, poolFee);
-  if (
-    !tickToPrice(
-      outerLimitPrice.baseCurrency,
-      outerLimitPrice.quoteCurrency,
-      outerTick,
-    ).equalTo(outerLimitPrice)
-  ) {
-    throw 'Outer limit price not aligned';
-  }
-  const tickSpacing = TICK_SPACINGS[poolFee];
+  const { tickLower, tickUpper } = tickToLimitOrderRange(
+    priceToClosestTickSafe(outerLimitPrice),
+    poolFee,
+    widthMultiplier,
+  );
   const zeroToOne = outerLimitPrice.baseCurrency.sortsBefore(
     outerLimitPrice.quoteCurrency,
   );
-  const basicPositionInfo: BasicPositionInfo = {
-    token0: outerLimitPrice.baseCurrency,
-    token1: outerLimitPrice.quoteCurrency,
-    tickLower: zeroToOne ? outerTick - tickSpacing : outerTick,
-    tickUpper: zeroToOne ? outerTick : outerTick + tickSpacing,
-    fee: poolFee,
-  };
-  const pool = await getPoolFromBasicPositionInfo(
-    basicPositionInfo,
+  const pool = await getPool(
+    outerLimitPrice.baseCurrency,
+    outerLimitPrice.quoteCurrency,
+    poolFee,
     chainId,
     provider,
   );
   const position = zeroToOne
     ? Position.fromAmount0({
         pool,
-        tickLower: basicPositionInfo.tickLower,
-        tickUpper: basicPositionInfo.tickUpper,
+        tickLower,
+        tickUpper,
         amount0: inputCurrencyAmount.quotient,
-        useFullPrecision: true,
+        useFullPrecision: false,
       })
     : Position.fromAmount1({
         pool,
-        tickLower: basicPositionInfo.tickLower,
-        tickUpper: basicPositionInfo.tickUpper,
+        tickLower,
+        tickUpper,
         amount1: inputCurrencyAmount.quotient,
       });
   const { amount0, amount1 } = position.mintAmounts;
@@ -312,7 +302,7 @@ export async function getRemoveLiquidityTx(
       )
     ).position;
   }
-  const collectableTokenAmount = await getCollectableTokenAmounts(
+  const collectableTokenAmount = await viewCollectableTokenAmounts(
     chainId,
     removeLiquidityOptions.tokenId.toString(),
     provider,
@@ -378,7 +368,7 @@ export async function getCollectTx(
       provider,
     );
   }
-  const collectableTokenAmount = await getCollectableTokenAmounts(
+  const collectableTokenAmount = await viewCollectableTokenAmounts(
     chainId,
     positionId.toString(),
     provider,
