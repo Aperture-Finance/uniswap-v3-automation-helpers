@@ -94,7 +94,7 @@ export function alignPriceToClosestUsableTick(
 
 /**
  * Returns the tick range for a limit order LP given a tick and width multiplier.
- * @param tick The expected fill price of the limit order.
+ * @param tick The desired average fill price of the limit order, not necessarily aligned to a usable tick.
  * @param poolFee The fee tier of the liquidity pool.
  * @param widthMultiplier The width multiplier of the tick range in terms of tick spacing.
  * @returns The tick range for the limit order.
