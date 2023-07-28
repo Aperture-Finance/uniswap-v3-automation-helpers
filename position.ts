@@ -41,6 +41,11 @@ export interface BasicPositionInfo {
   tickUpper: number;
 }
 
+export interface CollectableTokenAmounts {
+  token0Amount: CurrencyAmount<Token>;
+  token1Amount: CurrencyAmount<Token>;
+}
+
 export function getNPM(
   chainId: ApertureSupportedChainId,
   provider: Provider | Signer,
@@ -88,6 +93,13 @@ export async function getPositionFromBasicInfo(
   });
 }
 
+/**
+ * Get the Uniswap `Position` object for the specified position id.
+ * @param chainId The chain ID.
+ * @param positionId The position id.
+ * @param provider The ethers provider.
+ * @returns The `Position` object.
+ */
 export async function getPosition(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
@@ -108,11 +120,6 @@ export async function getPosition(
     tickLower: positionInfo.tickLower,
     tickUpper: positionInfo.tickUpper,
   });
-}
-
-export interface CollectableTokenAmounts {
-  token0Amount: CurrencyAmount<Token>;
-  token1Amount: CurrencyAmount<Token>;
 }
 
 /**

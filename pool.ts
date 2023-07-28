@@ -27,31 +27,6 @@ import { BasicPositionInfo } from './position';
 import { getPublicProvider } from './provider';
 import { DOUBLE_TICK, sqrtRatioToPrice } from './tick';
 
-export type PoolKey = {
-  token0: string;
-  token1: string;
-  fee: FeeAmount;
-};
-
-/**
- * Creates the pool key which is enough to compute the pool address
- * @param tokenA The first token of the pair, irrespective of sort order
- * @param tokenB The second token of the pair, irrespective of sort order
- * @param fee The fee tier of the pool
- * @returns The pool key
- */
-export function getPoolKey(
-  tokenA: string,
-  tokenB: string,
-  fee: FeeAmount,
-): PoolKey {
-  if (tokenA.toLowerCase() === tokenB.toLowerCase())
-    throw new Error('IDENTICAL_ADDRESSES');
-  return tokenA.toLowerCase() < tokenB.toLowerCase()
-    ? { token0: tokenA, token1: tokenB, fee }
-    : { token0: tokenB, token1: tokenA, fee };
-}
-
 /**
  * Computes a pool address
  * @param factoryAddress The Uniswap V3 factory address
@@ -398,6 +373,38 @@ export async function getTickToLiquidityMapForPool(
   return data;
 }
 
+/**
+ * Fetches the liquidity within the tick range for the specified pool by deploying an ephemeral contract via `eth_call`.
+ * Each tick consumes about 100k gas, so this method may fail if the number of ticks exceeds 3k assuming the provider
+ * gas limit is 300m.
+ * @param chainId Chain id.
+ * @param pool The liquidity pool to fetch the tick to liquidity map for.
+ * @param tickLower The lower tick to fetch liquidity for.
+ * @param tickUpper The upper tick to fetch liquidity for.
+ * @param provider Ethers provider.
+ */
+async function getPopulatedTicksInRange(
+  chainId: ApertureSupportedChainId,
+  pool: Pool,
+  tickLower: number,
+  tickUpper: number,
+  provider?: Provider,
+) {
+  // Deploy the ephemeral contract to query the liquidity within the specified tick range.
+  const returnData = await (provider ?? getPublicProvider(chainId)).call(
+    new EphemeralGetPopulatedTicksInRange__factory().getDeployTransaction(
+      Pool.getAddress(pool.token0, pool.token1, pool.fee),
+      tickLower,
+      tickUpper,
+    ),
+  );
+  const iface = EphemeralGetPopulatedTicksInRange__factory.createInterface();
+  return iface.decodeFunctionResult(
+    'getPopulatedTicksInRange',
+    returnData,
+  )[0] as TickLens.PopulatedTickStructOutput[];
+}
+
 export interface Liquidity {
   tick: number;
   liquidityActive: string;
@@ -406,9 +413,7 @@ export interface Liquidity {
 }
 
 /**
- * Fetches the liquidity within the tick range for the specified pool by deploying an ephemeral contract via `eth_call`.
- * Each tick consumes about 100k gas, so this method may fail if the number of ticks exceeds 3k assuming the provider
- * gas limit is 300m.
+ * Fetches the liquidity within the tick range for the specified pool.
  * @param chainId Chain id.
  * @param pool The liquidity pool to fetch the tick to liquidity map for.
  * @param _tickLower The lower tick to fetch liquidity for, defaults to half of the current price.
@@ -430,19 +435,13 @@ export async function getLiquidityArrayForPool(
     _tickUpper,
   );
   const { token0, token1 } = pool;
-  // Deploy the ephemeral contract to query the liquidity within the specified tick range.
-  const returnData = await (provider ?? getPublicProvider(chainId)).call(
-    new EphemeralGetPopulatedTicksInRange__factory().getDeployTransaction(
-      Pool.getAddress(token0, token1, pool.fee),
-      tickLower,
-      tickUpper,
-    ),
+  const populatedTicks = await getPopulatedTicksInRange(
+    chainId,
+    pool,
+    tickLower,
+    tickUpper,
+    provider,
   );
-  const iface = EphemeralGetPopulatedTicksInRange__factory.createInterface();
-  const populatedTicks = iface.decodeFunctionResult(
-    'getPopulatedTicksInRange',
-    returnData,
-  )[0] as TickLens.PopulatedTickStructOutput[];
   const liquidityArray = reconstructLiquidityArray(
     populatedTicks,
     tickCurrentAligned,

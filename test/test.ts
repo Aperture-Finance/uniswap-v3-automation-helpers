@@ -1521,13 +1521,12 @@ describe('Pool subgraph query tests', function () {
   }
 
   it('Tick liquidity distribution - Ethereum mainnet', async function () {
-    const provider = getPublicProvider(chainId);
     const pool = await getPool(
       WBTC_ADDRESS,
       WETH_ADDRESS,
       FeeAmount.LOW,
       chainId,
-      provider,
+      getPublicProvider(chainId),
     );
     await testLiquidityDistribution(chainId, pool);
   });
