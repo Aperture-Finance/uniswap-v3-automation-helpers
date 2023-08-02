@@ -1,15 +1,8 @@
 import axios from 'axios';
 
 export async function fetchUniV3PoolsFromGeckoTerminal(mainUrl: string) {
-  const pools = [
-    /*[
-      'poolAddress',
-      'poolName',
-      'swapCount24hrs',
-      'fromVolumeInUsd',
-      'toVolumeInUsd',
-    ],*/
-  ];
+  // Columns are: poolAddress, poolName, swapCount24hrs, fromVolumeInUsd, toVolumeInUsd.
+  const pools: [string, string, number, number, number][] = [];
   for (let page = 1; ; ++page) {
     const response = await axios.get(`${mainUrl}&page=${page}`);
     for (const pool of response.data.data) {

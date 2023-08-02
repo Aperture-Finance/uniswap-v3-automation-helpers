@@ -7,24 +7,24 @@ import whitelistedPoolsEthereum from '../data/whitelistedPools-1.json';
 import whitelistedPoolsArbitrum from '../data/whitelistedPools-42161.json';
 import { fetchUniV3PoolsFromGeckoTerminal } from './fetchUniV3PoolsFromGeckoTerminal';
 
+type WhitelistedPools = typeof whitelistedPoolsEthereum;
+
 async function generateWhitelistOfSpecificPools(
   chainId: number,
   poolsToFetch: string[],
-  // eslint-disable-next-line
-  currentWhitelist: any[],
+  currentWhitelist: WhitelistedPools,
 ) {
   // Add existing whitelisted pools if not on the to-fetch list.
   const poolsToFetchSet = new Set(poolsToFetch);
   for (const pool of currentWhitelist) {
-    if (!poolsToFetchSet.has(pool.id.toLowerCase())) {
+    if (!poolsToFetchSet.has(pool.id)) {
       console.log(`Pool ${pool.id} is added to the list to fetch.`);
       poolsToFetch.push(pool.id.toLowerCase());
     }
   }
 
   console.log(`Fetching information for ${poolsToFetch.length} pools...`);
-  // eslint-disable-next-line
-  let pools: any[] = [];
+  let pools: WhitelistedPools = [];
   for (let startIndex = 0; startIndex < poolsToFetch.length; startIndex += 50) {
     const response = await axios.post(
       getChainInfo(chainId).uniswap_subgraph_url!,
@@ -103,25 +103,20 @@ async function generateWhitelistOfSpecificPools(
     }
   }
 
-  pools
-    .filter((pool) => !priceList[pool.token0.id] || !priceList[pool.token1.id])
-    .forEach((pool) => {
-      console.log(pool);
-    });
-
-  console.log(`Pools before token price filtering: ${pools.length}`);
+  // Filter out pools involving tokens without price support.
+  console.log(`Pool count before token price filtering: ${pools.length}`);
   pools = pools.filter(
     (pool) => priceList[pool.token0.id] && priceList[pool.token1.id],
   );
-  console.log(`Pools after token price filtering: ${pools.length}`);
+  console.log(`Pool count after token price filtering: ${pools.length}`);
 
   // See if current whitelist is all covered in the new list.
   const newWhitelistSet = new Set(pools.map((pool) => pool.id.toLowerCase()));
   for (const pool of currentWhitelist) {
     if (!newWhitelistSet.has(pool.id.toLowerCase())) {
-      console.log(`Pool ${pool.id} is not in the new whitelist.`);
+      console.log(`Pool ${pool.id} is not on the new whitelist.`);
     } else {
-      console.log(`Pool ${pool.id} is in the new whitelist.`);
+      console.log(`Pool ${pool.id} is on the new whitelist.`);
     }
   }
 
@@ -130,7 +125,6 @@ async function generateWhitelistOfSpecificPools(
     JSON.stringify(pools, null, 2),
     'utf-8',
   );
-
   console.log(
     `Generated ${pools.length} whitelisted pools for chain id ${chainId}, involving ${tokens.size} tokens.`,
   );
