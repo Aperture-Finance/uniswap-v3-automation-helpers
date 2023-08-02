@@ -10,6 +10,7 @@ import { fetchUniV3PoolsFromGeckoTerminal } from './fetchUniV3PoolsFromGeckoTerm
 async function generateWhitelistOfSpecificPools(
   chainId: number,
   poolsToFetch: string[],
+  // eslint-disable-next-line
   currentWhitelist: any[],
 ) {
   // Add existing whitelisted pools if not on the to-fetch list.
@@ -22,6 +23,7 @@ async function generateWhitelistOfSpecificPools(
   }
 
   console.log(`Fetching information for ${poolsToFetch.length} pools...`);
+  // eslint-disable-next-line
   let pools: any[] = [];
   for (let startIndex = 0; startIndex < poolsToFetch.length; startIndex += 50) {
     const response = await axios.post(
