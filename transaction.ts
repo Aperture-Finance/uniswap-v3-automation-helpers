@@ -5,11 +5,9 @@ import {
   IUniV3Automan__factory,
   PermitInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
+import { EventFragment } from '@ethersproject/abi';
 import {
-  CollectEventObject,
-  DecreaseLiquidityEventObject,
-} from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/@aperture_finance/uni-v3-lib/src/interfaces/INonfungiblePositionManager';
-import {
+  Log,
   Provider,
   TransactionReceipt,
   TransactionRequest,
@@ -41,7 +39,7 @@ import {
   getAutomanReinvestCallInfo,
 } from './automan';
 import { ChainInfo, getChainInfo } from './chain';
-import { getNativeCurrency, getToken } from './currency';
+import { getNativeCurrency } from './currency';
 import { getPool } from './pool';
 import {
   BasicPositionInfo,
@@ -592,71 +590,95 @@ export function getSetApprovalForAllTx(
 }
 
 /**
+ * Filter logs by event.
+ * @param receipt Transaction receipt.
+ * @param event Event fragment.
+ * @returns The filtered logs.
+ */
+export function filterLogsByEvent(
+  receipt: TransactionReceipt,
+  event: EventFragment,
+): Log[] {
+  const eventSig =
+    INonfungiblePositionManager__factory.createInterface().getEventTopic(event);
+  return receipt.logs.filter((log) => log.topics[0] === eventSig);
+}
+
+/**
  * Parses the specified transaction receipt and extracts the position id (token id) minted by NPM within the transaction.
+ * @param chainId Chain id.
  * @param txReceipt The transaction receipt to parse.
  * @param recipientAddress The receipt address to which the position is minted.
  * @returns If a position is minted to `recipientAddress`, the position id is returned. If there is more than one, the first is returned. If there are none, `undefined` is returned.
  */
 export function getMintedPositionIdFromTxReceipt(
+  chainId: ApertureSupportedChainId,
   txReceipt: TransactionReceipt,
   recipientAddress: string,
 ): BigNumber | undefined {
+  const npmAddress =
+    getChainInfo(chainId).uniswap_v3_nonfungible_position_manager.toLowerCase();
   const npmInterface = INonfungiblePositionManager__factory.createInterface();
-  for (const log of txReceipt.logs) {
-    try {
-      const event = npmInterface.parseLog(log);
-      if (
-        event.name === 'Transfer' &&
-        event.args.from === ADDRESS_ZERO &&
-        event.args.to === recipientAddress
-      ) {
-        return event.args.tokenId;
-      }
-    } catch (e) {}
+  const transferLogs = filterLogsByEvent(
+    txReceipt,
+    npmInterface.getEvent('Transfer'),
+  );
+  recipientAddress = recipientAddress.toLowerCase();
+  for (const log of transferLogs) {
+    if (log.address.toLowerCase() === npmAddress) {
+      try {
+        const event = npmInterface.parseLog(log);
+        if (event.args.to.toLowerCase() === recipientAddress) {
+          return event.args.tokenId;
+        }
+      } catch (e) {}
+    }
   }
   return undefined;
 }
 
 /**
  * Get the collected fees in the position from a transaction receipt.
- * @param chainId Chain id.
- * @param positionId Position id.
  * @param receipt Transaction receipt.
- * @param provider Ethers provider.
- * @param token0Address Checksum address of token0 in the position.
- * @param token1Address Checksum address of token1 in the position.
+ * @param token0 Token 0.
+ * @param token1 Token 1.
  * @returns A promise that resolves to the collected amount of the two tokens in the position.
  */
 export async function getCollectedFeesFromReceipt(
-  chainId: ApertureSupportedChainId,
-  positionId: BigNumberish,
   receipt: TransactionReceipt,
-  provider: Provider,
-  token0Address: string,
-  token1Address: string,
+  token0: Token,
+  token1: Token,
 ): Promise<CollectableTokenAmounts> {
   const npmInterface = INonfungiblePositionManager__factory.createInterface();
-  let collectArgs: CollectEventObject;
-  let decreaseLiquidityArgs: DecreaseLiquidityEventObject | undefined;
-  for (const log of receipt.logs) {
-    try {
-      const event = npmInterface.parseLog(log);
-      if (event.name === 'Collect') {
-        collectArgs = event.args as unknown as CollectEventObject;
-      } else if (event.name === 'DecreaseLiquidity') {
-        decreaseLiquidityArgs =
-          event.args as unknown as DecreaseLiquidityEventObject;
-      }
-    } catch (e) {}
+  const collectLog = filterLogsByEvent(
+    receipt,
+    npmInterface.getEvent('Collect'),
+  );
+  let total0: BigNumber, total1: BigNumber;
+  try {
+    const collectEvent = npmInterface.parseLog(collectLog[0]);
+    total0 = collectEvent.args.amount0;
+    total1 = collectEvent.args.amount1;
+  } catch (e) {
+    throw new Error('Failed to decode collect event');
   }
-  const principal0 = decreaseLiquidityArgs?.amount0 ?? 0;
-  const principal1 = decreaseLiquidityArgs?.amount1 ?? 0;
-  const total0 = collectArgs!.amount0;
-  const total1 = collectArgs!.amount1;
-  const [token0, token1] = await Promise.all([
-    getToken(token0Address, chainId, provider),
-    getToken(token1Address, chainId, provider),
-  ]);
+  const decreaseLiquidityLog = filterLogsByEvent(
+    receipt,
+    npmInterface.getEvent('DecreaseLiquidity'),
+  );
+  let principal0 = BigNumber.from(0);
+  let principal1 = BigNumber.from(0);
+  if (decreaseLiquidityLog.length > 0) {
+    try {
+      const decreaseLiquidityEvent = npmInterface.parseLog(
+        decreaseLiquidityLog[0],
+      );
+      principal0 = decreaseLiquidityEvent.args.amount0;
+      principal1 = decreaseLiquidityEvent.args.amount1;
+    } catch (e) {
+      throw new Error('Failed to decode decrease liquidity event');
+    }
+  }
   return {
     token0Amount: CurrencyAmount.fromRawAmount(
       token0,

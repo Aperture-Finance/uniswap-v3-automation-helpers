@@ -210,7 +210,11 @@ describe('Limit order tests', function () {
     );
     // Create the limit order position.
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const positionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
+    const positionId = getMintedPositionIdFromTxReceipt(
+      chainId,
+      txReceipt,
+      eoa,
+    )!;
     const basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
@@ -315,7 +319,11 @@ describe('Limit order tests', function () {
     );
     // Create the limit order position.
     const txReceipt = await (await impersonatedEOA.sendTransaction(tx)).wait();
-    const positionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
+    const positionId = getMintedPositionIdFromTxReceipt(
+      chainId,
+      txReceipt,
+      eoa,
+    )!;
     const basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
@@ -384,6 +392,7 @@ describe('Limit order tests', function () {
       await impersonatedEOA.sendTransaction(nativeEthTx)
     ).wait();
     const nativeEthPositionId = getMintedPositionIdFromTxReceipt(
+      chainId,
       nativeEthTxReceipt,
       eoa,
     )!;
@@ -485,12 +494,9 @@ describe('Position liquidity management tests', function () {
     const eoaSigner = await ethers.getImpersonatedSigner(eoa);
     const txReceipt = await (await eoaSigner.sendTransaction(txRequest)).wait();
     const collectedFees = await getCollectedFeesFromReceipt(
-      chainId,
-      positionId,
       txReceipt,
-      hardhatForkProvider,
-      position4BasicInfo.token0.address,
-      position4BasicInfo.token1.address,
+      position4BasicInfo.token0,
+      position4BasicInfo.token1,
     );
     expect(collectedFees).deep.equal(position4ColletableTokenAmounts);
     expect(
@@ -536,12 +542,9 @@ describe('Position liquidity management tests', function () {
       await eoaSigner.sendTransaction(removeLiquidityTxRequest)
     ).wait();
     const collectedFees = await getCollectedFeesFromReceipt(
-      chainId,
-      positionId,
       removeLiquidityTxReceipt,
-      hardhatForkProvider,
-      position4BasicInfo.token0.address,
-      position4BasicInfo.token1.address,
+      position4BasicInfo.token0,
+      position4BasicInfo.token1,
     );
     expect(collectedFees).deep.equal(position4ColletableTokenAmounts);
     expect(
@@ -704,6 +707,7 @@ describe('Position liquidity management tests', function () {
       await eoaSigner.sendTransaction(createPositionTxRequest)
     ).wait();
     const createdPositionId = getMintedPositionIdFromTxReceipt(
+      chainId,
       createPositionTxReceipt,
       eoa,
     )!;
@@ -783,7 +787,11 @@ describe('Automan transaction tests', function () {
     const txReceipt = await (
       await impersonatedOwnerSigner.sendTransaction(txRequest)
     ).wait();
-    const newPositionId = getMintedPositionIdFromTxReceipt(txReceipt, eoa)!;
+    const newPositionId = getMintedPositionIdFromTxReceipt(
+      chainId,
+      txReceipt,
+      eoa,
+    )!;
     expect(
       await getBasicPositionInfo(chainId, newPositionId, hardhatForkProvider),
     ).to.deep.equal({
