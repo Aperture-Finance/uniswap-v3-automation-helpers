@@ -13,24 +13,24 @@ export type AutomanFragment = {
     : never;
 }[keyof UniV3Automan['functions']];
 
-type ExtractFragment<T extends AutomanActionName> = {
+export type GetAutomanFragment<T extends AutomanActionName> = {
   [P in AutomanFragment]: P extends `${T}${string}` ? P : never;
 }[AutomanFragment];
 
-export type AutomanParamsMap = {
-  [P in AutomanFragment]: Parameters<UniV3Automan['functions'][P]>;
-};
+export type GetAutomanParams<T extends AutomanFragment> = Parameters<
+  UniV3Automan['functions'][T]
+>;
 
-export type AutomanCallInfo<T extends AutomanFragment> = {
-  functionFragment: T;
-  params: AutomanParamsMap[T];
+type AutomanCallInfo<T extends AutomanActionName> = {
+  functionFragment: GetAutomanFragment<T>;
+  params: GetAutomanParams<GetAutomanFragment<T>>;
 };
 
 export function getAutomanRebalanceCallInfo(
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   existingPositionId: BigNumberish,
   permitInfo?: PermitInfo,
-): AutomanCallInfo<ExtractFragment<'rebalance'>> {
+): AutomanCallInfo<'rebalance'> {
   if (permitInfo === undefined) {
     return {
       functionFragment:
@@ -66,7 +66,7 @@ export function getAutomanReinvestCallInfo(
   amount0Min: BigNumberish = 0,
   amount1Min: BigNumberish = 0,
   permitInfo?: PermitInfo,
-): AutomanCallInfo<ExtractFragment<'reinvest'>> {
+): AutomanCallInfo<'reinvest'> {
   const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
     {
       tokenId: positionId,

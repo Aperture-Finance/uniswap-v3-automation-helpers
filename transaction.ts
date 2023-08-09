@@ -34,7 +34,7 @@ import JSBI from 'jsbi';
 
 import {
   AutomanFragment,
-  AutomanParamsMap,
+  GetAutomanParams,
   getAutomanRebalanceCallInfo,
   getAutomanReinvestCallInfo,
 } from './automan';
@@ -401,7 +401,7 @@ async function getAmountsWithSlippage<T extends AutomanFragment>(
   automanAddress: string,
   ownerAddress: string,
   functionFragment: T,
-  functionParams: AutomanParamsMap[T],
+  functionParams: GetAutomanParams<T>,
   slippageTolerance: Percent,
   provider: Provider,
 ): Promise<SimulatedAmounts> {
