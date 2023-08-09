@@ -3,6 +3,7 @@ import {
   ApertureSupportedChainId,
   ConditionTypeEnum,
   IERC20__factory,
+  IUniV3Automan__factory,
   PriceConditionSchema,
   UniV3Automan,
   UniV3Automan__factory,
@@ -35,6 +36,7 @@ import { getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
+import { getAutomanReinvestCallInfo } from '../automan';
 import { CHAIN_ID_TO_INFO, getChainInfo } from '../chain';
 import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
 import {
@@ -55,6 +57,7 @@ import {
 import {
   BasicPositionInfo,
   PositionDetails,
+  computeOperatorApprovalSlot,
   getAllPositionBasicInfoByOwner,
   getAllPositionsDetails,
   getBasicPositionInfo,
@@ -64,6 +67,7 @@ import {
   getPositionAtPrice,
   getPositionFromBasicInfo,
   getRebalancedPosition,
+  getReinvestedPosition,
   getTokenSvg,
   isPositionInRange,
   projectRebalancedPositionAtPrice,
@@ -767,6 +771,24 @@ describe('Automan transaction tests', function () {
     );
   });
 
+  it('Test computeOperatorApprovalSlot', async function () {
+    const npm = getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
+    const slot = computeOperatorApprovalSlot(eoa, automanContract.address);
+    expect(slot).to.equal(
+      '0x0e19f2cddd2e7388039c7ef081490ef6bd2600540ca6caf0f478dc7dfebe509b',
+    );
+    expect(await hardhatForkProvider.getStorageAt(npm, slot)).to.equal(
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+    );
+    await getNPM(chainId, impersonatedOwnerSigner).setApprovalForAll(
+      automanContract.address,
+      false,
+    );
+    expect(await hardhatForkProvider.getStorageAt(npm, slot)).to.equal(
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+    );
+  });
+
   it('Rebalance', async function () {
     const existingPosition = await getPosition(
       chainId,
@@ -850,7 +872,7 @@ describe('Automan transaction tests', function () {
   });
 });
 
-describe('Util tests', function () {
+describe('Position util tests', function () {
   beforeEach(async function () {
     await resetHardhatNetwork();
   });
@@ -1251,6 +1273,57 @@ describe('Util tests', function () {
       expect(basicPosition?.tickLower).to.equal(pos.tickLower);
       expect(basicPosition?.tickUpper).to.equal(pos.tickUpper);
     }
+  });
+
+  it('Test getReinvestedPosition', async function () {
+    const chainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
+    const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
+    const provider = new ethers.providers.InfuraProvider(chainId);
+    const positionId = 761879;
+    const blockNumber = 119626480;
+    const npm = getNPM(chainId, provider);
+    const owner = await npm.ownerOf(positionId);
+    expect(await npm.isApprovedForAll(owner, aperture_uniswap_v3_automan)).to.be
+      .false;
+    const reinvested = await getReinvestedPosition(
+      chainId,
+      positionId,
+      provider,
+      blockNumber,
+    );
+    await hardhatReset(
+      `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+      blockNumber,
+    );
+    const signer = await ethers.getImpersonatedSigner(owner);
+    await npm
+      .connect(signer)
+      .setApprovalForAll(aperture_uniswap_v3_automan, true);
+    const { liquidity: liquidityBefore } = await getPosition(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    const { functionFragment, params } = getAutomanReinvestCallInfo(
+      positionId,
+      Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
+      0,
+      0,
+    );
+    await IUniV3Automan__factory.connect(
+      aperture_uniswap_v3_automan,
+      signer,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+    ).functions[functionFragment](...params);
+    const { liquidity: liquidityAfter } = await getPosition(
+      chainId,
+      positionId,
+      hardhatForkProvider,
+    );
+    expect(JSBI.subtract(liquidityAfter, liquidityBefore).toString()).to.equal(
+      reinvested.liquidity.toString(),
+    );
   });
 });
 

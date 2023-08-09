@@ -3,9 +3,10 @@ import {
   EphemeralAllPositions__factory,
   EphemeralGetPosition__factory,
   INonfungiblePositionManager__factory,
+  IUniV3Automan__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { PositionStateStructOutput } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralGetPosition';
-import { Provider } from '@ethersproject/abstract-provider';
+import { JsonRpcProvider, Provider } from '@ethersproject/providers';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
@@ -16,8 +17,10 @@ import {
 } from '@uniswap/v3-sdk';
 import Big from 'big.js';
 import { BigNumber, BigNumberish, Signer } from 'ethers';
+import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
 import JSBI from 'jsbi';
 
+import { getAutomanReinvestCallInfo } from './automan';
 import { getChainInfo } from './chain';
 import { getToken } from './currency';
 import {
@@ -98,21 +101,26 @@ export async function getPositionFromBasicInfo(
  * @param chainId The chain ID.
  * @param positionId The position id.
  * @param provider The ethers provider.
+ * @param blockNumber Optional block number to query.
  * @returns The `Position` object.
  */
 export async function getPosition(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
+  blockNumber?: number,
 ) {
   const npm = getNPM(chainId, provider);
-  const positionInfo = await npm.positions(positionId);
+  const positionInfo = await npm.positions(positionId, {
+    blockTag: blockNumber,
+  });
   const pool = await getPool(
     positionInfo.token0,
     positionInfo.token1,
     positionInfo.fee,
     chainId,
     provider,
+    blockNumber,
   );
   return new Position({
     pool,
@@ -600,7 +608,7 @@ export class PositionDetails implements BasicPositionInfo {
    * Get the real-time collectable token amounts.
    * @param provider Ethers provider.
    */
-  public getCollectableTokenAmounts(
+  public async getCollectableTokenAmounts(
     provider: Provider,
   ): Promise<CollectableTokenAmounts> {
     return viewCollectableTokenAmounts(this.chainId, this.tokenId, provider, {
@@ -612,4 +620,101 @@ export class PositionDetails implements BasicPositionInfo {
       liquidity: this.liquidity,
     });
   }
+}
+
+/**
+ * Compute the storage slot for the operator approval in NonfungiblePositionManager.
+ * @param owner The owner of the position.
+ * @param spender The spender of the position.
+ * @returns The storage slot.
+ */
+export function computeOperatorApprovalSlot(
+  owner: string,
+  spender: string,
+): string {
+  return keccak256(
+    defaultAbiCoder.encode(
+      ['address', 'bytes32'],
+      [
+        spender,
+        keccak256(
+          defaultAbiCoder.encode(
+            ['address', 'bytes32'],
+            [
+              owner,
+              '0x0000000000000000000000000000000000000000000000000000000000000005',
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/**
+ * Predict the change in liquidity and token amounts after a reinvestment without a prior approval.
+ * https://github.com/dragonfly-xyz/useful-solidity-patterns/blob/main/patterns/eth_call-tricks/README.md#geth-overrides
+ * @param chainId The chain ID.
+ * @param positionId The position id.
+ * @param provider The ethers provider.
+ * @param blockNumber Optional block number to query.
+ * @returns The predicted change in liquidity and token amounts.
+ */
+export async function getReinvestedPosition(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  provider: JsonRpcProvider,
+  blockNumber?: number,
+): Promise<{
+  liquidity: BigNumber;
+  amount0: BigNumber;
+  amount1: BigNumber;
+}> {
+  const owner = await getNPM(chainId, provider).ownerOf(positionId, {
+    blockTag: blockNumber,
+  });
+  const { functionFragment, params } = getAutomanReinvestCallInfo(
+    positionId,
+    Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
+    0,
+    0,
+  );
+  const {
+    aperture_uniswap_v3_automan,
+    uniswap_v3_nonfungible_position_manager,
+  } = getChainInfo(chainId);
+  const iface = IUniV3Automan__factory.createInterface();
+  const returnData = await provider.send('eth_call', [
+    {
+      from: owner,
+      to: aperture_uniswap_v3_automan,
+      data: iface.encodeFunctionData(
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        functionFragment,
+        params,
+      ),
+    },
+    // hexlify the block number.
+    blockNumber ? '0x' + blockNumber.toString(16) : 'pending',
+    // forge an operator approval using state overrides.
+    {
+      [uniswap_v3_nonfungible_position_manager]: {
+        stateDiff: {
+          [computeOperatorApprovalSlot(owner, aperture_uniswap_v3_automan)]:
+            '0x0000000000000000000000000000000000000000000000000000000000000001',
+        },
+      },
+    },
+  ]);
+  return iface.decodeFunctionResult(
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    functionFragment,
+    returnData,
+  ) as unknown as {
+    liquidity: BigNumber;
+    amount0: BigNumber;
+    amount1: BigNumber;
+  };
 }

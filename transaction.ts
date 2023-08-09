@@ -34,7 +34,7 @@ import JSBI from 'jsbi';
 
 import {
   AutomanFragment,
-  AutomanParams,
+  GetAutomanParams,
   getAutomanRebalanceCallInfo,
   getAutomanReinvestCallInfo,
 } from './automan';
@@ -397,11 +397,11 @@ interface SimulatedAmounts {
   amount1Min: BigNumberish;
 }
 
-async function getAmountsWithSlippage(
+async function getAmountsWithSlippage<T extends AutomanFragment>(
   automanAddress: string,
   ownerAddress: string,
-  functionFragment: AutomanFragment,
-  functionParams: AutomanParams,
+  functionFragment: T,
+  functionParams: GetAutomanParams<T>,
   slippageTolerance: Percent,
   provider: Provider,
 ): Promise<SimulatedAmounts> {
@@ -475,14 +475,14 @@ export async function getRebalanceTx(
     recipient: ADDRESS_ZERO, // Param value ignored by Automan.
     deadline: deadlineEpochSeconds,
   };
-  const automanAddress = getChainInfo(chainId).aperture_uniswap_v3_automan;
+  const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
   const { functionFragment, params } = getAutomanRebalanceCallInfo(
     mintParams,
     existingPositionId,
     permitInfo,
   );
   const amounts = await getAmountsWithSlippage(
-    automanAddress,
+    aperture_uniswap_v3_automan,
     ownerAddress,
     functionFragment,
     params,
@@ -494,7 +494,7 @@ export async function getRebalanceTx(
   return {
     tx: {
       from: ownerAddress,
-      to: automanAddress,
+      to: aperture_uniswap_v3_automan,
       data: IUniV3Automan__factory.createInterface().encodeFunctionData(
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -530,39 +530,38 @@ export async function getReinvestTx(
   tx: TransactionRequest;
   amounts: SimulatedAmounts;
 }> {
-  const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
-    {
-      tokenId: positionId,
-      amount0Desired: 0, // Param value ignored by Automan.
-      amount1Desired: 0, // Param value ignored by Automan.
-      amount0Min: 0, // Setting this to zero for tx simulation.
-      amount1Min: 0, // Setting this to zero for tx simulation.
-      deadline: deadlineEpochSeconds,
-    };
-  const automanAddress = getChainInfo(chainId).aperture_uniswap_v3_automan;
+  const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
   const { functionFragment, params } = getAutomanReinvestCallInfo(
-    increaseLiquidityParams,
+    positionId,
+    deadlineEpochSeconds,
+    0, // Setting this to zero for tx simulation.
+    0, // Setting this to zero for tx simulation.
     permitInfo,
   );
   const amounts = await getAmountsWithSlippage(
-    automanAddress,
+    aperture_uniswap_v3_automan,
     ownerAddress,
     functionFragment,
     params,
     slippageTolerance,
     provider,
   );
-  increaseLiquidityParams.amount0Min = amounts.amount0Min;
-  increaseLiquidityParams.amount1Min = amounts.amount1Min;
+  const { params: paramsAfterSlippage } = getAutomanReinvestCallInfo(
+    positionId,
+    deadlineEpochSeconds,
+    amounts.amount0Min,
+    amounts.amount1Min,
+    permitInfo,
+  );
   return {
     tx: {
       from: ownerAddress,
-      to: automanAddress,
+      to: aperture_uniswap_v3_automan,
       data: IUniV3Automan__factory.createInterface().encodeFunctionData(
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         functionFragment,
-        getAutomanReinvestCallInfo(increaseLiquidityParams, permitInfo).params,
+        paramsAfterSlippage,
       ),
     },
     amounts: amounts,
