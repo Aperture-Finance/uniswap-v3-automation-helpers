@@ -107,6 +107,7 @@ export function getPoolContract(
  * @param fee Fee tier of the pool.
  * @param chainId Chain id.
  * @param provider Ethers provider.
+ * @param blockNumber Optional block number to query.
  * @returns The constructed Uniswap SDK Pool object.
  */
 export async function getPool(
@@ -115,23 +116,27 @@ export async function getPool(
   fee: FeeAmount,
   chainId: ApertureSupportedChainId,
   provider: Provider,
+  blockNumber?: number,
 ): Promise<Pool> {
   const poolContract = getPoolContract(tokenA, tokenB, fee, chainId, provider);
+  const opts = { blockTag: blockNumber };
   // If the specified pool has not been created yet, then the slot0() and liquidity() calls should fail (and throw an error).
   // Also update the tokens to the canonical type.
   const [slot0, inRangeLiquidity, tokenACanon, tokenBCanon] = await Promise.all(
     [
-      poolContract.slot0(),
-      poolContract.liquidity(),
+      poolContract.slot0(opts),
+      poolContract.liquidity(opts),
       getToken(
         typeof tokenA === 'string' ? tokenA : tokenA.address,
         chainId,
         provider,
+        blockNumber,
       ),
       getToken(
         typeof tokenB === 'string' ? tokenB : tokenB.address,
         chainId,
         provider,
+        blockNumber,
       ),
     ],
   );
