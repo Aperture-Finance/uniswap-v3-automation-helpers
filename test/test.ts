@@ -1296,12 +1296,6 @@ describe('Position util tests', function () {
       blockNumber,
     );
     const signer = await ethers.getImpersonatedSigner(owner);
-    const { functionFragment, params } = getAutomanReinvestCallInfo(
-      positionId,
-      Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
-      0,
-      0,
-    );
     await npm
       .connect(signer)
       .setApprovalForAll(aperture_uniswap_v3_automan, true);
@@ -1309,6 +1303,12 @@ describe('Position util tests', function () {
       chainId,
       positionId,
       hardhatForkProvider,
+    );
+    const { functionFragment, params } = getAutomanReinvestCallInfo(
+      positionId,
+      Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
+      0,
+      0,
     );
     await IUniV3Automan__factory.connect(
       aperture_uniswap_v3_automan,
