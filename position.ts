@@ -676,8 +676,6 @@ export async function getReinvestedPosition(
   const { functionFragment, params } = getAutomanReinvestCallInfo(
     positionId,
     Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
-    0,
-    0,
   );
   const {
     aperture_uniswap_v3_automan,
