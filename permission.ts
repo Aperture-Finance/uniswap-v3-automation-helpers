@@ -37,9 +37,8 @@ export async function checkPositionApprovalStatus(
       npm.ownerOf(positionId),
       npm.getApproved(positionId),
     ]);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-  } catch (err: never) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
     if (err.code === 'CALL_EXCEPTION') {
       return {
         owner: '',
