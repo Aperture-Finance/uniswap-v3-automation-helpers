@@ -11,19 +11,41 @@ import {
   getWhitelistedTokens,
 } from './whitelist';
 
+export interface ChainSpecificRoutingAPIInfo {
+  url: string;
+  // Routing API: https://github.com/Uniswap/routing-api/
+  // Unified Routing API: https://github.com/Uniswap/unified-routing-api
+  // Uniswap maintains an official unified routing API at https://api.uniswap.org/v2/quote.
+  // The unified routing API handler internally queries the routing API but we don't know the address of the latter.
+  // For the Manta UniV3 fork we only support the routing API and it doesn't make sense to deploy the unified routing API for Manta.
+  // Therefore, we need to support both routing API and unified routing API.
+  type: 'ROUTING_API' | 'UNIFIED_ROUTING_API';
+}
+
+const UNISWAP_OFFICIAL_ROUTING_API_INFO: ChainSpecificRoutingAPIInfo = {
+  url: 'https://uniswap-api.aperture.finance/v2/quote',
+  type: 'UNIFIED_ROUTING_API',
+};
+
 export interface ChainInfo {
   uniswap_v3_factory: string;
   uniswap_v3_nonfungible_position_manager: string;
   aperture_uniswap_v3_automan: string;
-  infura_network_id: string;
-  // Only populated for mainnets. See https://api.coingecko.com/api/v3/asset_platforms.
+  routingApiInfo: ChainSpecificRoutingAPIInfo;
+  // Automan maximum allowed gas deduction ceiling.
+  maxGasCeiling: number;
+  // Only populated for networks that have an Infura endpoint.
+  infura_network_id?: string;
+  // Only populated for networks that do not have an Infura endpoint.
+  rpc_url?: string;
+  // Only populated for networks with a CoinGecko asset platform ID.
   coingecko_asset_platform_id?: string;
-  // Only populated for mainnets.
+  // Only populated for networks with a Uniswap subgraph URL.
   uniswap_subgraph_url?: string;
-  // Only populated for mainnets. Map from pool addresses to `WhitelistedPool` with information about the two tokens and pool fee tier.
+  // TODO: remove `whitelistedPools` and `whitelistedTokens` once the frontend is updated to allow all pools/tokens.
+  // Only populated for networks with whitelisted pools.
   whitelistedPools?: Map<string, WhitelistedPool>;
   whitelistedTokens?: Map<string, Token>;
-  maxGasCeiling: number;
 }
 
 export const CHAIN_ID_TO_INFO: {
@@ -49,6 +71,7 @@ export const CHAIN_ID_TO_INFO: {
       whitelistedPoolsGoerli,
     ),
     maxGasCeiling: 0.05,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
   },
   [ApertureSupportedChainId.ARBITRUM_GOERLI_TESTNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
@@ -62,6 +85,7 @@ export const CHAIN_ID_TO_INFO: {
     ),
     infura_network_id: 'arbitrum-goerli',
     maxGasCeiling: 0.05,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
   },
   [ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
@@ -86,6 +110,7 @@ export const CHAIN_ID_TO_INFO: {
       whitelistedPoolsEthereum,
     ),
     maxGasCeiling: 0.5,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
   },
   [ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
@@ -110,6 +135,7 @@ export const CHAIN_ID_TO_INFO: {
       whitelistedPoolsArbitrum,
     ),
     maxGasCeiling: 0.2,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
   },
 };
 
