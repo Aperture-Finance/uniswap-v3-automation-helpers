@@ -87,6 +87,10 @@ import {
 } from '../price';
 import { getPublicProvider } from '../provider';
 import {
+  fetchQuoteFromRoutingApi,
+  fetchQuoteFromSpecifiedRoutingApiInfo,
+} from '../routing';
+import {
   DOUBLE_TICK,
   MAX_PRICE,
   MIN_PRICE,
@@ -108,6 +112,7 @@ import {
   getReinvestTx,
   getRemoveLiquidityTx,
 } from '../transaction';
+import { USDC_MAINNET } from '../uniswap-constants';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1628,5 +1633,37 @@ describe('Pool subgraph query tests', function () {
       getPublicProvider(arbitrumChainId),
     );
     await testLiquidityDistribution(arbitrumChainId, pool);
+  });
+});
+
+describe('Routing tests', function () {
+  it('Fetch quote swapping 1 ETH for USDC on mainnet', async function () {
+    const quote = await fetchQuoteFromRoutingApi(
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      'ETH',
+      USDC_MAINNET.address,
+      '1000000000000000000',
+      'exactIn',
+    );
+    expect(quote.amountDecimals === '1');
+    expect(Number(quote.quoteDecimals)).to.be.greaterThan(0);
+    console.log(`1 ETH -> ${quote.quoteDecimals} USDC`);
+  });
+
+  it('Fetch quote swapping 1 ETH for USDC on Manta Pacific testnet', async function () {
+    const quote = await fetchQuoteFromSpecifiedRoutingApiInfo(
+      3441005 as ApertureSupportedChainId,
+      {
+        url: 'https://manta-routing.aperture.finance/quote',
+        type: 'ROUTING_API',
+      },
+      'ETH',
+      '0x39471BEe1bBe79F3BFA774b6832D6a530edDaC6B',
+      '1000000000000000000',
+      'exactIn',
+    );
+    expect(quote.amountDecimals === '1');
+    expect(Number(quote.quoteDecimals)).to.be.greaterThan(0);
+    console.log(`1 ETH -> ${quote.quoteDecimals} USDC`);
   });
 });

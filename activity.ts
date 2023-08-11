@@ -411,7 +411,7 @@ export async function getWalletActivities(
 ) {
   const assetActivities: AssetActivityPartsFragment[] | undefined = (
     await axios.post(
-      'https://uniswap-api-graphql.hyperfocal-dev.workers.dev/v1/graphql',
+      'https://uniswap-api.aperture.finance/v1/graphql',
       {
         operationName: 'TransactionList',
         variables: {
