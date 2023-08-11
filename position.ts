@@ -686,12 +686,9 @@ export async function getReinvestedPosition(
     {
       from: owner,
       to: aperture_uniswap_v3_automan,
-      data: iface.encodeFunctionData(
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        functionFragment,
-        params,
-      ),
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      data: iface.encodeFunctionData(functionFragment, params),
     },
     // hexlify the block number.
     blockNumber ? '0x' + blockNumber.toString(16) : 'pending',
