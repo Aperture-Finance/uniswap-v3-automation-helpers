@@ -3,7 +3,6 @@ import {
   ApertureSupportedChainId,
   ConditionTypeEnum,
   IERC20__factory,
-  IUniV3Automan__factory,
   PriceConditionSchema,
   UniV3Automan,
   UniV3Automan__factory,
@@ -1282,9 +1281,12 @@ describe('Position util tests', function () {
     const positionId = 761879;
     const blockNumber = 119626480;
     const npm = getNPM(chainId, provider);
-    const owner = await npm.ownerOf(positionId);
-    expect(await npm.isApprovedForAll(owner, aperture_uniswap_v3_automan)).to.be
-      .false;
+    const opts = {
+      blockTag: blockNumber,
+    };
+    const owner = await npm.ownerOf(positionId, opts);
+    expect(await npm.isApprovedForAll(owner, aperture_uniswap_v3_automan, opts))
+      .to.be.false;
     const reinvested = await getReinvestedPosition(
       chainId,
       positionId,
@@ -1307,10 +1309,8 @@ describe('Position util tests', function () {
     const { functionFragment, params } = getAutomanReinvestCallInfo(
       positionId,
       Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
-      0,
-      0,
     );
-    await IUniV3Automan__factory.connect(
+    await UniV3Automan__factory.connect(
       aperture_uniswap_v3_automan,
       signer,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
