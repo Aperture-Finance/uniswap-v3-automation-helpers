@@ -18,7 +18,7 @@ export interface ChainSpecificRoutingAPIInfo {
   // Uniswap maintains an official unified routing API at https://api.uniswap.org/v2/quote.
   // The unified routing API handler internally queries the routing API but we don't know the address of the latter.
   // For the Manta UniV3 fork we only support the routing API and it doesn't make sense to deploy the unified routing API for Manta.
-  // Therefore, we need to support both routing API and unified routing API.
+  // Therefore, we need to support querying both routing API (for Manta) and unified routing API (for UniV3 official chains).
   type: 'ROUTING_API' | 'UNIFIED_ROUTING_API';
 }
 
