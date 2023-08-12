@@ -31,6 +31,7 @@ export interface ChainInfo {
   uniswap_v3_factory: string;
   uniswap_v3_nonfungible_position_manager: string;
   aperture_uniswap_v3_automan: string;
+  wrappedNativeCurrency: Token;
   routingApiInfo: ChainSpecificRoutingAPIInfo;
   // Automan maximum allowed gas deduction ceiling.
   maxGasCeiling: number;
@@ -61,6 +62,13 @@ export const CHAIN_ID_TO_INFO: {
     aperture_uniswap_v3_automan: getAddress(
       '0x00000000Ede6d8D217c60f93191C060747324bca',
     ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID,
+      getAddress('0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6'),
+      18,
+      'WETH',
+      'Wrapped Ether',
+    ),
     infura_network_id: 'goerli',
     whitelistedPools: getWhitelistedPools(
       ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID,
@@ -83,6 +91,13 @@ export const CHAIN_ID_TO_INFO: {
     aperture_uniswap_v3_automan: getAddress(
       '0xcd9002c47348c54B1C044e30E449CdAe44124139',
     ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.ARBITRUM_GOERLI_TESTNET_CHAIN_ID,
+      getAddress('0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3'),
+      18,
+      'WETH',
+      'WETH',
+    ),
     infura_network_id: 'arbitrum-goerli',
     maxGasCeiling: 0.05,
     routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
@@ -96,6 +111,13 @@ export const CHAIN_ID_TO_INFO: {
     ),
     aperture_uniswap_v3_automan: getAddress(
       '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
+      getAddress('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'),
+      18,
+      'WETH',
+      'Wrapped Ether',
     ),
     coingecko_asset_platform_id: 'ethereum',
     infura_network_id: 'mainnet',
@@ -121,6 +143,13 @@ export const CHAIN_ID_TO_INFO: {
     ),
     aperture_uniswap_v3_automan: getAddress(
       '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
+      getAddress('0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'),
+      18,
+      'WETH',
+      'Wrapped Ether',
     ),
     coingecko_asset_platform_id: 'arbitrum-one',
     infura_network_id: 'arbitrum',

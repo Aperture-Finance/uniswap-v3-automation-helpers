@@ -164,3 +164,26 @@ export async function fetchQuoteFromRoutingApi(
     type,
   );
 }
+
+/**
+ * Finds the best quote for swapping the specified token to the native currency.
+ * @param chainId The chain id of the token.
+ * @param tokenAddress The address of the token.
+ * @param nativeCurrencyExactOutRawAmount The exact output amount of the native currency when requesting the quote.
+ * @returns The raw amount of the input token needed in order to swap to `nativeCurrencyExactOutRawAmount` amount of the native currency.
+ */
+export async function fetchQuoteToNativeCurrency(
+  chainId: ApertureSupportedChainId,
+  tokenAddress: string,
+  nativeCurrencyExactOutRawAmount: BigNumberish,
+): Promise<string> {
+  return (
+    await fetchQuoteFromRoutingApi(
+      chainId,
+      tokenAddress,
+      getChainInfo(chainId).wrappedNativeCurrency.address,
+      nativeCurrencyExactOutRawAmount,
+      'exactOut',
+    )
+  ).quote;
+}
