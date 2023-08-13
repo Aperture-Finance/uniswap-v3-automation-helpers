@@ -7,5 +7,6 @@ export * from './pool';
 export * from './position';
 export * from './price';
 export * from './provider';
+export * from './routing';
 export * from './tick';
 export * from './transaction';
