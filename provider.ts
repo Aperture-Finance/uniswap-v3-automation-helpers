@@ -11,12 +11,11 @@ import { getChainInfo } from './chain';
 export function getPublicProvider(
   chainId: number,
 ): providers.MulticallProvider {
-  return new providers.MulticallProvider(
-    new ethers.providers.InfuraProvider(
-      getChainInfo(chainId).infura_network_id!,
-    ),
-    {
-      timeWindow: 0,
-    },
-  );
+  const info = getChainInfo(chainId);
+  const provider = info.infura_network_id
+    ? new ethers.providers.InfuraProvider(info.infura_network_id)
+    : new ethers.providers.JsonRpcProvider(info.rpc_url);
+  return new providers.MulticallProvider(provider, {
+    timeWindow: 0,
+  });
 }
