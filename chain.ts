@@ -166,6 +166,187 @@ export const CHAIN_ID_TO_INFO: {
     maxGasCeiling: 0.2,
     routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
   },
+  [ApertureSupportedChainId.POLYGON_MAINNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0x1F98431c8aD98523631AE4a59f267346ea31F984',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
+    ),
+    // Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.POLYGON_MAINNET_CHAIN_ID,
+      getAddress('0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'),
+      18,
+      'WMATIC',
+      'Wrapped Matic',
+    ),
+    coingecko_asset_platform_id: 'polygon-pos',
+    infura_network_id: 'matic',
+    uniswap_subgraph_url:
+      'https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-polygon',
+    maxGasCeiling: 0.2,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
+  },
+  [ApertureSupportedChainId.OPTIMISM_MAINNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0x1F98431c8aD98523631AE4a59f267346ea31F984',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
+    ),
+    // Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.OPTIMISM_MAINNET_CHAIN_ID,
+      getAddress('0x4200000000000000000000000000000000000006'),
+      18,
+      'WETH',
+      'Wrapped Ether',
+    ),
+    coingecko_asset_platform_id: 'optimistic-ethereum',
+    infura_network_id: 'optimism',
+    uniswap_subgraph_url:
+      'https://api.thegraph.com/subgraphs/name/ianlapham/optimism-post-regenesis',
+    maxGasCeiling: 0.2,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
+  },
+  [ApertureSupportedChainId.CELO_MAINNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0xAfE208a311B21f13EF87E33A90049fC17A7acDEc',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0x3d79EdAaBC0EaB6F08ED885C05Fc0B014290D95A',
+    ),
+    // Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    // CELO (aka cGLD or Celo Gold) is the native currency on the Celo mainnet, and accessible through the following ERC20 contract.
+    // Both share the same view of account balances, i.e. if you transfer via the ERC20 contract, the native currency balance will be updated accordingly, and vice versa.
+    // Therefore, this is not technically a wrapped token of the native currency, but rather, the native currency itself's ERC20 interface.
+    // Uniswap NPM contracts sets WETH9 as the zero address. Aperture Automan contract should be updated to check for this, and skip wrapping/unwraping accordingly.
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.CELO_MAINNET_CHAIN_ID,
+      getAddress('0x8dd4f800851Db9DC219fdFaEB82F8d69e2B13582'),
+      18,
+      'cGLD',
+      'Celo Gold',
+    ),
+    coingecko_asset_platform_id: 'celo',
+    rpc_url: 'https://forno.celo.org',
+    uniswap_subgraph_url:
+      'https://api.thegraph.com/subgraphs/name/jesse-sawa/uniswap-celo',
+    maxGasCeiling: 0.2,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
+  },
+  [ApertureSupportedChainId.BNB_MAINNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0xdB1d10011AD0Ff90774D0C6Bb92e5C5c8b4461F7',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0x7b8A01B39D58278b5DE7e48c8449c9f4F5170613',
+    ),
+    // Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.BNB_MAINNET_CHAIN_ID,
+      getAddress('0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'),
+      18,
+      'WBNB',
+      'Wrapped BNB',
+    ),
+    coingecko_asset_platform_id: 'binance-smart-chain',
+    rpc_url: 'https://bsc-dataseed.bnbchain.org',
+    uniswap_subgraph_url:
+      'https://api.thegraph.com/subgraphs/name/ilyamk/uniswap-v3---bnb-chain',
+    maxGasCeiling: 0.2,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
+  },
+  [ApertureSupportedChainId.BASE_MAINNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0x33128a8fC17869897dcE68Ed026d694621f6FDfD',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1',
+    ),
+    // Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.BASE_MAINNET_CHAIN_ID,
+      getAddress('0x4200000000000000000000000000000000000006'),
+      18,
+      'WETH',
+      'Wrapped Ether',
+    ),
+    coingecko_asset_platform_id: 'base',
+    rpc_url: 'https://mainnet.base.org',
+    uniswap_subgraph_url:
+      'https://api.studio.thegraph.com/query/48211/uniswap-v3-base/version/latest',
+    maxGasCeiling: 0.2,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
+  },
+  [ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0x740b1c1de25031C31FF4fC9A62f554A55cdC1baD',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0x655C406EBFa14EE2006250925e54ec43AD184f8B',
+    ),
+    // Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+      getAddress('0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'),
+      18,
+      'WAVAX',
+      'Wrapped AVAX',
+    ),
+    coingecko_asset_platform_id: 'avalanche',
+    rpc_url: 'https://api.avax.network/ext/bc/C/rpc',
+    uniswap_subgraph_url:
+      'https://api.thegraph.com/subgraphs/name/lynnshaoyu/uniswap-v3-avax',
+    maxGasCeiling: 0.2,
+    routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
+  },
+  [ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0x884402DfdEf9702dBA7fF8dDdF62AbD6afffb28b',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0x2dc114c0DEf2BC849996756E691FC6e8339649E1',
+    ),
+    // Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID,
+      getAddress('0xdB1fE098232A00A8B81dd6c2A911f2486cb374EE'),
+      18,
+      'WETH',
+      'Wrapped Ether',
+    ),
+    rpc_url: 'https://manta-testnet.calderachain.xyz/http',
+    maxGasCeiling: 0.2,
+    uniswap_subgraph_url:
+      'http://manta-loadb-nvw76zgfhxpo-e5139453fef6a975.elb.us-west-2.amazonaws.com:8000/subgraphs/name/aperture/uniswap-v3',
+    routingApiInfo: {
+      type: 'ROUTING_API',
+      url: 'https://manta-routing.aperture.finance/quote',
+    },
+  },
 };
 
 export function getChainInfo(chainId: ApertureSupportedChainId) {
