@@ -28,11 +28,13 @@ export async function getToken(
   provider: Provider,
   blockNumber?: number,
 ): Promise<Token> {
-  const decimals = await ERC20__factory.connect(
-    tokenAddress,
-    provider,
-  ).decimals({ blockTag: blockNumber });
-  return new Token(chainId, tokenAddress, decimals);
+  const connect = ERC20__factory.connect(tokenAddress, provider);
+  const [decimals, symbol, name] = await Promise.all([
+    connect.decimals({ blockTag: blockNumber }),
+    connect.symbol({ blockTag: blockNumber }),
+    connect.name({ blockTag: blockNumber }),
+  ]);
+  return new Token(chainId, tokenAddress, decimals, symbol, name);
 }
 
 export function getNativeCurrency(
