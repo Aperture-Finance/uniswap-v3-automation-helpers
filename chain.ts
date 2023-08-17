@@ -197,7 +197,6 @@ export const CHAIN_ID_TO_INFO: {
     uniswap_v3_nonfungible_position_manager: getAddress(
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
     ),
-    // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
       '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
@@ -251,9 +250,8 @@ export const CHAIN_ID_TO_INFO: {
     uniswap_v3_nonfungible_position_manager: getAddress(
       '0x7b8A01B39D58278b5DE7e48c8449c9f4F5170613',
     ),
-    // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
+      '0x000000000580f20d53f6d2eC56d12A5Fa75Ac8cF',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.BNB_MAINNET_CHAIN_ID,
