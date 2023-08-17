@@ -173,9 +173,8 @@ export const CHAIN_ID_TO_INFO: {
     uniswap_v3_nonfungible_position_manager: getAddress(
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
     ),
-    // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000Ede6d8D217c60f93191C060747324bca',
+      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.POLYGON_MAINNET_CHAIN_ID,
@@ -200,7 +199,7 @@ export const CHAIN_ID_TO_INFO: {
     ),
     // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000Ede6d8D217c60f93191C060747324bca',
+      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.OPTIMISM_MAINNET_CHAIN_ID,
@@ -225,7 +224,7 @@ export const CHAIN_ID_TO_INFO: {
     ),
     // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000Ede6d8D217c60f93191C060747324bca',
+      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
     // CELO (aka cGLD or Celo Gold) is the native currency on the Celo mainnet, and accessible through the following ERC20 contract.
     // Both share the same view of account balances, i.e. if you transfer via the ERC20 contract, the native currency balance will be updated accordingly, and vice versa.
@@ -254,7 +253,7 @@ export const CHAIN_ID_TO_INFO: {
     ),
     // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000Ede6d8D217c60f93191C060747324bca',
+      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.BNB_MAINNET_CHAIN_ID,
@@ -279,7 +278,7 @@ export const CHAIN_ID_TO_INFO: {
     ),
     // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000Ede6d8D217c60f93191C060747324bca',
+      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.BASE_MAINNET_CHAIN_ID,
@@ -304,7 +303,7 @@ export const CHAIN_ID_TO_INFO: {
     ),
     // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000Ede6d8D217c60f93191C060747324bca',
+      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
@@ -329,7 +328,7 @@ export const CHAIN_ID_TO_INFO: {
     ),
     // Not yet deployed.
     aperture_uniswap_v3_automan: getAddress(
-      '0x00000000Ede6d8D217c60f93191C060747324bca',
+      '0x0000000002F4Dd78bA85fE4B662983816c9Ae95F',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID,
