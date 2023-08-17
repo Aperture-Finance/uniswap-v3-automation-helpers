@@ -27,12 +27,29 @@ export async function getToken(
   chainId: ApertureSupportedChainId,
   provider: Provider,
   blockNumber?: number,
+  showSymbolAndName?: boolean,
 ): Promise<Token> {
-  const decimals = await ERC20__factory.connect(
-    tokenAddress,
-    provider,
-  ).decimals({ blockTag: blockNumber });
-  return new Token(chainId, tokenAddress, decimals);
+  const contract = ERC20__factory.connect(tokenAddress, provider);
+  const opts = { blockTag: blockNumber };
+  if (showSymbolAndName) {
+    try {
+      const [decimals, symbol, name] = await Promise.all([
+        contract.decimals(opts),
+        contract.symbol(opts),
+        contract.name(opts),
+      ]);
+      return new Token(chainId, tokenAddress, decimals, symbol, name);
+    } catch (e) {
+      console.log(
+        `Not able to fetch token info for tokenAddress ${tokenAddress}`,
+        e,
+      );
+      return new Token(chainId, tokenAddress, 18);
+    }
+  } else {
+    const decimals = await contract.decimals({ blockTag: blockNumber });
+    return new Token(chainId, tokenAddress, decimals);
+  }
 }
 
 export function getNativeCurrency(
