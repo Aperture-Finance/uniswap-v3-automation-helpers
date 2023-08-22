@@ -1,10 +1,15 @@
 import {
+  ApertureSupportedChainId,
   INonfungiblePositionManager,
+  IUniV3Automan__factory,
   PermitInfo,
   UniV3Automan,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { BigNumberish } from 'ethers';
+import { Provider } from '@ethersproject/providers';
+import { BigNumberish, Signer } from 'ethers';
 import { splitSignature } from 'ethers/lib/utils';
+
+import { getChainInfo } from './chain';
 
 export type AutomanActionName = 'decreaseLiquidity' | 'reinvest' | 'rebalance';
 export type AutomanFragment = {
@@ -25,6 +30,16 @@ type AutomanCallInfo<T extends AutomanActionName> = {
   functionFragment: GetAutomanFragment<T>;
   params: GetAutomanParams<GetAutomanFragment<T>>;
 };
+
+export function getAutomanContract(
+  chainId: ApertureSupportedChainId,
+  provider: Provider | Signer,
+) {
+  return IUniV3Automan__factory.connect(
+    getChainInfo(chainId).aperture_uniswap_v3_automan,
+    provider,
+  );
+}
 
 export function getAutomanRebalanceCallInfo(
   mintParams: INonfungiblePositionManager.MintParamsStruct,
