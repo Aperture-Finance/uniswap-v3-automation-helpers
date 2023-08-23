@@ -38,10 +38,7 @@ export function computeOperatorApprovalSlot(
         keccak256(
           defaultAbiCoder.encode(
             ['address', 'bytes32'],
-            [
-              owner,
-              '0x0000000000000000000000000000000000000000000000000000000000000005',
-            ],
+            [owner, defaultAbiCoder.encode(['uint256'], [5])],
           ),
         ),
       ],
@@ -61,7 +58,7 @@ export function getNPMApprovalOverrides(
     [uniswap_v3_nonfungible_position_manager]: {
       stateDiff: {
         [computeOperatorApprovalSlot(owner, aperture_uniswap_v3_automan)]:
-          '0x0000000000000000000000000000000000000000000000000000000000000001',
+          defaultAbiCoder.encode(['bool'], [true]),
       },
     },
   };

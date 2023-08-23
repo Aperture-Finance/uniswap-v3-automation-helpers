@@ -31,7 +31,7 @@ import Big from 'big.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BigNumber, Signer } from 'ethers';
-import { getAddress } from 'ethers/lib/utils';
+import { defaultAbiCoder, getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
@@ -891,14 +891,14 @@ describe('State overrides tests', function () {
       '0x0e19f2cddd2e7388039c7ef081490ef6bd2600540ca6caf0f478dc7dfebe509b',
     );
     expect(await hardhatForkProvider.getStorageAt(npm, slot)).to.equal(
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      defaultAbiCoder.encode(['bool'], [false]),
     );
     await getNPM(chainId, impersonatedOwnerSigner).setApprovalForAll(
       automanContract.address,
       true,
     );
     expect(await hardhatForkProvider.getStorageAt(npm, slot)).to.equal(
-      '0x0000000000000000000000000000000000000000000000000000000000000001',
+      defaultAbiCoder.encode(['bool'], [true]),
     );
   });
 
