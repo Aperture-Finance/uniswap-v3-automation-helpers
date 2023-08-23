@@ -64,6 +64,32 @@ export function getNPMApprovalOverrides(
   };
 }
 
+export function getAutomanWhitelistOverrides(
+  chainId: ApertureSupportedChainId,
+) {
+  const { aperture_uniswap_v3_automan, aperture_router_proxy } =
+    getChainInfo(chainId);
+  return {
+    [aperture_uniswap_v3_automan]: {
+      stateDiff: {
+        [keccak256(
+          defaultAbiCoder.encode(
+            ['address', 'bytes32'],
+            [aperture_router_proxy, defaultAbiCoder.encode(['uint256'], [3])],
+          ),
+        )]: defaultAbiCoder.encode(['bool'], [true]),
+      },
+    },
+  };
+}
+
+function symmetricalDifference<T>(arr1: T[], arr2: T[]): T[] {
+  return [
+    ...arr1.filter((item) => !arr2.includes(item)),
+    ...arr2.filter((item) => !arr1.includes(item)),
+  ];
+}
+
 export async function getTokenOverrides(
   chainId: ApertureSupportedChainId,
   provider: JsonRpcProvider,
@@ -118,20 +144,36 @@ export async function getTokenOverrides(
       provider,
     ),
   ]);
+  // tokens on L2 and those with a proxy will have more than one access list entry
+  const filteredToken0BalanceOfAccessList = token0BalanceOfAccessList.filter(
+    ({ address }) => address.toLowerCase() === token0.toLowerCase(),
+  );
+  const filteredToken0AllowanceAccessList = token0AllowanceAccessList.filter(
+    ({ address }) => address.toLowerCase() === token0.toLowerCase(),
+  );
+  const filteredToken1BalanceOfAccessList = token1BalanceOfAccessList.filter(
+    ({ address }) => address.toLowerCase() === token1.toLowerCase(),
+  );
+  const filteredToken1AllowanceAccessList = token1AllowanceAccessList.filter(
+    ({ address }) => address.toLowerCase() === token1.toLowerCase(),
+  );
   if (
-    token0BalanceOfAccessList.length !== 1 ||
-    token0AllowanceAccessList.length !== 1 ||
-    token1BalanceOfAccessList.length !== 1 ||
-    token1AllowanceAccessList.length !== 1
+    filteredToken0BalanceOfAccessList.length !== 1 ||
+    filteredToken0AllowanceAccessList.length !== 1 ||
+    filteredToken1BalanceOfAccessList.length !== 1 ||
+    filteredToken1AllowanceAccessList.length !== 1
   ) {
     throw new Error('Invalid access list length');
   }
-  if (
-    token0BalanceOfAccessList[0].storageKeys.length !== 1 ||
-    token0AllowanceAccessList[0].storageKeys.length !== 1 ||
-    token1BalanceOfAccessList[0].storageKeys.length !== 1 ||
-    token1AllowanceAccessList[0].storageKeys.length !== 1
-  ) {
+  const token0StorageKeys = symmetricalDifference(
+    filteredToken0BalanceOfAccessList[0].storageKeys,
+    filteredToken0AllowanceAccessList[0].storageKeys,
+  );
+  const token1StorageKeys = symmetricalDifference(
+    filteredToken1BalanceOfAccessList[0].storageKeys,
+    filteredToken1AllowanceAccessList[0].storageKeys,
+  );
+  if (token0StorageKeys.length !== 2 || token1StorageKeys.length !== 2) {
     throw new Error('Invalid storage key number');
   }
   const encodedAmount0Desired = defaultAbiCoder.encode(
@@ -146,14 +188,14 @@ export async function getTokenOverrides(
   return {
     [token0]: {
       stateDiff: {
-        [token0BalanceOfAccessList[0].storageKeys[0]]: encodedAmount0Desired,
-        [token0AllowanceAccessList[0].storageKeys[0]]: encodedAmount0Desired,
+        [token0StorageKeys[0]]: encodedAmount0Desired,
+        [token0StorageKeys[1]]: encodedAmount0Desired,
       },
     },
     [token1]: {
       stateDiff: {
-        [token1BalanceOfAccessList[0].storageKeys[0]]: encodedAmount1Desired,
-        [token1AllowanceAccessList[0].storageKeys[0]]: encodedAmount1Desired,
+        [token1StorageKeys[0]]: encodedAmount1Desired,
+        [token1StorageKeys[1]]: encodedAmount1Desired,
       },
     },
   };
@@ -168,6 +210,7 @@ export async function generateAccessList(
     const { accessList } = await provider.send('eth_createAccessList', [
       {
         ...tx,
+        gas: '0x989680',
         gasPrice: '0x0',
       },
       // hexlify the block number.

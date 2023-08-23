@@ -8,10 +8,14 @@ import {
 import { JsonRpcProvider, Provider } from '@ethersproject/providers';
 import { FeeAmount, TICK_SPACINGS, nearestUsableTick } from '@uniswap/v3-sdk';
 import { BigNumberish, BytesLike, Signer } from 'ethers';
-import { splitSignature } from 'ethers/lib/utils';
+import { solidityPack, splitSignature } from 'ethers/lib/utils';
 
 import { getChainInfo } from './chain';
-import { getTokenOverrides, staticCallWithOverrides } from './overrides';
+import {
+  getAutomanWhitelistOverrides,
+  getTokenOverrides,
+  staticCallWithOverrides,
+} from './overrides';
 
 export type AutomanActionName = 'decreaseLiquidity' | 'reinvest' | 'rebalance';
 export type AutomanFragment = {
@@ -46,6 +50,27 @@ export function getAutomanContract(
   return IUniV3Automan__factory.connect(
     getChainInfo(chainId).aperture_uniswap_v3_automan,
     provider,
+  );
+}
+
+export function encodeSwapData(
+  chainId: ApertureSupportedChainId,
+  router: string,
+  approveTarget: string,
+  tokenIn: string,
+  tokenOut: string,
+  amountIn: BigNumberish,
+  data: BytesLike,
+): string {
+  return solidityPack(
+    ['address', 'bytes'],
+    [
+      getChainInfo(chainId).aperture_router_proxy!,
+      solidityPack(
+        ['address', 'address', 'address', 'address', 'uint256', 'bytes'],
+        [router, approveTarget, tokenIn, tokenOut, amountIn, data],
+      ),
+    ],
   );
 }
 
@@ -94,15 +119,18 @@ export async function simulateMintOptimal(
       data,
     },
     // forge token approvals and balances
-    await getTokenOverrides(
-      chainId,
-      provider,
-      from,
-      mintParams.token0,
-      mintParams.token1,
-      mintParams.amount0Desired,
-      mintParams.amount1Desired,
-    ),
+    {
+      ...getAutomanWhitelistOverrides(chainId),
+      ...(await getTokenOverrides(
+        chainId,
+        provider,
+        from,
+        mintParams.token0,
+        mintParams.token1,
+        mintParams.amount0Desired,
+        mintParams.amount1Desired,
+      )),
+    },
     provider,
     blockNumber,
   );
