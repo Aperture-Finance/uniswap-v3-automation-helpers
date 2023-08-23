@@ -1695,36 +1695,10 @@ describe('Pool subgraph query tests', function () {
         readTickToLiquidityMap(tickToLiquidityMap, tickCurrentAligned)!,
       ),
     ).to.equal(true);
-
-    // Fetch current in-range liquidity from subgraph.
-    const { uniswap_subgraph_url } = getChainInfo(chainId);
-    const poolResponse = (
-      await axios.post(uniswap_subgraph_url!, {
-        operationName: 'PoolLiquidity',
-        variables: {},
-        query: `
-          query PoolLiquidity {
-            pool(id: "${Pool.getAddress(
-              pool.token0,
-              pool.token1,
-              pool.fee,
-            ).toLowerCase()}") {
-              liquidity
-            }
-          }`,
-      })
-    ).data.data.pool;
-
-    // Verify that the subgraph is in sync with the node.
-    if (pool.liquidity.toString() === poolResponse.liquidity) {
-      for (const { tick, liquidityActive } of liquidityArr) {
-        if (tickToLiquidityMap.has(tick)) {
-          expect(liquidityActive).to.equal(
-            tickToLiquidityMap.get(tick)!.toString(),
-          );
-        }
-      }
-    }
+    expect(
+      liquidityArr.filter(({ tick }) => tick === tickCurrentAligned)[0]
+        .liquidityActive,
+    ).to.equal(pool.liquidity.toString());
   }
 
   it('Tick liquidity distribution - Ethereum mainnet', async function () {
@@ -1816,6 +1790,6 @@ describe('Routing tests', function () {
       0.01,
       provider,
     );
-    console.log(res);
+    console.log(res.liquidity);
   });
 });
