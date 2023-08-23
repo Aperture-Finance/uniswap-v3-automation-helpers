@@ -121,7 +121,11 @@ export async function optimalMint(
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
   // get swap amounts using the same pool
-  const { amountIn, amountOut, zeroForOne } = await automan.getOptimalSwap(
+  const {
+    amountIn: poolAmountIn,
+    amountOut: poolAmountOut,
+    zeroForOne,
+  } = await automan.getOptimalSwap(
     computePoolAddress(
       getChainInfo(chainId).uniswap_v3_factory,
       token0Amount.currency.address,
@@ -144,18 +148,18 @@ export async function optimalMint(
     ? token1Amount.currency.address
     : token0Amount.currency.address;
   // get a quote from 1inch
-  const { toAmount, tx } = await quote(
+  const { toAmount: routerAmountOut, tx } = await quote(
     chainId,
     src,
     dst,
-    amountIn.toString(),
+    poolAmountIn.toString(),
     aperture_router_proxy,
     slippage,
   );
-  console.log('amountOut', amountOut.toString());
-  console.log('1inch quote', toAmount.toString());
+  console.log('poolAmountOut', poolAmountOut.toString());
+  console.log('1inch quote', routerAmountOut.toString());
   // use the same pool if the quote isn't better
-  if (amountOut.gte(toAmount)) {
+  if (poolAmountOut.gte(routerAmountOut)) {
     return optimalMintPool(chainId, provider, fromAddress, mintParams);
   }
   // const approveTarget = await getApproveTarget(chainId);
@@ -166,7 +170,7 @@ export async function optimalMint(
     approveTarget,
     src,
     dst,
-    amountIn,
+    poolAmountIn,
     tx.data,
   );
   const { liquidity, amount0, amount1 } = await simulateMintOptimal(
