@@ -235,10 +235,10 @@ const CHAIN_ID_TO_INFO: {
     // Uniswap NPM contracts sets WETH9 as the zero address. Aperture Automan contract should be updated to check for this, and skip wrapping/unwraping accordingly.
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.CELO_MAINNET_CHAIN_ID,
-      getAddress('0x8dd4f800851Db9DC219fdFaEB82F8d69e2B13582'),
+      getAddress('0x471EcE3750Da237f93B8E339c536989b8978a438'),
       18,
-      'cGLD',
-      'Celo Gold',
+      'CELO',
+      'Celo native asset',
     ),
     coingecko_asset_platform_id: 'celo',
     rpc_url: 'https://forno.celo.org',

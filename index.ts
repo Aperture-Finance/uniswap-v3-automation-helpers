@@ -1,4 +1,3 @@
-export * from './activity';
 export * from './chain';
 export * from './currency';
 export * from './overrides';
