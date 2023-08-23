@@ -479,6 +479,7 @@ export async function getRebalanceTx(
   const { functionFragment, params } = getAutomanRebalanceCallInfo(
     mintParams,
     existingPositionId,
+    0,
     permitInfo,
   );
   const amounts = await getAmountsWithSlippage(
@@ -499,8 +500,12 @@ export async function getRebalanceTx(
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         functionFragment,
-        getAutomanRebalanceCallInfo(mintParams, existingPositionId, permitInfo)
-          .params,
+        getAutomanRebalanceCallInfo(
+          mintParams,
+          existingPositionId,
+          0,
+          permitInfo,
+        ).params,
       ),
     },
     amounts: amounts,
@@ -536,6 +541,7 @@ export async function getReinvestTx(
     deadlineEpochSeconds,
     0, // Setting this to zero for tx simulation.
     0, // Setting this to zero for tx simulation.
+    0,
     permitInfo,
   );
   const amounts = await getAmountsWithSlippage(
@@ -551,6 +557,7 @@ export async function getReinvestTx(
     deadlineEpochSeconds,
     amounts.amount0Min,
     amounts.amount1Min,
+    0,
     permitInfo,
   );
   return {

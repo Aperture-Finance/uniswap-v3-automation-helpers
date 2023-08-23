@@ -31,6 +31,7 @@ export interface ChainInfo {
   uniswap_v3_factory: string;
   uniswap_v3_nonfungible_position_manager: string;
   aperture_uniswap_v3_automan: string;
+  aperture_router_proxy?: string;
   wrappedNativeCurrency: Token;
   routingApiInfo: ChainSpecificRoutingAPIInfo;
   // Automan maximum allowed gas deduction ceiling.
@@ -49,7 +50,7 @@ export interface ChainInfo {
   whitelistedTokens?: Map<string, Token>;
 }
 
-export const CHAIN_ID_TO_INFO: {
+const CHAIN_ID_TO_INFO: {
   [key in ApertureSupportedChainId]: ChainInfo;
 } = {
   [ApertureSupportedChainId.GOERLI_TESTNET_CHAIN_ID]: {
@@ -143,6 +144,9 @@ export const CHAIN_ID_TO_INFO: {
     ),
     aperture_uniswap_v3_automan: getAddress(
       '0x00000000Ede6d8D217c60f93191C060747324bca',
+    ),
+    aperture_router_proxy: getAddress(
+      '0x0000000095538AD2A95685330eD1268C69753BC2',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
