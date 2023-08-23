@@ -35,6 +35,7 @@ import { defaultAbiCoder, getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
+import { optimalMint } from '../aggregator';
 import { getAutomanReinvestCallInfo, simulateMintOptimal } from '../automan';
 import { getChainInfo } from '../chain';
 import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
@@ -868,23 +869,17 @@ describe('Automan transaction tests', function () {
 });
 
 describe('State overrides tests', function () {
-  let automanContract: UniV3Automan;
-  let impersonatedOwnerSigner: Signer;
-
-  beforeEach(async function () {
+  it('Test computeOperatorApprovalSlot', async function () {
     await resetHardhatNetwork();
-    impersonatedOwnerSigner = await ethers.getImpersonatedSigner(eoa);
+    const impersonatedOwnerSigner = await ethers.getImpersonatedSigner(eoa);
     // Deploy Automan.
-    automanContract = await new UniV3Automan__factory(
+    const automanContract = await new UniV3Automan__factory(
       await ethers.getImpersonatedSigner(WHALE_ADDRESS),
     ).deploy(
       getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
       /*owner=*/ WHALE_ADDRESS,
     );
     await automanContract.deployed();
-  });
-
-  it('Test computeOperatorApprovalSlot', async function () {
     const npm = getChainInfo(chainId).uniswap_v3_nonfungible_position_manager;
     const slot = computeOperatorApprovalSlot(eoa, automanContract.address);
     expect(slot).to.equal(
@@ -955,13 +950,21 @@ describe('State overrides tests', function () {
   });
 
   it('Test simulateMintOptimal', async function () {
+    const blockNumber = 17975698;
     const provider = new ethers.providers.InfuraProvider(chainId);
     const token0 = WBTC_ADDRESS;
     const token1 = WETH_ADDRESS;
     const fee = FeeAmount.MEDIUM;
     const amount0Desired = '100000000';
     const amount1Desired = '1000000000000000000';
-    const pool = await getPool(token0, token1, fee, chainId);
+    const pool = await getPool(
+      token0,
+      token1,
+      fee,
+      chainId,
+      undefined,
+      blockNumber,
+    );
     const mintParams = {
       token0,
       token1,
@@ -987,7 +990,7 @@ describe('State overrides tests', function () {
       eoa,
       mintParams,
       undefined,
-      17975698,
+      blockNumber,
     );
     expect(liquidity.toString()).to.equal('716894157038546');
     expect(amount0.toString()).to.equal('51320357');
@@ -1783,5 +1786,36 @@ describe('Routing tests', function () {
     expect(quote.amountDecimals === '1');
     expect(Number(quote.quoteDecimals)).to.be.greaterThan(0);
     console.log(`1 ETH -> ${quote.quoteDecimals} USDC`);
+  });
+
+  it('Test optimalMint', async function () {
+    const chainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
+    const provider = new ethers.providers.JsonRpcProvider(
+      process.env.ARBITRUM_RPC_URL,
+    );
+    const token0 = '0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f';
+    const token1 = '0x82af49447d8a07e3bd95bd0d56f35241523fbab1';
+    const fee = FeeAmount.MEDIUM;
+    const amount0Desired = '100000000';
+    const amount1Desired = '1000000000000000000';
+    const pool = await getPool(token0, token1, fee, chainId);
+    const res = await optimalMint(
+      chainId,
+      CurrencyAmount.fromRawAmount(pool.token0, amount0Desired),
+      CurrencyAmount.fromRawAmount(pool.token1, amount1Desired),
+      fee,
+      nearestUsableTick(
+        pool.tickCurrent - 10 * pool.tickSpacing,
+        pool.tickSpacing,
+      ),
+      nearestUsableTick(
+        pool.tickCurrent + 10 * pool.tickSpacing,
+        pool.tickSpacing,
+      ),
+      eoa,
+      0.01,
+      provider,
+    );
+    console.log(res);
   });
 });

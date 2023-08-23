@@ -112,15 +112,17 @@ export async function simulateMintOptimal(
     throw new Error('tickLower or tickUpper not valid');
   }
   const data = getAutomanMintOptimalCalldata(mintParams, swapData);
+  const { aperture_uniswap_v3_automan, aperture_router_proxy } =
+    getChainInfo(chainId);
   const returnData = await staticCallWithOverrides(
     {
       from,
-      to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+      to: aperture_uniswap_v3_automan,
       data,
     },
     // forge token approvals and balances
     {
-      ...getAutomanWhitelistOverrides(chainId),
+      ...(aperture_router_proxy ? getAutomanWhitelistOverrides(chainId) : {}),
       ...(await getTokenOverrides(
         chainId,
         provider,

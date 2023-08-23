@@ -1,14 +1,25 @@
-import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
+import {
+  ApertureSupportedChainId,
+  INonfungiblePositionManager,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import axios from 'axios';
 
-import { getAutomanContract, simulateMintOptimal } from './automan';
+import {
+  encodeSwapData,
+  getAutomanContract,
+  simulateMintOptimal,
+} from './automan';
 import { getChainInfo } from './chain';
 import { computePoolAddress } from './pool';
 
-const ApiBaseUrl = 'https://api.1inch.io/v5.2';
+const ApiBaseUrl = 'https://api.1inch.dev';
+const headers = {
+  Authorization: `Bearer ${process.env.ONEINCH_API_KEY}`,
+  Accept: 'application/json',
+};
 
 type SwapParams = {
   src: string;
@@ -19,6 +30,25 @@ type SwapParams = {
   disableEstimate: boolean;
   allowPartialFill: boolean;
 };
+
+function apiRequestUrl(chainId: ApertureSupportedChainId, methodName: string) {
+  return new URL(`/swap/v5.2/${chainId}/${methodName}`, ApiBaseUrl).toString();
+}
+
+export async function getApproveTarget(
+  chainId: ApertureSupportedChainId,
+): Promise<string> {
+  try {
+    return (
+      await axios.get(apiRequestUrl(chainId, 'approve/spender'), {
+        headers,
+      })
+    ).data.address;
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
 
 export async function quote(
   chainId: ApertureSupportedChainId,
@@ -49,7 +79,10 @@ export async function quote(
   };
   try {
     return (
-      await axios.get(new URL(`/${chainId}/quote`, ApiBaseUrl).toString(), {
+      await axios.get(apiRequestUrl(chainId, 'swap'), {
+        headers,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         params: new URLSearchParams(swapParams),
       })
     ).data;
@@ -74,28 +107,6 @@ export async function optimalMint(
     throw new Error('token0 must be sorted before token1');
   }
   const automan = getAutomanContract(chainId, provider);
-  // get swap amounts using the same pool
-  const { amountIn, amountOut, zeroForOne } = await automan.getOptimalSwap(
-    computePoolAddress(
-      getChainInfo(chainId).uniswap_v3_factory,
-      token0Amount.currency.address,
-      token1Amount.currency.address,
-      fee,
-    ),
-    tickLower,
-    tickUpper,
-    token0Amount.quotient.toString(),
-    token1Amount.quotient.toString(),
-  );
-  // get a quote from 1inch
-  const { toAmount } = await quote(
-    chainId,
-    zeroForOne ? token0Amount.currency.address : token1Amount.currency.address,
-    zeroForOne ? token1Amount.currency.address : token0Amount.currency.address,
-    amountIn.toString(),
-    fromAddress, // TODO: use router proxy
-    slippage,
-  );
   const mintParams = {
     token0: token0Amount.currency.address,
     token1: token1Amount.currency.address,
@@ -109,21 +120,88 @@ export async function optimalMint(
     recipient: fromAddress,
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
+  // get swap amounts using the same pool
+  const { amountIn, amountOut, zeroForOne } = await automan.getOptimalSwap(
+    computePoolAddress(
+      getChainInfo(chainId).uniswap_v3_factory,
+      token0Amount.currency.address,
+      token1Amount.currency.address,
+      fee,
+    ),
+    tickLower,
+    tickUpper,
+    token0Amount.quotient.toString(),
+    token1Amount.quotient.toString(),
+  );
+  const { aperture_router_proxy } = getChainInfo(chainId);
+  if (aperture_router_proxy === undefined) {
+    return optimalMintPool(chainId, provider, fromAddress, mintParams);
+  }
+  const src = zeroForOne
+    ? token0Amount.currency.address
+    : token1Amount.currency.address;
+  const dst = zeroForOne
+    ? token1Amount.currency.address
+    : token0Amount.currency.address;
+  // get a quote from 1inch
+  const { toAmount, tx } = await quote(
+    chainId,
+    src,
+    dst,
+    amountIn.toString(),
+    aperture_router_proxy,
+    slippage,
+  );
+  console.log('amountOut', amountOut.toString());
+  console.log('1inch quote', toAmount.toString());
   // use the same pool if the quote isn't better
   if (amountOut.gte(toAmount)) {
-    const { liquidity, amount0, amount1 } = await simulateMintOptimal(
-      chainId,
-      provider,
-      fromAddress,
-      mintParams,
-    );
-    return {
-      amount0,
-      amount1,
-      liquidity,
-      swapData: '0x',
-    };
+    return optimalMintPool(chainId, provider, fromAddress, mintParams);
   }
+  // const approveTarget = await getApproveTarget(chainId);
+  const approveTarget = '0x1111111254eeb25477b68fb85ed929f73a960582';
+  const swapData = encodeSwapData(
+    chainId,
+    tx.to,
+    approveTarget,
+    src,
+    dst,
+    amountIn,
+    tx.data,
+  );
+  const { liquidity, amount0, amount1 } = await simulateMintOptimal(
+    chainId,
+    provider,
+    fromAddress,
+    mintParams,
+    swapData,
+  );
+  return {
+    amount0,
+    amount1,
+    liquidity,
+    swapData,
+  };
+}
+
+async function optimalMintPool(
+  chainId: ApertureSupportedChainId,
+  provider: JsonRpcProvider,
+  fromAddress: string,
+  mintParams: INonfungiblePositionManager.MintParamsStruct,
+) {
+  const { liquidity, amount0, amount1 } = await simulateMintOptimal(
+    chainId,
+    provider,
+    fromAddress,
+    mintParams,
+  );
+  return {
+    amount0,
+    amount1,
+    liquidity,
+    swapData: '0x',
+  };
 }
 
 // export async function optimalRebalance(
