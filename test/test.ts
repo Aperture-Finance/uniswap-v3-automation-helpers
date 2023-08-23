@@ -115,7 +115,6 @@ import {
   getReinvestTx,
   getRemoveLiquidityTx,
 } from '../transaction';
-import { USDC_MAINNET } from '../uniswap-constants';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1735,7 +1734,7 @@ describe('Routing tests', function () {
     const quote = await fetchQuoteFromRoutingApi(
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       'ETH',
-      USDC_MAINNET.address,
+      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC mainnet
       '1000000000000000000',
       'exactIn',
     );
