@@ -1,11 +1,10 @@
 import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { Provider } from '@ethersproject/providers';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import axios from 'axios';
-import {BigNumber, BigNumberish} from 'ethers';
 
-import { getAutomanContract } from './automan';
+import { getAutomanContract, simulateMintOptimal } from './automan';
 import { getChainInfo } from './chain';
 import { computePoolAddress } from './pool';
 
@@ -69,8 +68,11 @@ export async function optimalMint(
   tickUpper: number,
   fromAddress: string,
   slippage: number,
-  provider: Provider,
+  provider: JsonRpcProvider,
 ) {
+  if (!token0Amount.currency.sortsBefore(token1Amount.currency)) {
+    throw new Error('token0 must be sorted before token1');
+  }
   const automan = getAutomanContract(chainId, provider);
   // get swap amounts using the same pool
   const { amountIn, amountOut, zeroForOne } = await automan.getOptimalSwap(
@@ -86,29 +88,48 @@ export async function optimalMint(
     token1Amount.quotient.toString(),
   );
   // get a quote from 1inch
-  const { toAmount, tx } = await quote(
+  const { toAmount } = await quote(
     chainId,
     zeroForOne ? token0Amount.currency.address : token1Amount.currency.address,
     zeroForOne ? token1Amount.currency.address : token0Amount.currency.address,
     amountIn.toString(),
-    fromAddress,
+    fromAddress, // TODO: use router proxy
     slippage,
   );
+  const mintParams = {
+    token0: token0Amount.currency.address,
+    token1: token1Amount.currency.address,
+    fee,
+    tickLower,
+    tickUpper,
+    amount0Desired: token0Amount.quotient.toString(),
+    amount1Desired: token1Amount.quotient.toString(),
+    amount0Min: 0,
+    amount1Min: 0,
+    recipient: fromAddress,
+    deadline: Math.floor(Date.now() / 1000 + 60 * 30),
+  };
   // use the same pool if the quote isn't better
-  if (amountOut.gte(toAmount) {
+  if (amountOut.gte(toAmount)) {
+    const { liquidity, amount0, amount1 } = await simulateMintOptimal(
+      chainId,
+      provider,
+      fromAddress,
+      mintParams,
+    );
     return {
       amount0,
       amount1,
       liquidity,
-      swapData,
-    }
+      swapData: '0x',
+    };
   }
 }
 
-export async function optimalRebalance(
-  chainId: ApertureSupportedChainId,
-  positionId: BigNumberish,
-  newTickLower: number,
-  newTickUpper: number,
-  provider: Provider,
-) {}
+// export async function optimalRebalance(
+//   chainId: ApertureSupportedChainId,
+//   positionId: BigNumberish,
+//   newTickLower: number,
+//   newTickUpper: number,
+//   provider: JsonRpcProvider,
+// ) {}

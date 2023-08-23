@@ -86,7 +86,7 @@ export function getPoolContract(
   tokenB: Token | string,
   fee: FeeAmount,
   chainId: ApertureSupportedChainId,
-  provider: Provider | Signer,
+  provider?: Provider | Signer,
 ) {
   return IUniswapV3Pool__factory.connect(
     computePoolAddress(
@@ -95,7 +95,7 @@ export function getPoolContract(
       tokenB,
       fee,
     ),
-    provider,
+    provider ?? getPublicProvider(chainId),
   );
 }
 
@@ -115,9 +115,10 @@ export async function getPool(
   tokenB: Token | string,
   fee: FeeAmount,
   chainId: ApertureSupportedChainId,
-  provider: Provider,
+  provider?: Provider,
   blockNumber?: number,
 ): Promise<Pool> {
+  provider = provider ?? getPublicProvider(chainId);
   const poolContract = getPoolContract(tokenA, tokenB, fee, chainId, provider);
   const opts = { blockTag: blockNumber };
   // If the specified pool has not been created yet, then the slot0() and liquidity() calls should fail (and throw an error).
