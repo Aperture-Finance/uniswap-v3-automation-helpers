@@ -66,7 +66,7 @@ export function getNPMApprovalOverrides(
 
 export function getAutomanWhitelistOverrides(
   chainId: ApertureSupportedChainId,
-) {
+): StateOverrides {
   const { aperture_uniswap_v3_automan, aperture_router_proxy } =
     getChainInfo(chainId);
   return {
@@ -105,6 +105,7 @@ export async function getTokenOverrides(
     from,
     getChainInfo(chainId).aperture_uniswap_v3_automan,
   ]);
+  // TODO: use an ephemeral contract to get the storage keys
   const [
     token0BalanceOfAccessList,
     token0AllowanceAccessList,

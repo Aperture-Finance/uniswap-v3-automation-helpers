@@ -76,11 +76,11 @@ export function encodeSwapData(
 
 export function getAutomanMintOptimalCalldata(
   mintParams: INonfungiblePositionManager.MintParamsStruct,
-  swapData?: BytesLike,
+  swapData: BytesLike = '0x',
 ): string {
   return IUniV3Automan__factory.createInterface().encodeFunctionData(
     'mintOptimal',
-    [mintParams, swapData ?? '0x'],
+    [mintParams, swapData],
   );
 }
 
@@ -147,13 +147,13 @@ export function getAutomanRebalanceCallInfo(
   existingPositionId: BigNumberish,
   feeBips: BigNumberish = 0,
   permitInfo?: PermitInfo,
-  swapData?: BytesLike,
+  swapData: BytesLike = '0x',
 ): AutomanCallInfo<'rebalance'> {
   if (permitInfo === undefined) {
     return {
       functionFragment:
         'rebalance((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256),uint256,uint256,bytes)',
-      params: [mintParams, existingPositionId, feeBips, swapData ?? '0x'],
+      params: [mintParams, existingPositionId, feeBips, swapData],
     };
   }
   const permitSignature = splitSignature(permitInfo.signature);
@@ -164,7 +164,7 @@ export function getAutomanRebalanceCallInfo(
       mintParams,
       existingPositionId,
       feeBips,
-      swapData ?? '0x',
+      swapData,
       permitInfo.deadline,
       permitSignature.v,
       permitSignature.r,
@@ -180,7 +180,7 @@ export function getAutomanReinvestCallInfo(
   amount1Min: BigNumberish = 0,
   feeBips: BigNumberish = 0,
   permitInfo?: PermitInfo,
-  swapData?: BytesLike,
+  swapData: BytesLike = '0x',
 ): AutomanCallInfo<'reinvest'> {
   const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
     {
@@ -195,7 +195,7 @@ export function getAutomanReinvestCallInfo(
     return {
       functionFragment:
         'reinvest((uint256,uint256,uint256,uint256,uint256,uint256),uint256,bytes)',
-      params: [increaseLiquidityParams, feeBips, swapData ?? '0x'],
+      params: [increaseLiquidityParams, feeBips, swapData],
     };
   }
   const permitSignature = splitSignature(permitInfo.signature);
@@ -205,7 +205,7 @@ export function getAutomanReinvestCallInfo(
     params: [
       increaseLiquidityParams,
       feeBips,
-      swapData ?? '0x',
+      swapData,
       permitInfo.deadline,
       permitSignature.v,
       permitSignature.r,
