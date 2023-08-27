@@ -1692,8 +1692,9 @@ describe('Pool subgraph query tests', function () {
       ),
     ).to.equal(true);
     expect(
-      liquidityArr.filter(({ tick }) => tick === tickCurrentAligned)[0]
-        .liquidityActive,
+      liquidityArr[
+        liquidityArr.findIndex(({ tick }) => tick > tickCurrentAligned) - 1
+      ].liquidityActive,
     ).to.equal(pool.liquidity.toString());
   }
 
