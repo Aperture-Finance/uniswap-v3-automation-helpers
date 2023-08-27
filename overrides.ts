@@ -211,7 +211,7 @@ export async function generateAccessList(
     const { accessList } = await provider.send('eth_createAccessList', [
       {
         ...tx,
-        gas: '0x989680',
+        gas: '0x11E1A300',
         gasPrice: '0x0',
       },
       // hexlify the block number.

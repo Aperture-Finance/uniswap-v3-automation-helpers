@@ -1429,16 +1429,15 @@ describe('Position util tests', function () {
       positionId,
       hardhatForkProvider,
     );
-    const { functionFragment, params } = getAutomanReinvestCallInfo(
+    const { data } = getAutomanReinvestCallInfo(
       positionId,
       Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
     );
-    await UniV3Automan__factory.connect(
-      aperture_uniswap_v3_automan,
-      signer,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-    ).functions[functionFragment](...params);
+    await signer.sendTransaction({
+      from: owner,
+      to: aperture_uniswap_v3_automan,
+      data,
+    });
     const { liquidity: liquidityAfter } = await getPosition(
       chainId,
       positionId,

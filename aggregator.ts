@@ -7,15 +7,16 @@ import { CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import axios from 'axios';
 import Bottleneck from 'bottleneck';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumberish } from 'ethers';
 
 import {
-  encodeSwapData,
+  encodeOptimalSwapData,
   getAutomanContract,
   simulateMintOptimal,
 } from './automan';
 import { getChainInfo } from './chain';
 import { computePoolAddress } from './pool';
+import { PositionDetails } from './position';
 
 const ApiBaseUrl = 'https://api.1inch.dev';
 const headers = {
@@ -147,144 +148,70 @@ export async function optimalMint(
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
   // get swap amounts using the same pool
-  const {
-    amountIn: poolAmountIn,
-    amountOut: poolAmountOut,
-    zeroForOne,
-  } = await automan.getOptimalSwap(
-    computePoolAddress(
-      getChainInfo(chainId).uniswap_v3_factory,
-      token0Amount.currency.address,
-      token1Amount.currency.address,
-      fee,
+  const [
+    { amountIn: poolAmountIn, amountOut: poolAmountOut, zeroForOne },
+    poolEstimate,
+  ] = await Promise.all([
+    automan.getOptimalSwap(
+      computePoolAddress(
+        getChainInfo(chainId).uniswap_v3_factory,
+        token0Amount.currency.address,
+        token1Amount.currency.address,
+        fee,
+      ),
+      tickLower,
+      tickUpper,
+      token0Amount.quotient.toString(),
+      token1Amount.quotient.toString(),
     ),
-    tickLower,
-    tickUpper,
-    token0Amount.quotient.toString(),
-    token1Amount.quotient.toString(),
-  );
+    optimalMintPool(chainId, provider, fromAddress, mintParams),
+  ]);
   const { aperture_router_proxy } = getChainInfo(chainId);
   if (aperture_router_proxy === undefined) {
-    return optimalMintPool(chainId, provider, fromAddress, mintParams);
+    return poolEstimate;
   }
-  const src = zeroForOne
-    ? token0Amount.currency.address
-    : token1Amount.currency.address;
-  const dst = zeroForOne
-    ? token1Amount.currency.address
-    : token0Amount.currency.address;
   // get a quote from 1inch
-  const initialQuote = await quote(
+  const { toAmount: routerAmountOut, tx } = await quote(
     chainId,
-    src,
-    dst,
+    zeroForOne ? token0Amount.currency.address : token1Amount.currency.address,
+    zeroForOne ? token1Amount.currency.address : token0Amount.currency.address,
     poolAmountIn.toString(),
     aperture_router_proxy,
     slippage,
   );
   console.log('poolAmountOut', poolAmountOut.toString());
-  console.log('1inch quote', initialQuote.toAmount.toString());
-  const poolEstimate = await optimalMintPool(
+  console.log('1inch quote', routerAmountOut.toString());
+  console.log(`poolEstimate liquidity: ${poolEstimate.liquidity.toString()}`);
+  // use the same pool if the quote isn't better
+  if (poolAmountOut.gte(routerAmountOut)) {
+    return poolEstimate;
+  }
+  const approveTarget = await getApproveTarget(chainId);
+  const swapData = encodeOptimalSwapData(
+    chainId,
+    token0Amount.currency.address,
+    token1Amount.currency.address,
+    fee,
+    tickLower,
+    tickUpper,
+    zeroForOne,
+    approveTarget,
+    tx.to,
+    tx.data,
+  );
+  const { liquidity, amount0, amount1 } = await simulateMintOptimal(
     chainId,
     provider,
     fromAddress,
     mintParams,
-  );
-  console.log(`poolEstimate liquidity: ${poolEstimate.liquidity.toString()}`);
-  // use the same pool if the quote isn't better
-  if (poolAmountOut.gte(initialQuote.toAmount)) {
-    return poolEstimate;
-  }
-  // const approveTarget = await getApproveTarget(chainId);
-  const approveTarget = '0x1111111254eeb25477b68fb85ed929f73a960582';
-  // maximize the liquidity minted using 1inch and binary search
-  let low = poolAmountIn.mul(8).div(10); // 0.8 * poolAmountIn
-  let high = poolAmountIn.mul(12).div(10); // 1.2 * poolAmountIn
-  let optimalSimulationResult;
-  let optimalSwapData;
-  let maxLiquidity = BigNumber.from(0);
-  // 0.001 of the token unit
-  const tolerance = BigNumber.from(10)
-    .pow(
-      zeroForOne
-        ? token0Amount.currency.decimals
-        : token1Amount.currency.decimals,
-    )
-    .div(1000);
-  const maxIterations = 7;
-
-  for (let i = 0; i < maxIterations && high.sub(low).gt(tolerance); i++) {
-    const mid = low.add(high).div(2);
-    // Get 1inch quote for this mid value
-    const { swapData, simulationResult } = await searchStep(
-      chainId,
-      mintParams,
-      src,
-      dst,
-      mid,
-      approveTarget,
-      fromAddress,
-      slippage,
-      provider,
-    );
-    console.log(
-      `liquidity: ${simulationResult.liquidity.toString()}, low: ${low.toString()}, high: ${high.toString()}, mid: ${mid.toString()}`,
-    );
-    if (simulationResult.liquidity.gt(maxLiquidity)) {
-      maxLiquidity = simulationResult.liquidity;
-      optimalSwapData = swapData;
-      optimalSimulationResult = simulationResult;
-      low = mid.add(1);
-    } else {
-      high = mid.sub(1);
-    }
-  }
-  return {
-    amount0: optimalSimulationResult!.amount0,
-    amount1: optimalSimulationResult!.amount1,
-    liquidity: optimalSimulationResult!.liquidity,
-    swapData: optimalSwapData,
-  };
-}
-
-async function searchStep(
-  chainId: ApertureSupportedChainId,
-  mintParams: INonfungiblePositionManager.MintParamsStruct,
-  src: string,
-  dst: string,
-  amountIn: BigNumberish,
-  approveTarget: string,
-  from: string,
-  slippage: number,
-  provider: JsonRpcProvider,
-) {
-  const quoteResult = await quote(
-    chainId,
-    src,
-    dst,
-    amountIn.toString(),
-    getChainInfo(chainId).aperture_router_proxy!,
-    slippage,
-  );
-  const swapData = encodeSwapData(
-    chainId,
-    quoteResult.tx.to,
-    approveTarget,
-    src,
-    dst,
-    amountIn,
-    quoteResult.tx.data,
-  );
-  const simulationResult = await simulateMintOptimal(
-    chainId,
-    provider,
-    from,
-    mintParams,
     swapData,
   );
+  console.log(`1inch liquidity: ${liquidity.toString()}`);
   return {
+    amount0,
+    amount1,
+    liquidity,
     swapData,
-    simulationResult,
   };
 }
 
@@ -308,10 +235,12 @@ async function optimalMintPool(
   };
 }
 
-// export async function optimalRebalance(
-//   chainId: ApertureSupportedChainId,
-//   positionId: BigNumberish,
-//   newTickLower: number,
-//   newTickUpper: number,
-//   provider: JsonRpcProvider,
-// ) {}
+export async function optimalRebalance(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  newTickLower: number,
+  newTickUpper: number,
+  provider: JsonRpcProvider,
+) {
+  await PositionDetails.fromPositionId(chainId, positionId, provider);
+}
