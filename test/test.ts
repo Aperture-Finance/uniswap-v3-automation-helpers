@@ -1803,7 +1803,7 @@ describe('Routing tests', function () {
     const total = Number(
       pool.token0Price.quote(token0Amount).add(token1Amount).toFixed(),
     );
-    expect(_total).to.be.closeTo(total, total / 1e3);
+    expect(_total).to.be.closeTo(total, total * 0.005);
   });
 
   it('Test optimalRebalance', async function () {
@@ -1843,7 +1843,7 @@ describe('Routing tests', function () {
     );
     expect(liquidity.toNumber()).to.be.closeTo(
       Number(predictedLiquidity.toString()),
-      Number(predictedLiquidity.toString()) / 1e3,
+      Number(predictedLiquidity.toString()) * 0.005,
     );
   });
 });

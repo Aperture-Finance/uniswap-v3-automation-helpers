@@ -150,7 +150,7 @@ const CHAIN_ID_TO_INFO: {
       '0x0000000095538AD2A95685330eD1268C69753BC2',
     ),
     optimal_swap_router: getAddress(
-      '0x0000000095538AD2A95685330eD1268C69753BC2',
+      '0x00000000063E0E1E06A0FE61e16bE8Bdec1BEA31',
     ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,

@@ -148,7 +148,7 @@ export async function optimalMint(
     recipient: fromAddress,
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
-  if (getChainInfo(chainId).aperture_router_proxy === undefined) {
+  if (getChainInfo(chainId).optimal_swap_router === undefined) {
     return await optimalMintPool(chainId, provider, fromAddress, mintParams);
   }
   const [poolEstimate, routerEstimate] = await Promise.all([
@@ -190,7 +190,7 @@ async function optimalMintRouter(
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   slippage: number,
 ) {
-  const { aperture_router_proxy, uniswap_v3_factory } = getChainInfo(chainId);
+  const { optimal_swap_router, uniswap_v3_factory } = getChainInfo(chainId);
   const automan = getAutomanContract(chainId, provider);
   const approveTarget = await getApproveTarget(chainId);
   // get swap amounts using the same pool
@@ -212,7 +212,7 @@ async function optimalMintRouter(
     zeroForOne ? mintParams.token0 : mintParams.token1,
     zeroForOne ? mintParams.token1 : mintParams.token0,
     poolAmountIn.toString(),
-    aperture_router_proxy!,
+    optimal_swap_router!,
     slippage,
   );
   const swapData = encodeOptimalSwapData(
