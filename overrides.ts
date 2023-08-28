@@ -66,16 +66,15 @@ export function getNPMApprovalOverrides(
 
 export function getAutomanWhitelistOverrides(
   chainId: ApertureSupportedChainId,
-) {
-  const { aperture_uniswap_v3_automan, aperture_router_proxy } =
-    getChainInfo(chainId);
+  routerToWhitelist: string,
+): StateOverrides {
   return {
-    [aperture_uniswap_v3_automan]: {
+    [getChainInfo(chainId).aperture_uniswap_v3_automan]: {
       stateDiff: {
         [keccak256(
           defaultAbiCoder.encode(
             ['address', 'bytes32'],
-            [aperture_router_proxy, defaultAbiCoder.encode(['uint256'], [3])],
+            [routerToWhitelist, defaultAbiCoder.encode(['uint256'], [3])],
           ),
         )]: defaultAbiCoder.encode(['bool'], [true]),
       },
@@ -165,6 +164,7 @@ export async function getTokenOverrides(
   ) {
     throw new Error('Invalid access list length');
   }
+  // get rid of the storage key of implementation address
   const token0StorageKeys = symmetricalDifference(
     filteredToken0BalanceOfAccessList[0].storageKeys,
     filteredToken0AllowanceAccessList[0].storageKeys,
@@ -210,7 +210,7 @@ export async function generateAccessList(
     const { accessList } = await provider.send('eth_createAccessList', [
       {
         ...tx,
-        gas: '0x989680',
+        gas: '0x11E1A300',
         gasPrice: '0x0',
       },
       // hexlify the block number.

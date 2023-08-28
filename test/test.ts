@@ -34,7 +34,7 @@ import { defaultAbiCoder, getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
-import { optimalMint } from '../aggregator';
+import { optimalMint, optimalRebalance } from '../aggregator';
 import { getAutomanReinvestCallInfo, simulateMintOptimal } from '../automan';
 import { getChainInfo } from '../chain';
 import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
@@ -997,8 +997,11 @@ describe('State overrides tests', function () {
 });
 
 describe('Position util tests', function () {
+  let inRangePosition: Position;
+
   beforeEach(async function () {
     await resetHardhatNetwork();
+    inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
   });
 
   it('Position approval', async function () {
@@ -1121,7 +1124,6 @@ describe('Position util tests', function () {
   });
 
   it('Position in-range', async function () {
-    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     const outOfRangePosition = await getPosition(
       chainId,
       7,
@@ -1139,10 +1141,9 @@ describe('Position util tests', function () {
   });
 
   it('Token value proportion to price conversion', async function () {
-    const position = await getPosition(chainId, 4, hardhatForkProvider);
     const price = getRawRelativePriceFromTokenValueProportion(
-      position.tickLower,
-      position.tickUpper,
+      inRangePosition.tickLower,
+      inRangePosition.tickUpper,
       new Big('0.3'),
     );
     expect(price.toString()).to.equal(
@@ -1150,24 +1151,24 @@ describe('Position util tests', function () {
     );
     expect(
       getRawRelativePriceFromTokenValueProportion(
-        position.tickLower,
-        position.tickUpper,
+        inRangePosition.tickLower,
+        inRangePosition.tickUpper,
         new Big('0'),
       ).toString(),
     ).to.equal(
-      new Big(TickMath.getSqrtRatioAtTick(position.tickUpper).toString())
+      new Big(TickMath.getSqrtRatioAtTick(inRangePosition.tickUpper).toString())
         .pow(2)
         .div(Q192)
         .toString(),
     );
     expect(
       getRawRelativePriceFromTokenValueProportion(
-        position.tickLower,
-        position.tickUpper,
+        inRangePosition.tickLower,
+        inRangePosition.tickUpper,
         new Big('1'),
       ).toString(),
     ).to.equal(
-      new Big(TickMath.getSqrtRatioAtTick(position.tickLower).toString())
+      new Big(TickMath.getSqrtRatioAtTick(inRangePosition.tickLower).toString())
         .pow(2)
         .div(Q192)
         .toString(),
@@ -1175,8 +1176,8 @@ describe('Position util tests', function () {
 
     // Verify that the calculated price indeed corresponds to ~30% of the position value in token0.
     const token0ValueProportion = getTokenValueProportionFromPriceRatio(
-      position.tickLower,
-      position.tickUpper,
+      inRangePosition.tickLower,
+      inRangePosition.tickUpper,
       price,
     );
     expect(token0ValueProportion.toFixed(30)).to.equal(
@@ -1185,8 +1186,8 @@ describe('Position util tests', function () {
 
     // Verify that price condition is generated correctly.
     const condition = generatePriceConditionFromTokenValueProportion(
-      position.tickLower,
-      position.tickUpper,
+      inRangePosition.tickLower,
+      inRangePosition.tickUpper,
       false,
       new Big('0.3'),
       /*durationSec=*/ 7200,
@@ -1200,8 +1201,8 @@ describe('Position util tests', function () {
     });
     expect(
       generatePriceConditionFromTokenValueProportion(
-        position.tickLower,
-        position.tickUpper,
+        inRangePosition.tickLower,
+        inRangePosition.tickUpper,
         true,
         new Big('0.95'),
         /*durationSec=*/ undefined,
@@ -1229,7 +1230,6 @@ describe('Position util tests', function () {
   });
 
   it('Test getRebalancedPosition', async function () {
-    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     // rebalance to an out of range position
     const newTickLower = inRangePosition.tickUpper;
     const newTickUpper = newTickLower + 10 * TICK_SPACINGS[FeeAmount.MEDIUM];
@@ -1260,7 +1260,6 @@ describe('Position util tests', function () {
   });
 
   it('Test getPositionAtPrice', async function () {
-    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     // corresponds to tick -870686
     const smallPrice = new Big('1.5434597458370203830544e-38');
     const position = new Position({
@@ -1299,7 +1298,6 @@ describe('Position util tests', function () {
   });
 
   it('Test projectRebalancedPositionAtPrice', async function () {
-    const inRangePosition = await getPosition(chainId, 4, hardhatForkProvider);
     const priceUpper = tickToPrice(
       inRangePosition.pool.token0,
       inRangePosition.pool.token1,
@@ -1412,7 +1410,7 @@ describe('Position util tests', function () {
     const owner = await npm.ownerOf(positionId, opts);
     expect(await npm.isApprovedForAll(owner, aperture_uniswap_v3_automan, opts))
       .to.be.false;
-    const reinvested = await getReinvestedPosition(
+    const { liquidity } = await getReinvestedPosition(
       chainId,
       positionId,
       provider,
@@ -1431,23 +1429,22 @@ describe('Position util tests', function () {
       positionId,
       hardhatForkProvider,
     );
-    const { functionFragment, params } = getAutomanReinvestCallInfo(
+    const { data } = getAutomanReinvestCallInfo(
       positionId,
       Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
     );
-    await UniV3Automan__factory.connect(
-      aperture_uniswap_v3_automan,
-      signer,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-    ).functions[functionFragment](...params);
+    await signer.sendTransaction({
+      from: owner,
+      to: aperture_uniswap_v3_automan,
+      data,
+    });
     const { liquidity: liquidityAfter } = await getPosition(
       chainId,
       positionId,
       hardhatForkProvider,
     );
     expect(JSBI.subtract(liquidityAfter, liquidityBefore).toString()).to.equal(
-      reinvested.liquidity.toString(),
+      liquidity.toString(),
     );
   });
 });
@@ -1694,8 +1691,9 @@ describe('Pool subgraph query tests', function () {
       ),
     ).to.equal(true);
     expect(
-      liquidityArr.filter(({ tick }) => tick === tickCurrentAligned)[0]
-        .liquidityActive,
+      liquidityArr[
+        liquidityArr.findIndex(({ tick }) => tick > tickCurrentAligned) - 1
+      ].liquidityActive,
     ).to.equal(pool.liquidity.toString());
   }
 
@@ -1768,26 +1766,84 @@ describe('Routing tests', function () {
     const token0 = '0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f';
     const token1 = '0x82af49447d8a07e3bd95bd0d56f35241523fbab1';
     const fee = FeeAmount.MEDIUM;
-    const amount0Desired = '100000000';
-    const amount1Desired = '1000000000000000000';
     const pool = await getPool(token0, token1, fee, chainId);
-    const res = await optimalMint(
+    const token0Amount = CurrencyAmount.fromRawAmount(
+      pool.token0,
+      '1000000000',
+    );
+    const token1Amount = CurrencyAmount.fromRawAmount(
+      pool.token1,
+      '1000000000000000000',
+    );
+    const tickLower = nearestUsableTick(
+      pool.tickCurrent - 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const tickUpper = nearestUsableTick(
+      pool.tickCurrent + 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const { amount0, amount1 } = await optimalMint(
       chainId,
-      CurrencyAmount.fromRawAmount(pool.token0, amount0Desired),
-      CurrencyAmount.fromRawAmount(pool.token1, amount1Desired),
+      token0Amount,
+      token1Amount,
       fee,
-      nearestUsableTick(
-        pool.tickCurrent - 10 * pool.tickSpacing,
-        pool.tickSpacing,
-      ),
-      nearestUsableTick(
-        pool.tickCurrent + 10 * pool.tickSpacing,
-        pool.tickSpacing,
-      ),
+      tickLower,
+      tickUpper,
       eoa,
-      0.01,
+      0.1,
       provider,
     );
-    console.log(res.liquidity);
+    const _total = Number(
+      pool.token0Price
+        .quote(CurrencyAmount.fromRawAmount(pool.token0, amount0.toString()))
+        .add(CurrencyAmount.fromRawAmount(pool.token1, amount1.toString()))
+        .toFixed(),
+    );
+    const total = Number(
+      pool.token0Price.quote(token0Amount).add(token1Amount).toFixed(),
+    );
+    expect(_total).to.be.closeTo(total, total * 0.005);
+  });
+
+  it('Test optimalRebalance', async function () {
+    const chainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
+    const provider = new ethers.providers.JsonRpcProvider(
+      process.env.ARBITRUM_RPC_URL,
+    );
+    const tokenId = 726230;
+    const { pool, position } = await PositionDetails.fromPositionId(
+      chainId,
+      tokenId,
+      provider,
+    );
+    const tickLower = nearestUsableTick(
+      pool.tickCurrent - 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const tickUpper = nearestUsableTick(
+      pool.tickCurrent + 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const { liquidity } = await optimalRebalance(
+      chainId,
+      tokenId,
+      tickLower,
+      tickUpper,
+      0,
+      true,
+      await getNPM(chainId, provider).ownerOf(tokenId),
+      0.1,
+      provider,
+    );
+    const { liquidity: predictedLiquidity } = getRebalancedPosition(
+      position,
+      tickLower,
+      tickUpper,
+    );
+    expect(liquidity.toNumber()).to.be.closeTo(
+      Number(predictedLiquidity.toString()),
+      Number(predictedLiquidity.toString()) * 0.005,
+    );
   });
 });

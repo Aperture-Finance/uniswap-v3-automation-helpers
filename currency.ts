@@ -48,7 +48,7 @@ export async function getToken(
       return new Token(chainId, tokenAddress, 18);
     }
   } else {
-    const decimals = await contract.decimals({ blockTag: blockNumber });
+    const decimals = await contract.decimals(opts);
     return new Token(chainId, tokenAddress, decimals);
   }
 }

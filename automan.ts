@@ -12,12 +12,16 @@ import { solidityPack, splitSignature } from 'ethers/lib/utils';
 
 import { getChainInfo } from './chain';
 import {
-  getAutomanWhitelistOverrides,
+  getNPMApprovalOverrides,
   getTokenOverrides,
   staticCallWithOverrides,
 } from './overrides';
 
-export type AutomanActionName = 'decreaseLiquidity' | 'reinvest' | 'rebalance';
+export type AutomanActionName =
+  | 'decreaseLiquidity'
+  | 'reinvest'
+  | 'rebalance'
+  | 'removeLiquidity(';
 export type AutomanFragment = {
   [K in keyof UniV3Automan['functions']]: K extends `${AutomanActionName}${string}`
     ? K
@@ -34,13 +38,21 @@ export type GetAutomanParams<T extends AutomanFragment> = Parameters<
 
 type AutomanCallInfo<T extends AutomanActionName> = {
   functionFragment: GetAutomanFragment<T>;
-  params: GetAutomanParams<GetAutomanFragment<T>>;
+  data: string;
 };
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 type MintReturnType = UnwrapPromise<
   ReturnType<UniV3Automan['callStatic']['mintOptimal']>
+>;
+
+type RemoveLiquidityReturnType = UnwrapPromise<
+  ReturnType<UniV3Automan['callStatic'][GetAutomanFragment<'removeLiquidity('>]>
+>;
+
+type RebalanceReturnType = UnwrapPromise<
+  ReturnType<UniV3Automan['callStatic'][GetAutomanFragment<'rebalance'>]>
 >;
 
 export function getAutomanContract(
@@ -74,14 +86,222 @@ export function encodeSwapData(
   );
 }
 
-export function getAutomanMintOptimalCalldata(
-  mintParams: INonfungiblePositionManager.MintParamsStruct,
-  swapData?: BytesLike,
+export function encodeOptimalSwapData(
+  chainId: ApertureSupportedChainId,
+  token0: string,
+  token1: string,
+  fee: FeeAmount,
+  tickLower: number,
+  tickUpper: number,
+  zeroForOne: boolean,
+  approveTarget: string,
+  router: string,
+  data: BytesLike,
 ): string {
-  return IUniV3Automan__factory.createInterface().encodeFunctionData(
-    'mintOptimal',
-    [mintParams, swapData ?? '0x'],
+  return solidityPack(
+    ['address', 'bytes'],
+    [
+      getChainInfo(chainId).optimal_swap_router!,
+      solidityPack(
+        // prettier-ignore
+        ['address', 'address', 'uint24', 'int24', 'int24', 'bool', 'address', 'address', 'bytes'],
+        // prettier-ignore
+        [token0, token1, fee, tickLower, tickUpper, zeroForOne, approveTarget, router, data],
+      ),
+    ],
   );
+}
+
+export function getAutomanDecreaseLiquidityCallInfo(
+  positionId: BigNumberish,
+  liquidity: BigNumberish,
+  deadline: BigNumberish,
+  amount0Min: BigNumberish = 0,
+  amount1Min: BigNumberish = 0,
+  feeBips: BigNumberish = 0,
+  permitInfo?: PermitInfo,
+): AutomanCallInfo<'decreaseLiquidity'> {
+  const params: INonfungiblePositionManager.DecreaseLiquidityParamsStruct = {
+    tokenId: positionId,
+    liquidity,
+    amount0Min,
+    amount1Min,
+    deadline,
+  };
+  if (permitInfo === undefined) {
+    const functionFragment =
+      'decreaseLiquidity((uint256,uint128,uint256,uint256,uint256),uint256)';
+    return {
+      functionFragment,
+      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+        functionFragment,
+        [params, feeBips],
+      ),
+    };
+  }
+  const permitSignature = splitSignature(permitInfo.signature);
+  const functionFragment =
+    'decreaseLiquidity((uint256,uint128,uint256,uint256,uint256),uint256,uint256,uint8,bytes32,bytes32)';
+  return {
+    functionFragment,
+    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      functionFragment,
+      [
+        params,
+        feeBips,
+        permitInfo.deadline,
+        permitSignature.v,
+        permitSignature.r,
+        permitSignature.s,
+      ],
+    ),
+  };
+}
+
+export function getAutomanRebalanceCallInfo(
+  mintParams: INonfungiblePositionManager.MintParamsStruct,
+  existingPositionId: BigNumberish,
+  feeBips: BigNumberish = 0,
+  permitInfo?: PermitInfo,
+  swapData: BytesLike = '0x',
+): AutomanCallInfo<'rebalance'> {
+  if (permitInfo === undefined) {
+    const functionFragment =
+      'rebalance((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256),uint256,uint256,bytes)';
+    return {
+      functionFragment,
+      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+        functionFragment,
+        [mintParams, existingPositionId, feeBips, swapData],
+      ),
+    };
+  }
+  const permitSignature = splitSignature(permitInfo.signature);
+  const functionFragment =
+    'rebalance((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256),uint256,uint256,bytes,uint256,uint8,bytes32,bytes32)';
+  return {
+    functionFragment,
+    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      functionFragment,
+      [
+        mintParams,
+        existingPositionId,
+        feeBips,
+        swapData,
+        permitInfo.deadline,
+        permitSignature.v,
+        permitSignature.r,
+        permitSignature.s,
+      ],
+    ),
+  };
+}
+
+export function getAutomanReinvestCallInfo(
+  positionId: BigNumberish,
+  deadline: BigNumberish,
+  amount0Min: BigNumberish = 0,
+  amount1Min: BigNumberish = 0,
+  feeBips: BigNumberish = 0,
+  permitInfo?: PermitInfo,
+  swapData: BytesLike = '0x',
+): AutomanCallInfo<'reinvest'> {
+  const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
+    {
+      tokenId: positionId,
+      amount0Desired: 0, // Param value ignored by Automan.
+      amount1Desired: 0, // Param value ignored by Automan.
+      amount0Min,
+      amount1Min,
+      deadline,
+    };
+  if (permitInfo === undefined) {
+    const functionFragment =
+      'reinvest((uint256,uint256,uint256,uint256,uint256,uint256),uint256,bytes)';
+    return {
+      functionFragment,
+      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+        functionFragment,
+        [increaseLiquidityParams, feeBips, swapData],
+      ),
+    };
+  }
+  const permitSignature = splitSignature(permitInfo.signature);
+  const functionFragment =
+    'reinvest((uint256,uint256,uint256,uint256,uint256,uint256),uint256,bytes,uint256,uint8,bytes32,bytes32)';
+  return {
+    functionFragment,
+    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      functionFragment,
+      [
+        increaseLiquidityParams,
+        feeBips,
+        swapData,
+        permitInfo.deadline,
+        permitSignature.v,
+        permitSignature.r,
+        permitSignature.s,
+      ],
+    ),
+  };
+}
+
+export function getAutomanRemoveLiquidityCallInfo(
+  tokenId: BigNumberish,
+  deadline: BigNumberish,
+  amount0Min: BigNumberish = 0,
+  amount1Min: BigNumberish = 0,
+  feeBips: BigNumberish = 0,
+  permitInfo?: PermitInfo,
+): AutomanCallInfo<'removeLiquidity('> {
+  const decreaseLiquidityParams: INonfungiblePositionManager.DecreaseLiquidityParamsStruct =
+    {
+      tokenId,
+      liquidity: 0, // Param value ignored by Automan.
+      amount0Min,
+      amount1Min,
+      deadline,
+    };
+  if (permitInfo === undefined) {
+    const functionFragment =
+      'removeLiquidity((uint256,uint128,uint256,uint256,uint256),uint256)';
+    return {
+      functionFragment,
+      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+        functionFragment,
+        [decreaseLiquidityParams, feeBips],
+      ),
+    };
+  }
+  const permitSignature = splitSignature(permitInfo.signature);
+  const functionFragment =
+    'removeLiquidity((uint256,uint128,uint256,uint256,uint256),uint256,uint256,uint8,bytes32,bytes32)';
+  return {
+    functionFragment,
+    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      functionFragment,
+      [
+        decreaseLiquidityParams,
+        feeBips,
+        permitInfo.deadline,
+        permitSignature.v,
+        permitSignature.r,
+        permitSignature.s,
+      ],
+    ),
+  };
+}
+
+function checkTicks(mintParams: INonfungiblePositionManager.MintParamsStruct) {
+  const tickLower = Number(mintParams.tickLower.toString());
+  const tickUpper = Number(mintParams.tickUpper.toString());
+  const fee = mintParams.fee as FeeAmount;
+  if (
+    tickLower !== nearestUsableTick(tickLower, TICK_SPACINGS[fee]) ||
+    tickUpper !== nearestUsableTick(tickUpper, TICK_SPACINGS[fee])
+  ) {
+    throw new Error('tickLower or tickUpper not valid');
+  }
 }
 
 /**
@@ -99,117 +319,106 @@ export async function simulateMintOptimal(
   provider: JsonRpcProvider,
   from: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
-  swapData?: BytesLike,
+  swapData: BytesLike = '0x',
   blockNumber?: number,
 ): Promise<MintReturnType> {
-  const tickLower = Number(mintParams.tickLower.toString());
-  const tickUpper = Number(mintParams.tickUpper.toString());
-  const fee = mintParams.fee as FeeAmount;
-  if (
-    tickLower !== nearestUsableTick(tickLower, TICK_SPACINGS[fee]) ||
-    tickUpper !== nearestUsableTick(tickUpper, TICK_SPACINGS[fee])
-  ) {
-    throw new Error('tickLower or tickUpper not valid');
-  }
-  const data = getAutomanMintOptimalCalldata(mintParams, swapData);
-  const { aperture_uniswap_v3_automan, aperture_router_proxy } =
-    getChainInfo(chainId);
+  checkTicks(mintParams);
+  const data = IUniV3Automan__factory.createInterface().encodeFunctionData(
+    'mintOptimal',
+    [mintParams, swapData],
+  );
   const returnData = await staticCallWithOverrides(
     {
       from,
-      to: aperture_uniswap_v3_automan,
+      to: getChainInfo(chainId).aperture_uniswap_v3_automan,
       data,
     },
     // forge token approvals and balances
-    {
-      ...(aperture_router_proxy ? getAutomanWhitelistOverrides(chainId) : {}),
-      ...(await getTokenOverrides(
-        chainId,
-        provider,
-        from,
-        mintParams.token0,
-        mintParams.token1,
-        mintParams.amount0Desired,
-        mintParams.amount1Desired,
-      )),
-    },
+    await getTokenOverrides(
+      chainId,
+      provider,
+      from,
+      mintParams.token0,
+      mintParams.token1,
+      mintParams.amount0Desired,
+      mintParams.amount1Desired,
+    ),
     provider,
     blockNumber,
   );
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     'mintOptimal',
     returnData,
-  ) as unknown as MintReturnType;
+  ) as MintReturnType;
 }
 
-export function getAutomanRebalanceCallInfo(
-  mintParams: INonfungiblePositionManager.MintParamsStruct,
-  existingPositionId: BigNumberish,
-  feeBips: BigNumberish = 0,
-  permitInfo?: PermitInfo,
-  swapData?: BytesLike,
-): AutomanCallInfo<'rebalance'> {
-  if (permitInfo === undefined) {
-    return {
-      functionFragment:
-        'rebalance((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256),uint256,uint256,bytes)',
-      params: [mintParams, existingPositionId, feeBips, swapData ?? '0x'],
-    };
-  }
-  const permitSignature = splitSignature(permitInfo.signature);
-  return {
-    functionFragment:
-      'rebalance((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256),uint256,uint256,bytes,uint256,uint8,bytes32,bytes32)',
-    params: [
-      mintParams,
-      existingPositionId,
-      feeBips,
-      swapData ?? '0x',
-      permitInfo.deadline,
-      permitSignature.v,
-      permitSignature.r,
-      permitSignature.s,
-    ],
-  };
-}
-
-export function getAutomanReinvestCallInfo(
-  positionId: BigNumberish,
-  deadline: BigNumberish,
+export async function simulateRemoveLiquidity(
+  chainId: ApertureSupportedChainId,
+  provider: JsonRpcProvider,
+  from: string,
+  tokenId: BigNumberish,
   amount0Min: BigNumberish = 0,
   amount1Min: BigNumberish = 0,
   feeBips: BigNumberish = 0,
-  permitInfo?: PermitInfo,
-  swapData?: BytesLike,
-): AutomanCallInfo<'reinvest'> {
-  const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
+  blockNumber?: number,
+): Promise<RemoveLiquidityReturnType> {
+  const { functionFragment, data } = getAutomanRemoveLiquidityCallInfo(
+    tokenId,
+    Math.floor(Date.now() / 1000 + 60 * 30),
+    amount0Min,
+    amount1Min,
+    feeBips,
+  );
+  const returnData = await staticCallWithOverrides(
     {
-      tokenId: positionId,
-      amount0Desired: 0, // Param value ignored by Automan.
-      amount1Desired: 0, // Param value ignored by Automan.
-      amount0Min,
-      amount1Min,
-      deadline,
-    };
-  if (permitInfo === undefined) {
-    return {
-      functionFragment:
-        'reinvest((uint256,uint256,uint256,uint256,uint256,uint256),uint256,bytes)',
-      params: [increaseLiquidityParams, feeBips, swapData ?? '0x'],
-    };
-  }
-  const permitSignature = splitSignature(permitInfo.signature);
-  return {
-    functionFragment:
-      'reinvest((uint256,uint256,uint256,uint256,uint256,uint256),uint256,bytes,uint256,uint8,bytes32,bytes32)',
-    params: [
-      increaseLiquidityParams,
-      feeBips,
-      swapData ?? '0x',
-      permitInfo.deadline,
-      permitSignature.v,
-      permitSignature.r,
-      permitSignature.s,
-    ],
-  };
+      from,
+      to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+      data,
+    },
+    getNPMApprovalOverrides(chainId, from),
+    provider,
+    blockNumber,
+  );
+  return IUniV3Automan__factory.createInterface().decodeFunctionResult(
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    functionFragment,
+    returnData,
+  ) as RemoveLiquidityReturnType;
+}
+
+export async function simulateRebalance(
+  chainId: ApertureSupportedChainId,
+  provider: JsonRpcProvider,
+  from: string,
+  mintParams: INonfungiblePositionManager.MintParamsStruct,
+  tokenId: BigNumberish,
+  feeBips: BigNumberish = 0,
+  swapData: BytesLike = '0x',
+  blockNumber?: number,
+): Promise<RebalanceReturnType> {
+  checkTicks(mintParams);
+  const { functionFragment, data } = getAutomanRebalanceCallInfo(
+    mintParams,
+    tokenId,
+    feeBips,
+    undefined,
+    swapData,
+  );
+  const returnData = await staticCallWithOverrides(
+    {
+      from,
+      to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+      data,
+    },
+    getNPMApprovalOverrides(chainId, from),
+    provider,
+    blockNumber,
+  );
+  return IUniV3Automan__factory.createInterface().decodeFunctionResult(
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    functionFragment,
+    returnData,
+  ) as RebalanceReturnType;
 }

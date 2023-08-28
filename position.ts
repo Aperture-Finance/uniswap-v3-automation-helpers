@@ -644,25 +644,22 @@ export async function getReinvestedPosition(
   const owner = await getNPM(chainId, provider).ownerOf(positionId, {
     blockTag: blockNumber,
   });
-  const { functionFragment, params } = getAutomanReinvestCallInfo(
+  const { functionFragment, data } = getAutomanReinvestCallInfo(
     positionId,
     Math.round(new Date().getTime() / 1000 + 60 * 10), // 10 minutes from now.
   );
-  const iface = IUniV3Automan__factory.createInterface();
   const returnData = await staticCallWithOverrides(
     {
       from: owner,
       to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      data: iface.encodeFunctionData(functionFragment, params),
+      data,
     },
     // forge an operator approval using state overrides.
     getNPMApprovalOverrides(chainId, owner),
     provider,
     blockNumber,
   );
-  return iface.decodeFunctionResult(
+  return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     functionFragment,

@@ -1,3 +1,4 @@
+export * from './automan';
 export * from './chain';
 export * from './currency';
 export * from './overrides';
@@ -10,3 +11,4 @@ export * from './provider';
 export * from './routing';
 export * from './tick';
 export * from './transaction';
+export * from './whitelist';

@@ -34,7 +34,6 @@ import JSBI from 'jsbi';
 
 import {
   AutomanFragment,
-  GetAutomanParams,
   getAutomanRebalanceCallInfo,
   getAutomanReinvestCallInfo,
 } from './automan';
@@ -397,25 +396,29 @@ interface SimulatedAmounts {
   amount1Min: BigNumberish;
 }
 
-async function getAmountsWithSlippage<T extends AutomanFragment>(
+async function getAmountsWithSlippage(
   automanAddress: string,
   ownerAddress: string,
-  functionFragment: T,
-  functionParams: GetAutomanParams<T>,
+  functionFragment: AutomanFragment,
+  data: string,
   slippageTolerance: Percent,
   provider: Provider,
 ): Promise<SimulatedAmounts> {
-  const { amount0, amount1 } = (await IUniV3Automan__factory.connect(
-    automanAddress,
-    provider,
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-  ).callStatic[functionFragment](...functionParams, {
+  const returnData = await provider.call({
     from: ownerAddress,
-  })) as {
-    amount0: BigNumber;
-    amount1: BigNumber;
-  };
+    to: automanAddress,
+    data,
+  });
+  const { amount0, amount1 } =
+    IUniV3Automan__factory.createInterface().decodeFunctionResult(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      functionFragment,
+      returnData,
+    ) as unknown as {
+      amount0: BigNumber;
+      amount1: BigNumber;
+    };
   const coefficient = new Percent(1).subtract(slippageTolerance);
   return {
     amount0,
@@ -476,7 +479,7 @@ export async function getRebalanceTx(
     deadline: deadlineEpochSeconds,
   };
   const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
-  const { functionFragment, params } = getAutomanRebalanceCallInfo(
+  const { functionFragment, data } = getAutomanRebalanceCallInfo(
     mintParams,
     existingPositionId,
     0,
@@ -486,7 +489,7 @@ export async function getRebalanceTx(
     aperture_uniswap_v3_automan,
     ownerAddress,
     functionFragment,
-    params,
+    data,
     slippageTolerance,
     provider,
   );
@@ -496,17 +499,12 @@ export async function getRebalanceTx(
     tx: {
       from: ownerAddress,
       to: aperture_uniswap_v3_automan,
-      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        functionFragment,
-        getAutomanRebalanceCallInfo(
-          mintParams,
-          existingPositionId,
-          0,
-          permitInfo,
-        ).params,
-      ),
+      data: getAutomanRebalanceCallInfo(
+        mintParams,
+        existingPositionId,
+        0,
+        permitInfo,
+      ).data,
     },
     amounts: amounts,
   };
@@ -536,7 +534,7 @@ export async function getReinvestTx(
   amounts: SimulatedAmounts;
 }> {
   const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
-  const { functionFragment, params } = getAutomanReinvestCallInfo(
+  const { functionFragment, data } = getAutomanReinvestCallInfo(
     positionId,
     deadlineEpochSeconds,
     0, // Setting this to zero for tx simulation.
@@ -548,28 +546,22 @@ export async function getReinvestTx(
     aperture_uniswap_v3_automan,
     ownerAddress,
     functionFragment,
-    params,
+    data,
     slippageTolerance,
     provider,
-  );
-  const { params: paramsAfterSlippage } = getAutomanReinvestCallInfo(
-    positionId,
-    deadlineEpochSeconds,
-    amounts.amount0Min,
-    amounts.amount1Min,
-    0,
-    permitInfo,
   );
   return {
     tx: {
       from: ownerAddress,
       to: aperture_uniswap_v3_automan,
-      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        functionFragment,
-        paramsAfterSlippage,
-      ),
+      data: getAutomanReinvestCallInfo(
+        positionId,
+        deadlineEpochSeconds,
+        amounts.amount0Min,
+        amounts.amount1Min,
+        0,
+        permitInfo,
+      ).data,
     },
     amounts: amounts,
   };
