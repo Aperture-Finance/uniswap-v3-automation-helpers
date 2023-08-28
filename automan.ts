@@ -113,6 +113,52 @@ export function encodeOptimalSwapData(
   );
 }
 
+export function getAutomanDecreaseLiquidityCallInfo(
+  positionId: BigNumberish,
+  liquidity: BigNumberish,
+  deadline: BigNumberish,
+  amount0Min: BigNumberish = 0,
+  amount1Min: BigNumberish = 0,
+  feeBips: BigNumberish = 0,
+  permitInfo?: PermitInfo,
+): AutomanCallInfo<'decreaseLiquidity'> {
+  const params: INonfungiblePositionManager.DecreaseLiquidityParamsStruct = {
+    tokenId: positionId,
+    liquidity,
+    amount0Min,
+    amount1Min,
+    deadline,
+  };
+  if (permitInfo === undefined) {
+    const functionFragment =
+      'decreaseLiquidity((uint256,uint128,uint256,uint256,uint256),uint256)';
+    return {
+      functionFragment,
+      data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+        functionFragment,
+        [params, feeBips],
+      ),
+    };
+  }
+  const permitSignature = splitSignature(permitInfo.signature);
+  const functionFragment =
+    'decreaseLiquidity((uint256,uint128,uint256,uint256,uint256),uint256,uint256,uint8,bytes32,bytes32)';
+  return {
+    functionFragment,
+    data: IUniV3Automan__factory.createInterface().encodeFunctionData(
+      functionFragment,
+      [
+        params,
+        feeBips,
+        permitInfo.deadline,
+        permitSignature.v,
+        permitSignature.r,
+        permitSignature.s,
+      ],
+    ),
+  };
+}
+
 export function getAutomanRebalanceCallInfo(
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   existingPositionId: BigNumberish,
