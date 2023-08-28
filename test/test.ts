@@ -34,7 +34,7 @@ import { defaultAbiCoder, getAddress } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
-import { optimalMint } from '../aggregator';
+import { optimalMint, optimalRebalance } from '../aggregator';
 import { getAutomanReinvestCallInfo, simulateMintOptimal } from '../automan';
 import { getChainInfo } from '../chain';
 import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
@@ -1766,26 +1766,84 @@ describe('Routing tests', function () {
     const token0 = '0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f';
     const token1 = '0x82af49447d8a07e3bd95bd0d56f35241523fbab1';
     const fee = FeeAmount.MEDIUM;
-    const amount0Desired = '1000000000';
-    const amount1Desired = '1000000000000000000';
     const pool = await getPool(token0, token1, fee, chainId);
-    const res = await optimalMint(
+    const token0Amount = CurrencyAmount.fromRawAmount(
+      pool.token0,
+      '1000000000',
+    );
+    const token1Amount = CurrencyAmount.fromRawAmount(
+      pool.token1,
+      '1000000000000000000',
+    );
+    const tickLower = nearestUsableTick(
+      pool.tickCurrent - 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const tickUpper = nearestUsableTick(
+      pool.tickCurrent + 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const { amount0, amount1 } = await optimalMint(
       chainId,
-      CurrencyAmount.fromRawAmount(pool.token0, amount0Desired),
-      CurrencyAmount.fromRawAmount(pool.token1, amount1Desired),
+      token0Amount,
+      token1Amount,
       fee,
-      nearestUsableTick(
-        pool.tickCurrent - 10 * pool.tickSpacing,
-        pool.tickSpacing,
-      ),
-      nearestUsableTick(
-        pool.tickCurrent + 10 * pool.tickSpacing,
-        pool.tickSpacing,
-      ),
+      tickLower,
+      tickUpper,
       eoa,
-      0.01,
+      0.1,
       provider,
     );
-    console.log(res.liquidity);
+    const _total = Number(
+      pool.token0Price
+        .quote(CurrencyAmount.fromRawAmount(pool.token0, amount0.toString()))
+        .add(CurrencyAmount.fromRawAmount(pool.token1, amount1.toString()))
+        .toFixed(),
+    );
+    const total = Number(
+      pool.token0Price.quote(token0Amount).add(token1Amount).toFixed(),
+    );
+    expect(_total).to.be.closeTo(total, total / 1e3);
+  });
+
+  it('Test optimalRebalance', async function () {
+    const chainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
+    const provider = new ethers.providers.JsonRpcProvider(
+      process.env.ARBITRUM_RPC_URL,
+    );
+    const tokenId = 726230;
+    const { pool, position } = await PositionDetails.fromPositionId(
+      chainId,
+      tokenId,
+      provider,
+    );
+    const tickLower = nearestUsableTick(
+      pool.tickCurrent - 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const tickUpper = nearestUsableTick(
+      pool.tickCurrent + 10 * pool.tickSpacing,
+      pool.tickSpacing,
+    );
+    const { liquidity } = await optimalRebalance(
+      chainId,
+      tokenId,
+      tickLower,
+      tickUpper,
+      0,
+      true,
+      await getNPM(chainId, provider).ownerOf(tokenId),
+      0.1,
+      provider,
+    );
+    const { liquidity: predictedLiquidity } = getRebalancedPosition(
+      position,
+      tickLower,
+      tickUpper,
+    );
+    expect(liquidity.toNumber()).to.be.closeTo(
+      Number(predictedLiquidity.toString()),
+      Number(predictedLiquidity.toString()) / 1e3,
+    );
   });
 });

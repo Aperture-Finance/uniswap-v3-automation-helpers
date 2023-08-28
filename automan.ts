@@ -13,6 +13,7 @@ import { solidityPack, splitSignature } from 'ethers/lib/utils';
 import { getChainInfo } from './chain';
 import {
   getAutomanWhitelistOverrides,
+  getNPMApprovalOverrides,
   getTokenOverrides,
   staticCallWithOverrides,
 } from './overrides';
@@ -246,6 +247,18 @@ export function getAutomanRemoveLiquidityCallInfo(
   };
 }
 
+function checkTicks(mintParams: INonfungiblePositionManager.MintParamsStruct) {
+  const tickLower = Number(mintParams.tickLower.toString());
+  const tickUpper = Number(mintParams.tickUpper.toString());
+  const fee = mintParams.fee as FeeAmount;
+  if (
+    tickLower !== nearestUsableTick(tickLower, TICK_SPACINGS[fee]) ||
+    tickUpper !== nearestUsableTick(tickUpper, TICK_SPACINGS[fee])
+  ) {
+    throw new Error('tickLower or tickUpper not valid');
+  }
+}
+
 /**
  * Simulate a `mintOptimal` call by overriding the balances and allowances of the tokens involved.
  * @param chainId The chain ID.
@@ -264,15 +277,7 @@ export async function simulateMintOptimal(
   swapData: BytesLike = '0x',
   blockNumber?: number,
 ): Promise<MintReturnType> {
-  const tickLower = Number(mintParams.tickLower.toString());
-  const tickUpper = Number(mintParams.tickUpper.toString());
-  const fee = mintParams.fee as FeeAmount;
-  if (
-    tickLower !== nearestUsableTick(tickLower, TICK_SPACINGS[fee]) ||
-    tickUpper !== nearestUsableTick(tickUpper, TICK_SPACINGS[fee])
-  ) {
-    throw new Error('tickLower or tickUpper not valid');
-  }
+  checkTicks(mintParams);
   const data = IUniV3Automan__factory.createInterface().encodeFunctionData(
     'mintOptimal',
     [mintParams, swapData],
@@ -337,7 +342,7 @@ export async function simulateRemoveLiquidity(
       to: getChainInfo(chainId).aperture_uniswap_v3_automan,
       data,
     },
-    {},
+    getNPMApprovalOverrides(chainId, from),
     provider,
     blockNumber,
   );
@@ -359,6 +364,7 @@ export async function simulateRebalance(
   swapData: BytesLike = '0x',
   blockNumber?: number,
 ): Promise<RebalanceReturnType> {
+  checkTicks(mintParams);
   const { functionFragment, data } = getAutomanRebalanceCallInfo(
     mintParams,
     tokenId,
@@ -382,6 +388,7 @@ export async function simulateRebalance(
           }
         : {}),
       ...(aperture_router_proxy ? getAutomanWhitelistOverrides(chainId) : {}),
+      ...getNPMApprovalOverrides(chainId, from),
     },
     provider,
     blockNumber,

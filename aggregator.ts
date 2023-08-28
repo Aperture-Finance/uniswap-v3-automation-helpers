@@ -4,7 +4,7 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
-import { ADDRESS_ZERO, FeeAmount } from '@uniswap/v3-sdk';
+import { FeeAmount } from '@uniswap/v3-sdk';
 import axios from 'axios';
 import Bottleneck from 'bottleneck';
 import { BigNumberish } from 'ethers';
@@ -248,6 +248,7 @@ export async function optimalRebalance(
   newTickLower: number,
   newTickUpper: number,
   feeBips: BigNumberish,
+  usePool: boolean,
   fromAddress: string,
   slippage: number,
   provider: JsonRpcProvider,
@@ -267,30 +268,28 @@ export async function optimalRebalance(
       0,
       feeBips,
     );
-  const { swapData } = await optimalMint(
-    chainId,
-    CurrencyAmount.fromRawAmount(position.token0, receive0.toString()),
-    CurrencyAmount.fromRawAmount(position.token1, receive1.toString()),
-    position.fee,
-    newTickLower,
-    newTickUpper,
-    fromAddress,
-    slippage,
-    provider,
-  );
   const mintParams: INonfungiblePositionManager.MintParamsStruct = {
     token0: position.token0.address,
     token1: position.token1.address,
     fee: position.fee,
     tickLower: newTickLower,
     tickUpper: newTickUpper,
-    amount0Desired: 0, // Param value ignored by Automan.
-    amount1Desired: 0, // Param value ignored by Automan.
+    amount0Desired: receive0,
+    amount1Desired: receive1,
     amount0Min: 0, // Setting this to zero for tx simulation.
     amount1Min: 0, // Setting this to zero for tx simulation.
-    recipient: ADDRESS_ZERO, // Param value ignored by Automan.
+    recipient: fromAddress,
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
+  const { swapData } = usePool
+    ? await optimalMintPool(chainId, provider, fromAddress, mintParams)
+    : await optimalMintRouter(
+        chainId,
+        provider,
+        fromAddress,
+        mintParams,
+        slippage,
+      );
   const { amount0, amount1, liquidity } = await simulateRebalance(
     chainId,
     provider,
