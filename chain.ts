@@ -32,6 +32,7 @@ export interface ChainInfo {
   uniswap_v3_nonfungible_position_manager: string;
   aperture_uniswap_v3_automan: string;
   aperture_router_proxy?: string;
+  optimal_swap_router?: string;
   wrappedNativeCurrency: Token;
   routingApiInfo: ChainSpecificRoutingAPIInfo;
   // Automan maximum allowed gas deduction ceiling.
@@ -146,6 +147,9 @@ const CHAIN_ID_TO_INFO: {
       '0x00000000Ede6d8D217c60f93191C060747324bca',
     ),
     aperture_router_proxy: getAddress(
+      '0x0000000095538AD2A95685330eD1268C69753BC2',
+    ),
+    optimal_swap_router: getAddress(
       '0x0000000095538AD2A95685330eD1268C69753BC2',
     ),
     wrappedNativeCurrency: new Token(
