@@ -12,7 +12,6 @@ import { solidityPack, splitSignature } from 'ethers/lib/utils';
 
 import { getChainInfo } from './chain';
 import {
-  getAutomanWhitelistOverrides,
   getNPMApprovalOverrides,
   getTokenOverrides,
   staticCallWithOverrides,
