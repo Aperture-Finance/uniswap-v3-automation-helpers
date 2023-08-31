@@ -447,11 +447,7 @@ export async function simulateRebalance(
   let returnData: string;
   if (provider instanceof JsonRpcProvider) {
     returnData = await staticCallWithOverrides(
-      {
-        from,
-        to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-        data,
-      },
+      tx,
       getNPMApprovalOverrides(chainId, from),
       provider,
       blockNumber,

@@ -278,7 +278,7 @@ export async function optimalRebalance(
     amount1Desired: receive1,
     amount0Min: 0, // Setting this to zero for tx simulation.
     amount1Min: 0, // Setting this to zero for tx simulation.
-    recipient: fromAddress,
+    recipient: fromAddress, // Param value ignored by Automan for rebalance.
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
   const { swapData } = usePool
