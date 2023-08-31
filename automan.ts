@@ -307,7 +307,7 @@ function checkTicks(mintParams: INonfungiblePositionManager.MintParamsStruct) {
 /**
  * Simulate a `mintOptimal` call by overriding the balances and allowances of the tokens involved.
  * @param chainId The chain ID.
- * @param provider The Ethers provider.
+ * @param provider A JSON RPC provider or a base provider.
  * @param from The address to simulate the call from.
  * @param mintParams The mint parameters.
  * @param swapData The swap data if using a router.
@@ -316,7 +316,7 @@ function checkTicks(mintParams: INonfungiblePositionManager.MintParamsStruct) {
  */
 export async function simulateMintOptimal(
   chainId: ApertureSupportedChainId,
-  provider: JsonRpcProvider,
+  provider: JsonRpcProvider | Provider,
   from: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   swapData: BytesLike = '0x',
@@ -327,34 +327,51 @@ export async function simulateMintOptimal(
     'mintOptimal',
     [mintParams, swapData],
   );
-  const returnData = await staticCallWithOverrides(
-    {
-      from,
-      to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-      data,
-    },
-    // forge token approvals and balances
-    await getTokenOverrides(
-      chainId,
+  const tx = {
+    from,
+    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+    data,
+  };
+  let returnData: string;
+  if (provider instanceof JsonRpcProvider) {
+    returnData = await staticCallWithOverrides(
+      tx,
+      // forge token approvals and balances
+      await getTokenOverrides(
+        chainId,
+        provider,
+        from,
+        mintParams.token0,
+        mintParams.token1,
+        mintParams.amount0Desired,
+        mintParams.amount1Desired,
+      ),
       provider,
-      from,
-      mintParams.token0,
-      mintParams.token1,
-      mintParams.amount0Desired,
-      mintParams.amount1Desired,
-    ),
-    provider,
-    blockNumber,
-  );
+      blockNumber,
+    );
+  } else {
+    returnData = await provider.call(tx, blockNumber);
+  }
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     'mintOptimal',
     returnData,
   ) as MintReturnType;
 }
 
+/**
+ * Simulate a `removeLiquidity` call.
+ * @param chainId The chain ID.
+ * @param provider A JSON RPC provider or a base provider.
+ * @param from The address to simulate the call from.
+ * @param tokenId The token ID of the position to burn.
+ * @param amount0Min The minimum amount of token0 to receive.
+ * @param amount1Min The minimum amount of token1 to receive.
+ * @param feeBips The percentage of position value to pay as a fee, multiplied by 1e18.
+ * @param blockNumber Optional block number to query.
+ */
 export async function simulateRemoveLiquidity(
   chainId: ApertureSupportedChainId,
-  provider: JsonRpcProvider,
+  provider: JsonRpcProvider | Provider,
   from: string,
   tokenId: BigNumberish,
   amount0Min: BigNumberish = 0,
@@ -369,16 +386,22 @@ export async function simulateRemoveLiquidity(
     amount1Min,
     feeBips,
   );
-  const returnData = await staticCallWithOverrides(
-    {
-      from,
-      to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-      data,
-    },
-    getNPMApprovalOverrides(chainId, from),
-    provider,
-    blockNumber,
-  );
+  const tx = {
+    from,
+    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+    data,
+  };
+  let returnData: string;
+  if (provider instanceof JsonRpcProvider) {
+    returnData = await staticCallWithOverrides(
+      tx,
+      getNPMApprovalOverrides(chainId, from),
+      provider,
+      blockNumber,
+    );
+  } else {
+    returnData = await provider.call(tx, blockNumber);
+  }
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -387,9 +410,20 @@ export async function simulateRemoveLiquidity(
   ) as RemoveLiquidityReturnType;
 }
 
+/**
+ * Simulate a `rebalance` call.
+ * @param chainId The chain ID.
+ * @param provider A JSON RPC provider or a base provider.
+ * @param from The address to simulate the call from.
+ * @param mintParams The mint parameters.
+ * @param tokenId The token ID of the position to rebalance.
+ * @param feeBips The percentage of position value to pay as a fee, multiplied by 1e18.
+ * @param swapData The swap data if using a router.
+ * @param blockNumber Optional block number to query.
+ */
 export async function simulateRebalance(
   chainId: ApertureSupportedChainId,
-  provider: JsonRpcProvider,
+  provider: JsonRpcProvider | Provider,
   from: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   tokenId: BigNumberish,
@@ -405,16 +439,26 @@ export async function simulateRebalance(
     undefined,
     swapData,
   );
-  const returnData = await staticCallWithOverrides(
-    {
-      from,
-      to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-      data,
-    },
-    getNPMApprovalOverrides(chainId, from),
-    provider,
-    blockNumber,
-  );
+  const tx = {
+    from,
+    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+    data,
+  };
+  let returnData: string;
+  if (provider instanceof JsonRpcProvider) {
+    returnData = await staticCallWithOverrides(
+      {
+        from,
+        to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+        data,
+      },
+      getNPMApprovalOverrides(chainId, from),
+      provider,
+      blockNumber,
+    );
+  } else {
+    returnData = await provider.call(tx, blockNumber);
+  }
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
