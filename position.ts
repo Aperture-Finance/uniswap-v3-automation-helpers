@@ -471,6 +471,7 @@ export function projectRebalancedPositionAtPrice(
  */
 export class PositionDetails implements BasicPositionInfo {
   public readonly tokenId: string;
+  public readonly owner: string;
   public readonly token0: Token;
   public readonly token1: Token;
   public readonly fee: FeeAmount;
@@ -484,6 +485,7 @@ export class PositionDetails implements BasicPositionInfo {
 
   private constructor(
     tokenId: BigNumberish,
+    owner: string,
     basicPositionInfo: BasicPositionInfo,
     sqrtRatioX96: BigintIsh,
     tick: number,
@@ -492,6 +494,7 @@ export class PositionDetails implements BasicPositionInfo {
     tokensOwed1: BigNumber,
   ) {
     this.tokenId = tokenId.toString();
+    this.owner = owner;
     this.token0 = basicPositionInfo.token0;
     this.token1 = basicPositionInfo.token1;
     this.fee = basicPositionInfo.fee;
@@ -547,6 +550,7 @@ export class PositionDetails implements BasicPositionInfo {
    * Get the position details from the position state struct.
    * @param chainId The chain ID.
    * @param tokenId The token ID.
+   * @param owner The position owner.
    * @param position NonfungiblePositionManager's position struct.
    * @param slot0 The pool's slot0 struct.
    * @param activeLiquidity The pool's active liquidity.
@@ -558,6 +562,7 @@ export class PositionDetails implements BasicPositionInfo {
     chainId: ApertureSupportedChainId,
     {
       tokenId,
+      owner,
       position,
       slot0,
       activeLiquidity,
@@ -567,6 +572,7 @@ export class PositionDetails implements BasicPositionInfo {
   ): PositionDetails {
     return new PositionDetails(
       tokenId,
+      owner,
       {
         token0: new Token(chainId, position.token0, decimals0),
         token1: new Token(chainId, position.token1, decimals1),

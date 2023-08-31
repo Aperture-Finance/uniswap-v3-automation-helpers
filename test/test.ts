@@ -1364,11 +1364,12 @@ describe('Position util tests', function () {
   });
 
   it('Test get position details', async function () {
-    const { position } = await PositionDetails.fromPositionId(
+    const { owner, position } = await PositionDetails.fromPositionId(
       chainId,
       4,
       hardhatForkProvider,
     );
+    expect(owner).to.equal(eoa);
     expect(position).to.deep.equal(
       await getPosition(chainId, 4, hardhatForkProvider),
     );
