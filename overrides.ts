@@ -89,6 +89,16 @@ function symmetricalDifference<T>(arr1: T[], arr2: T[]): T[] {
   ];
 }
 
+/**
+ * Get the balance and allowance state overrides for `token0` and `token1`.
+ * @param chainId The chain ID.
+ * @param provider A JSON RPC provider that supports `eth_createAccessList`.
+ * @param from The sender address.
+ * @param token0 The token0 address.
+ * @param token1 The token1 address.
+ * @param amount0Desired The amount of token0 to set the balance and allowance to.
+ * @param amount1Desired The amount of token1 to set the balance and allowance to.
+ */
 export async function getTokenOverrides(
   chainId: ApertureSupportedChainId,
   provider: JsonRpcProvider,
@@ -223,6 +233,13 @@ export async function generateAccessList(
   }
 }
 
+/**
+ * Call a contract with the given state overrides.
+ * @param tx The transaction request.
+ * @param overrides The state overrides.
+ * @param provider A JSON RPC provider that supports `eth_call` with state overrides.
+ * @param blockNumber Optional block number to use for the call.
+ */
 export async function staticCallWithOverrides(
   tx: TransactionRequest,
   overrides: StateOverrides,

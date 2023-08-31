@@ -208,13 +208,11 @@ export async function getAddLiquidityTx(
   position?: Position,
 ): Promise<TransactionRequest> {
   if (position === undefined) {
-    position = (
-      await PositionDetails.fromPositionId(
-        chainId,
-        increaseLiquidityOptions.tokenId.toString(),
-        provider,
-      )
-    ).position;
+    ({ position } = await PositionDetails.fromPositionId(
+      chainId,
+      increaseLiquidityOptions.tokenId.toString(),
+      provider,
+    ));
   }
   // Same as `position` except that the liquidity field represents the amount of liquidity to add to the existing `position`.
   const incrementalPosition = new Position({
@@ -291,13 +289,11 @@ export async function getRemoveLiquidityTx(
   position?: Position,
 ): Promise<TransactionRequest> {
   if (position === undefined) {
-    position = (
-      await PositionDetails.fromPositionId(
-        chainId,
-        removeLiquidityOptions.tokenId.toString(),
-        provider,
-      )
-    ).position;
+    ({ position } = await PositionDetails.fromPositionId(
+      chainId,
+      removeLiquidityOptions.tokenId.toString(),
+      provider,
+    ));
   }
   const collectableTokenAmount = await viewCollectableTokenAmounts(
     chainId,
@@ -438,7 +434,7 @@ async function getAmountsWithSlippage(
  * @param slippageTolerance How much the amount of either token0 or token1 in the new position is allowed to change unfavorably.
  * @param deadlineEpochSeconds Timestamp when the tx expires (in seconds since epoch).
  * @param provider Ethers provider.
- * @param existingPosition Optional, the existing position.
+ * @param position Optional, the existing position.
  * @param permitInfo Optional. If Automan doesn't already has authority over the existing position, this should be populated with a valid owner-signed permit info.
  * @returns The generated transaction request and expected amounts.
  */
@@ -451,24 +447,23 @@ export async function getRebalanceTx(
   slippageTolerance: Percent,
   deadlineEpochSeconds: BigNumberish,
   provider: Provider,
-  existingPosition?: Position,
+  position?: Position,
   permitInfo?: PermitInfo,
 ): Promise<{
   tx: TransactionRequest;
   amounts: SimulatedAmounts;
 }> {
-  if (existingPosition === undefined) {
-    const { position } = await PositionDetails.fromPositionId(
+  if (position === undefined) {
+    ({ position } = await PositionDetails.fromPositionId(
       chainId,
       existingPositionId,
       provider,
-    );
-    existingPosition = position;
+    ));
   }
   const mintParams: INonfungiblePositionManager.MintParamsStruct = {
-    token0: existingPosition.amount0.currency.address,
-    token1: existingPosition.amount1.currency.address,
-    fee: existingPosition.pool.fee,
+    token0: position.amount0.currency.address,
+    token1: position.amount1.currency.address,
+    fee: position.pool.fee,
     tickLower: newPositionTickLower,
     tickUpper: newPositionTickUpper,
     amount0Desired: 0, // Param value ignored by Automan.

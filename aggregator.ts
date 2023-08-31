@@ -2,7 +2,7 @@ import {
   ApertureSupportedChainId,
   INonfungiblePositionManager,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { JsonRpcProvider, Provider } from '@ethersproject/providers';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import axios from 'axios';
@@ -119,7 +119,7 @@ export async function quote(
  * @param tickUpper The upper tick of the range.
  * @param fromAddress The address to mint from.
  * @param slippage The slippage tolerance.
- * @param provider The Ethers provider.
+ * @param provider A JSON RPC provider or a base provider.
  */
 export async function optimalMint(
   chainId: ApertureSupportedChainId,
@@ -130,7 +130,7 @@ export async function optimalMint(
   tickUpper: number,
   fromAddress: string,
   slippage: number,
-  provider: JsonRpcProvider,
+  provider: JsonRpcProvider | Provider,
 ) {
   if (!token0Amount.currency.sortsBefore(token1Amount.currency)) {
     throw new Error('token0 must be sorted before token1');
@@ -165,7 +165,7 @@ export async function optimalMint(
 
 async function optimalMintPool(
   chainId: ApertureSupportedChainId,
-  provider: JsonRpcProvider,
+  provider: JsonRpcProvider | Provider,
   fromAddress: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
 ) {
@@ -185,7 +185,7 @@ async function optimalMintPool(
 
 async function optimalMintRouter(
   chainId: ApertureSupportedChainId,
-  provider: JsonRpcProvider,
+  provider: JsonRpcProvider | Provider,
   fromAddress: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   slippage: number,
@@ -251,7 +251,7 @@ export async function optimalRebalance(
   usePool: boolean,
   fromAddress: string,
   slippage: number,
-  provider: JsonRpcProvider,
+  provider: JsonRpcProvider | Provider,
 ) {
   const position = await PositionDetails.fromPositionId(
     chainId,
@@ -278,7 +278,7 @@ export async function optimalRebalance(
     amount1Desired: receive1,
     amount0Min: 0, // Setting this to zero for tx simulation.
     amount1Min: 0, // Setting this to zero for tx simulation.
-    recipient: fromAddress,
+    recipient: fromAddress, // Param value ignored by Automan for rebalance.
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
   const { swapData } = usePool
