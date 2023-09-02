@@ -1,3 +1,4 @@
+export * from './activity';
 export * from './automan';
 export * from './chain';
 export * from './currency';
