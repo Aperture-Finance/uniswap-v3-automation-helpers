@@ -15,6 +15,7 @@ import {
   getERC20Overrides,
   getNPMApprovalOverrides,
   staticCallWithOverrides,
+  tryStaticCallWithOverrides,
 } from './overrides';
 
 export type AutomanActionName =
@@ -398,27 +399,18 @@ export async function simulateRemoveLiquidity(
     amount1Min,
     feeBips,
   );
-  const tx = {
-    from,
-    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-    data,
-  };
-  let returnData: string;
-  if (provider instanceof JsonRpcProvider) {
-    returnData = await staticCallWithOverrides(
-      tx,
-      getNPMApprovalOverrides(chainId, from),
-      provider,
-      blockNumber,
-    );
-  } else {
-    returnData = await provider.call(tx, blockNumber);
-  }
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     functionFragment,
-    returnData,
+    await tryStaticCallWithOverrides(
+      from,
+      getChainInfo(chainId).aperture_uniswap_v3_automan,
+      data,
+      getNPMApprovalOverrides(chainId, from),
+      provider,
+      blockNumber,
+    ),
   ) as RemoveLiquidityReturnType;
 }
 
@@ -451,26 +443,17 @@ export async function simulateRebalance(
     undefined,
     swapData,
   );
-  const tx = {
-    from,
-    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-    data,
-  };
-  let returnData: string;
-  if (provider instanceof JsonRpcProvider) {
-    returnData = await staticCallWithOverrides(
-      tx,
-      getNPMApprovalOverrides(chainId, from),
-      provider,
-      blockNumber,
-    );
-  } else {
-    returnData = await provider.call(tx, blockNumber);
-  }
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     functionFragment,
-    returnData,
+    await tryStaticCallWithOverrides(
+      from,
+      getChainInfo(chainId).aperture_uniswap_v3_automan,
+      data,
+      getNPMApprovalOverrides(chainId, from),
+      provider,
+      blockNumber,
+    ),
   ) as RebalanceReturnType;
 }

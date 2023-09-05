@@ -2,7 +2,11 @@ import {
   ApertureSupportedChainId,
   IERC20__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { JsonRpcProvider, TransactionRequest } from '@ethersproject/providers';
+import {
+  JsonRpcProvider,
+  Provider,
+  TransactionRequest,
+} from '@ethersproject/providers';
 import { AccessList } from '@ethersproject/transactions';
 import { BigNumberish } from 'ethers';
 import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
@@ -82,7 +86,7 @@ export function getAutomanWhitelistOverrides(
   };
 }
 
-function symmetricalDifference<T>(arr1: T[], arr2: T[]): T[] {
+function symmetricDifference<T>(arr1: T[], arr2: T[]): T[] {
   return [
     ...arr1.filter((item) => !arr2.includes(item)),
     ...arr2.filter((item) => !arr1.includes(item)),
@@ -139,7 +143,7 @@ export async function getERC20Overrides(
     throw new Error('Invalid access list length');
   }
   // get rid of the storage key of implementation address
-  const storageKeys = symmetricalDifference(
+  const storageKeys = symmetricDifference(
     filteredBalanceOfAccessList[0].storageKeys,
     filteredAllowanceAccessList[0].storageKeys,
   );
@@ -147,7 +151,6 @@ export async function getERC20Overrides(
     throw new Error('Invalid storage key number');
   }
   const encodedAmount = defaultAbiCoder.encode(['uint256'], [amount]);
-  // TODO: handle native ETH edge case
   return {
     [token]: {
       stateDiff: {
@@ -198,4 +201,40 @@ export async function staticCallWithOverrides(
     blockNumber ? '0x' + blockNumber.toString(16) : 'latest',
     overrides,
   ]);
+}
+
+/**
+ * Try to call a contract with the given state overrides. If the call fails, fall back to a regular call.
+ * @param from The sender address.
+ * @param to The contract address.
+ * @param data The transaction data.
+ * @param overrides The state overrides.
+ * @param provider A JSON RPC provider that map support `eth_call` with state overrides.
+ * @param blockNumber Optional block number to use for the call.
+ */
+export async function tryStaticCallWithOverrides(
+  from: string,
+  to: string,
+  data: string,
+  overrides: StateOverrides,
+  provider: JsonRpcProvider | Provider,
+  blockNumber?: number,
+): Promise<string> {
+  const tx = {
+    from,
+    to,
+    data,
+  };
+  let returnData: string;
+  if (provider instanceof JsonRpcProvider) {
+    returnData = await staticCallWithOverrides(
+      tx,
+      overrides,
+      provider,
+      blockNumber,
+    );
+  } else {
+    returnData = await provider.call(tx, blockNumber);
+  }
+  return returnData;
 }
