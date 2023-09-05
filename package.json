@@ -1,6 +1,6 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
-  "version": "1.6.6",
+  "version": "1.6.7",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
   "author": "Aperture Finance <engineering@aperture.finance>",
   "license": "MIT",
@@ -37,11 +37,11 @@
   },
   "dependencies": {
     "@0xsequence/multicall": "0.43.34",
-    "@aperture_finance/uniswap-v3-automation-sdk": "1.4.3",
+    "@aperture_finance/uniswap-v3-automation-sdk": "1.4.4",
     "@uniswap/permit2-sdk": "^1.2.0",
     "@uniswap/smart-order-router": "^3.15.2",
     "@uniswap/v3-sdk": "^3.10.0",
-    "axios": "^1.4.0",
+    "axios": "^1.5.0",
     "big.js": "^6.2.1",
     "bottleneck": "^2.19.5",
     "ethers": "5.7.2",
@@ -57,12 +57,12 @@
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@trivago/prettier-plugin-sort-imports": "^4.2.0",
     "@types/big.js": "^6.2.0",
-    "@types/chai": "^4.3.5",
-    "@types/chai-as-promised": "^7.1.5",
+    "@types/chai": "^4.3.6",
+    "@types/chai-as-promised": "^7.1.6",
     "@types/mocha": "^10.0.1",
-    "@types/node": "^20.5.7",
-    "@typescript-eslint/eslint-plugin": "^6.5.0",
-    "@typescript-eslint/parser": "^6.5.0",
+    "@types/node": "^20.5.9",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
     "chai": "^4.3.8",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^16.3.1",
@@ -73,6 +73,6 @@
     "hardhat": "^2.17.2",
     "prettier": "^2.8.8",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.2.2"
   }
 }

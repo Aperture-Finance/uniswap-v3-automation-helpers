@@ -12,9 +12,10 @@ import { solidityPack, splitSignature } from 'ethers/lib/utils';
 
 import { getChainInfo } from './chain';
 import {
+  getERC20Overrides,
   getNPMApprovalOverrides,
-  getTokenOverrides,
   staticCallWithOverrides,
+  tryStaticCallWithOverrides,
 } from './overrides';
 
 export type AutomanActionName =
@@ -327,25 +328,37 @@ export async function simulateMintOptimal(
     'mintOptimal',
     [mintParams, swapData],
   );
+  const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
   const tx = {
     from,
-    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+    to: aperture_uniswap_v3_automan,
     data,
   };
   let returnData: string;
   if (provider instanceof JsonRpcProvider) {
+    // forge token approvals and balances
+    const [token0Overrides, token1Overrides] = await Promise.all([
+      getERC20Overrides(
+        mintParams.token0,
+        from,
+        aperture_uniswap_v3_automan,
+        mintParams.amount0Desired,
+        provider,
+      ),
+      getERC20Overrides(
+        mintParams.token1,
+        from,
+        aperture_uniswap_v3_automan,
+        mintParams.amount1Desired,
+        provider,
+      ),
+    ]);
     returnData = await staticCallWithOverrides(
       tx,
-      // forge token approvals and balances
-      await getTokenOverrides(
-        chainId,
-        provider,
-        from,
-        mintParams.token0,
-        mintParams.token1,
-        mintParams.amount0Desired,
-        mintParams.amount1Desired,
-      ),
+      {
+        ...token0Overrides,
+        ...token1Overrides,
+      },
       provider,
       blockNumber,
     );
@@ -386,27 +399,18 @@ export async function simulateRemoveLiquidity(
     amount1Min,
     feeBips,
   );
-  const tx = {
-    from,
-    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-    data,
-  };
-  let returnData: string;
-  if (provider instanceof JsonRpcProvider) {
-    returnData = await staticCallWithOverrides(
-      tx,
-      getNPMApprovalOverrides(chainId, from),
-      provider,
-      blockNumber,
-    );
-  } else {
-    returnData = await provider.call(tx, blockNumber);
-  }
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     functionFragment,
-    returnData,
+    await tryStaticCallWithOverrides(
+      from,
+      getChainInfo(chainId).aperture_uniswap_v3_automan,
+      data,
+      getNPMApprovalOverrides(chainId, from),
+      provider,
+      blockNumber,
+    ),
   ) as RemoveLiquidityReturnType;
 }
 
@@ -439,26 +443,17 @@ export async function simulateRebalance(
     undefined,
     swapData,
   );
-  const tx = {
-    from,
-    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
-    data,
-  };
-  let returnData: string;
-  if (provider instanceof JsonRpcProvider) {
-    returnData = await staticCallWithOverrides(
-      tx,
-      getNPMApprovalOverrides(chainId, from),
-      provider,
-      blockNumber,
-    );
-  } else {
-    returnData = await provider.call(tx, blockNumber);
-  }
   return IUniV3Automan__factory.createInterface().decodeFunctionResult(
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     functionFragment,
-    returnData,
+    await tryStaticCallWithOverrides(
+      from,
+      getChainInfo(chainId).aperture_uniswap_v3_automan,
+      data,
+      getNPMApprovalOverrides(chainId, from),
+      provider,
+      blockNumber,
+    ),
   ) as RebalanceReturnType;
 }
