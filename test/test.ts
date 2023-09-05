@@ -41,7 +41,7 @@ import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
 import {
   computeOperatorApprovalSlot,
   generateAccessList,
-  getTokenOverrides,
+  getERC20Overrides,
 } from '../overrides';
 import {
   generateAutoCompoundRequestPayload,
@@ -901,7 +901,7 @@ describe('State overrides tests', function () {
       'balanceOf',
       [eoa],
     );
-    const res = await generateAccessList(
+    const { accessList } = await generateAccessList(
       {
         from: eoa,
         to: WETH_ADDRESS,
@@ -909,7 +909,7 @@ describe('State overrides tests', function () {
       },
       provider,
     );
-    expect(res[0].storageKeys[0]).to.equal(
+    expect(accessList[0].storageKeys[0]).to.equal(
       '0x5408245386fab212e3c3357882670a5f5af556f7edf543831e2995afd71f4348',
     );
   });
@@ -918,15 +918,23 @@ describe('State overrides tests', function () {
     const provider = new ethers.providers.InfuraProvider(chainId);
     const amount0Desired = '1000000000000000000';
     const amount1Desired = '100000000';
-    const stateOverrides = await getTokenOverrides(
-      chainId,
-      provider,
-      eoa,
-      WETH_ADDRESS,
-      WBTC_ADDRESS,
-      amount0Desired,
-      amount1Desired,
-    );
+    const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
+    const stateOverrides = {
+      ...(await getERC20Overrides(
+        WETH_ADDRESS,
+        eoa,
+        aperture_uniswap_v3_automan,
+        amount0Desired,
+        provider,
+      )),
+      ...(await getERC20Overrides(
+        WBTC_ADDRESS,
+        eoa,
+        aperture_uniswap_v3_automan,
+        amount1Desired,
+        provider,
+      )),
+    };
     expect(stateOverrides).to.deep.equal({
       [WETH_ADDRESS]: {
         stateDiff: {

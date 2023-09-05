@@ -90,40 +90,28 @@ function symmetricalDifference<T>(arr1: T[], arr2: T[]): T[] {
 }
 
 /**
- * Get the balance and allowance state overrides for `token0` and `token1`.
- * @param chainId The chain ID.
- * @param provider A JSON RPC provider that supports `eth_createAccessList`.
+ * Get the balance and allowance state overrides for a token.
+ * @param token The token address.
  * @param from The sender address.
- * @param token0 The token0 address.
- * @param token1 The token1 address.
- * @param amount0Desired The amount of token0 to set the balance and allowance to.
- * @param amount1Desired The amount of token1 to set the balance and allowance to.
+ * @param to The spender address.
+ * @param amount The amount of token to set the balance and allowance to.
+ * @param provider A JSON RPC provider that supports `eth_createAccessList`.
  */
-export async function getTokenOverrides(
-  chainId: ApertureSupportedChainId,
-  provider: JsonRpcProvider,
+export async function getERC20Overrides(
+  token: string,
   from: string,
-  token0: string,
-  token1: string,
-  amount0Desired: BigNumberish,
-  amount1Desired: BigNumberish,
+  to: string,
+  amount: BigNumberish,
+  provider: JsonRpcProvider,
 ): Promise<StateOverrides> {
   const iface = IERC20__factory.createInterface();
   const balanceOfData = iface.encodeFunctionData('balanceOf', [from]);
-  const allowanceData = iface.encodeFunctionData('allowance', [
-    from,
-    getChainInfo(chainId).aperture_uniswap_v3_automan,
-  ]);
-  const [
-    token0BalanceOfAccessList,
-    token0AllowanceAccessList,
-    token1BalanceOfAccessList,
-    token1AllowanceAccessList,
-  ] = await Promise.all([
+  const allowanceData = iface.encodeFunctionData('allowance', [from, to]);
+  const [balanceOfAccessList, allowanceAccessList] = await Promise.all([
     generateAccessList(
       {
         from,
-        to: token0,
+        to: token,
         data: balanceOfData,
       },
       provider,
@@ -131,81 +119,40 @@ export async function getTokenOverrides(
     generateAccessList(
       {
         from,
-        to: token0,
-        data: allowanceData,
-      },
-      provider,
-    ),
-    generateAccessList(
-      {
-        from,
-        to: token1,
-        data: balanceOfData,
-      },
-      provider,
-    ),
-    generateAccessList(
-      {
-        from,
-        to: token1,
+        to: token,
         data: allowanceData,
       },
       provider,
     ),
   ]);
   // tokens on L2 and those with a proxy will have more than one access list entry
-  const filteredToken0BalanceOfAccessList = token0BalanceOfAccessList.filter(
-    ({ address }) => address.toLowerCase() === token0.toLowerCase(),
+  const filteredBalanceOfAccessList = balanceOfAccessList.accessList.filter(
+    ({ address }) => address.toLowerCase() === token.toLowerCase(),
   );
-  const filteredToken0AllowanceAccessList = token0AllowanceAccessList.filter(
-    ({ address }) => address.toLowerCase() === token0.toLowerCase(),
-  );
-  const filteredToken1BalanceOfAccessList = token1BalanceOfAccessList.filter(
-    ({ address }) => address.toLowerCase() === token1.toLowerCase(),
-  );
-  const filteredToken1AllowanceAccessList = token1AllowanceAccessList.filter(
-    ({ address }) => address.toLowerCase() === token1.toLowerCase(),
+  const filteredAllowanceAccessList = allowanceAccessList.accessList.filter(
+    ({ address }) => address.toLowerCase() === token.toLowerCase(),
   );
   if (
-    filteredToken0BalanceOfAccessList.length !== 1 ||
-    filteredToken0AllowanceAccessList.length !== 1 ||
-    filteredToken1BalanceOfAccessList.length !== 1 ||
-    filteredToken1AllowanceAccessList.length !== 1
+    filteredBalanceOfAccessList.length !== 1 ||
+    filteredAllowanceAccessList.length !== 1
   ) {
     throw new Error('Invalid access list length');
   }
   // get rid of the storage key of implementation address
-  const token0StorageKeys = symmetricalDifference(
-    filteredToken0BalanceOfAccessList[0].storageKeys,
-    filteredToken0AllowanceAccessList[0].storageKeys,
+  const storageKeys = symmetricalDifference(
+    filteredBalanceOfAccessList[0].storageKeys,
+    filteredAllowanceAccessList[0].storageKeys,
   );
-  const token1StorageKeys = symmetricalDifference(
-    filteredToken1BalanceOfAccessList[0].storageKeys,
-    filteredToken1AllowanceAccessList[0].storageKeys,
-  );
-  if (token0StorageKeys.length !== 2 || token1StorageKeys.length !== 2) {
+  if (storageKeys.length !== 2) {
     throw new Error('Invalid storage key number');
   }
-  const encodedAmount0Desired = defaultAbiCoder.encode(
-    ['uint256'],
-    [amount0Desired],
-  );
-  const encodedAmount1Desired = defaultAbiCoder.encode(
-    ['uint256'],
-    [amount1Desired],
-  );
+  const encodedAmount = defaultAbiCoder.encode(['uint256'], [amount]);
   // TODO: handle native ETH edge case
   return {
-    [token0]: {
+    [token]: {
       stateDiff: {
-        [token0StorageKeys[0]]: encodedAmount0Desired,
-        [token0StorageKeys[1]]: encodedAmount0Desired,
-      },
-    },
-    [token1]: {
-      stateDiff: {
-        [token1StorageKeys[0]]: encodedAmount1Desired,
-        [token1StorageKeys[1]]: encodedAmount1Desired,
+        [storageKeys[0]]: encodedAmount,
+        [storageKeys[1]]: encodedAmount,
       },
     },
   };
@@ -215,9 +162,9 @@ export async function generateAccessList(
   tx: TransactionRequest,
   provider: JsonRpcProvider,
   blockNumber?: number,
-): Promise<AccessList> {
+): Promise<{ accessList: AccessList; gasUsed: string; gasRefund: string }> {
   try {
-    const { accessList } = await provider.send('eth_createAccessList', [
+    return await provider.send('eth_createAccessList', [
       {
         ...tx,
         gas: '0x11E1A300',
@@ -226,7 +173,6 @@ export async function generateAccessList(
       // hexlify the block number.
       blockNumber ? '0x' + blockNumber.toString(16) : 'latest',
     ]);
-    return accessList as AccessList;
   } catch (error) {
     console.error('Error generating access list:', error);
     throw error;
