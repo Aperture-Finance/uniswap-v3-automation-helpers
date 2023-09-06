@@ -117,7 +117,7 @@ import {
   getUnwrapETHTx,
   getWrapETHTx,
 } from '../transaction';
-import { getPoolsFromSubgraph } from '../whitelist';
+import { getPoolsFromSubgraph, getWhitelistedPools } from '../whitelist';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1775,7 +1775,11 @@ describe('Pool subgraph query tests', function () {
     const pools = await getPoolsFromSubgraph(
       ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID,
     );
-    expect(pools.length).to.be.greaterThanOrEqual(6);
+    const whitelistedPools = getWhitelistedPools(
+      ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID,
+      pools,
+    );
+    expect(whitelistedPools.size).to.be.greaterThanOrEqual(6);
   });
 });
 
