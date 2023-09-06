@@ -4,6 +4,7 @@ import {
   INonfungiblePositionManager__factory,
   IUniV3Automan__factory,
   PermitInfo,
+  WETH__factory,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { EventFragment } from '@ethersproject/abi';
 import {
@@ -559,6 +560,35 @@ export async function getReinvestTx(
       ).data,
     },
     amounts: amounts,
+  };
+}
+
+export function getWrapETHTx(
+  chainId: ApertureSupportedChainId,
+  amount: BigNumberish,
+): TransactionRequest {
+  if (chainId === ApertureSupportedChainId.CELO_MAINNET_CHAIN_ID) {
+    throw new Error('CELO wrapping is not applicable');
+  }
+  return {
+    to: getChainInfo(chainId).wrappedNativeCurrency.address,
+    data: WETH__factory.createInterface().encodeFunctionData('deposit'),
+    value: amount,
+  };
+}
+
+export function getUnwrapETHTx(
+  chainId: ApertureSupportedChainId,
+  amount: BigNumberish,
+): TransactionRequest {
+  if (chainId === ApertureSupportedChainId.CELO_MAINNET_CHAIN_ID) {
+    throw new Error('CELO unwrapping is not applicable');
+  }
+  return {
+    to: getChainInfo(chainId).wrappedNativeCurrency.address,
+    data: WETH__factory.createInterface().encodeFunctionData('withdraw', [
+      amount,
+    ]),
   };
 }
 
