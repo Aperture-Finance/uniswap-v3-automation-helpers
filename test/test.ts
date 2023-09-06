@@ -117,6 +117,7 @@ import {
   getUnwrapETHTx,
   getWrapETHTx,
 } from '../transaction';
+import { getPoolsFromSubgraph } from '../whitelist';
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -1768,6 +1769,13 @@ describe('Pool subgraph query tests', function () {
       getPublicProvider(arbitrumChainId),
     );
     await testLiquidityDistribution(arbitrumChainId, pool);
+  });
+
+  it('Get all pools', async function () {
+    const pools = await getPoolsFromSubgraph(
+      ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID,
+    );
+    expect(pools.length).to.be.greaterThanOrEqual(6);
   });
 });
 
