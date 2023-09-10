@@ -1,6 +1,6 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
-  "version": "1.6.9",
+  "version": "1.6.10",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
   "author": "Aperture Finance <engineering@aperture.finance>",
   "license": "MIT",

@@ -349,7 +349,7 @@ const CHAIN_ID_TO_INFO: {
     rpc_url: 'https://manta-testnet.calderachain.xyz/http',
     maxGasCeiling: 0.2,
     uniswap_subgraph_url:
-      'http://manta-loadb-nvw76zgfhxpo-e5139453fef6a975.elb.us-west-2.amazonaws.com:8000/subgraphs/name/aperture/uniswap-v3',
+      'https://d3lcl3uht06cq4.cloudfront.net/subgraphs/name/aperture/uniswap-v3',
     routingApiInfo: {
       type: 'ROUTING_API',
       url: 'https://manta-routing.aperture.finance/quote',
