@@ -114,6 +114,12 @@ const CHAIN_ID_TO_INFO: {
     aperture_uniswap_v3_automan: getAddress(
       '0x00000000Ede6d8D217c60f93191C060747324bca',
     ),
+    aperture_router_proxy: getAddress(
+      '0x0000000095538AD2A95685330eD1268C69753BC2',
+    ),
+    optimal_swap_router: getAddress(
+      '0x00000000063E0E1E06A0FE61e16bE8Bdec1BEA31',
+    ),
     wrappedNativeCurrency: new Token(
       ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
       getAddress('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'),
@@ -322,6 +328,41 @@ const CHAIN_ID_TO_INFO: {
       'https://api.thegraph.com/subgraphs/name/lynnshaoyu/uniswap-v3-avax',
     maxGasCeiling: 0.2,
     routingApiInfo: UNISWAP_OFFICIAL_ROUTING_API_INFO,
+  },
+  [ApertureSupportedChainId.MANTA_PACIFIC_MAINNET_CHAIN_ID]: {
+    uniswap_v3_factory: getAddress(
+      '0x5bd1F6735B80e58aAC88B8A94836854d3068a13a',
+    ),
+    uniswap_v3_nonfungible_position_manager: getAddress(
+      '0xe77e3F98a386a4C8f8c706A2aCfFdf57e70D06c6',
+    ),
+    // TODO: Not yet deployed.
+    aperture_uniswap_v3_automan: getAddress(
+      '0x00000000c04A561724F4Ea1181cA6E2E74E70FC1',
+    ),
+    // TODO: Not yet deployed.
+    aperture_router_proxy: getAddress(
+      '0x0000000095538AD2A95685330eD1268C69753BC2',
+    ),
+    // TODO: Not yet deployed.
+    optimal_swap_router: getAddress(
+      '0x000000002c1732dCF01E5C9E057d3fD2A7f1c238',
+    ),
+    wrappedNativeCurrency: new Token(
+      ApertureSupportedChainId.MANTA_PACIFIC_MAINNET_CHAIN_ID,
+      getAddress('0x0Dc808adcE2099A9F62AA87D9670745AbA741746'),
+      18,
+      'WETH',
+      'Wrapped Ether',
+    ),
+    rpc_url: 'https://pacific-rpc.manta.network/http',
+    maxGasCeiling: 0.2,
+    uniswap_subgraph_url:
+      'https://d2vin613o4opvi.cloudfront.net/subgraphs/name/aperture/uniswap-v3',
+    routingApiInfo: {
+      type: 'ROUTING_API',
+      url: 'https://manta-routing.aperture.finance/quote',
+    },
   },
   [ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID]: {
     uniswap_v3_factory: getAddress(
