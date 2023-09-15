@@ -154,17 +154,17 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@aperture_finance/uniswap-v3-automation-sdk@1.5.0":
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-1.5.0.tgz#454774cd382ba4ab60f2dcd87a7141636a6ee26c"
-  integrity sha512-5q1LNNeg0sAVALaE8Qz8Z+ui3aYlRolgOvf08IDCKAQOAqkjpTcWg5L7uNz9U1AC/606k7cBefT4Iz5mbgk68A==
+"@aperture_finance/uniswap-v3-automation-sdk@1.5.1":
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-1.5.1.tgz#e5702d849898022461b77cc490cb4f3da0d2aa10"
+  integrity sha512-yZUcUBRc8ayO7c+ILlbBISn43Hp/wFWbrVwy1iVoO+/sQpSTeRW9wosR0VpaKRYFNRUW8G1d7ZbD5YLMH8iA5A==
   dependencies:
     "@uniswap/v3-sdk" "^3.10.0"
     axios "^1.5.0"
     big.js "^6.2.1"
     ethers "5.7.2"
     json-stable-stringify "^1.0.2"
-    viem "^1.10.9"
+    viem "^1.10.14"
     zod "^3.22.2"
 
 "@ardatan/relay-compiler@12.0.0":
@@ -6067,7 +6067,7 @@ value-or-promise@^1.0.11, value-or-promise@^1.0.12:
   resolved "https://registry.yarnpkg.com/value-or-promise/-/value-or-promise-1.0.12.tgz#0e5abfeec70148c78460a849f6b003ea7986f15c"
   integrity sha512-Z6Uz+TYwEqE7ZN50gwn+1LCVo9ZVrpxRPOhOLnncYkY1ZzOYtrX8Fwf/rFktZ8R5mJms6EZf5TqNOMeZmnPq9Q==
 
-viem@^1.10.9:
+viem@^1.10.14:
   version "1.10.14"
   resolved "https://registry.yarnpkg.com/viem/-/viem-1.10.14.tgz#f32ab489f36700987accd93daa9b43135e39bc8b"
   integrity sha512-GRwFXLFr+/7+7nYYkABgHom3zMIE3DdxZ/DP78QlYWUanpjUV5IebxMOm6pfKD+ZAj3vf9YPAmz+WogjiUgDWw==
