@@ -376,6 +376,7 @@ export async function simulateMintOptimal(
  * @param chainId The chain ID.
  * @param provider A JSON RPC provider or a base provider.
  * @param from The address to simulate the call from.
+ * @param owner The owner of the position to burn.
  * @param tokenId The token ID of the position to burn.
  * @param amount0Min The minimum amount of token0 to receive.
  * @param amount1Min The minimum amount of token1 to receive.
@@ -386,6 +387,7 @@ export async function simulateRemoveLiquidity(
   chainId: ApertureSupportedChainId,
   provider: JsonRpcProvider | Provider,
   from: string,
+  owner: string,
   tokenId: BigNumberish,
   amount0Min: BigNumberish = 0,
   amount1Min: BigNumberish = 0,
@@ -407,7 +409,7 @@ export async function simulateRemoveLiquidity(
       from,
       getChainInfo(chainId).aperture_uniswap_v3_automan,
       data,
-      getNPMApprovalOverrides(chainId, from),
+      getNPMApprovalOverrides(chainId, owner),
       provider,
       blockNumber,
     ),
@@ -419,6 +421,7 @@ export async function simulateRemoveLiquidity(
  * @param chainId The chain ID.
  * @param provider A JSON RPC provider or a base provider.
  * @param from The address to simulate the call from.
+ * @param owner The owner of the position to rebalance.
  * @param mintParams The mint parameters.
  * @param tokenId The token ID of the position to rebalance.
  * @param feeBips The percentage of position value to pay as a fee, multiplied by 1e18.
@@ -429,6 +432,7 @@ export async function simulateRebalance(
   chainId: ApertureSupportedChainId,
   provider: JsonRpcProvider | Provider,
   from: string,
+  owner: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   tokenId: BigNumberish,
   feeBips: BigNumberish = 0,
@@ -451,7 +455,7 @@ export async function simulateRebalance(
       from,
       getChainInfo(chainId).aperture_uniswap_v3_automan,
       data,
-      getNPMApprovalOverrides(chainId, from),
+      getNPMApprovalOverrides(chainId, owner),
       provider,
       blockNumber,
     ),
