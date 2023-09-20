@@ -262,6 +262,9 @@ export function fractionToBig(price: Fraction): Big {
  * @returns The sqrt ratio of token1/token0, as a `JSBI` number.
  */
 export function priceToSqrtRatioX96(price: Big): JSBI {
+  if (price.lte(0)) {
+    throw new Error('Invalid price: must be greater than 0');
+  }
   const sqrtRatioX96 = JSBI.BigInt(price.times(Q192).sqrt().toFixed(0));
   if (JSBI.lessThan(sqrtRatioX96, TickMath.MIN_SQRT_RATIO)) {
     return TickMath.MIN_SQRT_RATIO;
@@ -270,6 +273,32 @@ export function priceToSqrtRatioX96(price: Big): JSBI {
   } else {
     return sqrtRatioX96;
   }
+}
+
+/**
+ * Given a Big price of quoteToken/baseToken, calculate the closest tick.
+ * @param price The price of quoteToken/baseToken, as a `Big` number.
+ * @param baseToken The base token.
+ * @param quoteToken The quote token.
+ * @returns The closest tick.
+ */
+export function bigToClosestTickSafe(
+  price: Big,
+  baseToken: Token,
+  quoteToken: Token,
+): number {
+  if (price.lte(0)) {
+    throw new Error('Invalid price: must be greater than 0');
+  }
+  const sorted = baseToken.sortsBefore(quoteToken);
+  if (!sorted) {
+    const DP = Big.DP;
+    Big.DP = 30;
+    price = new Big(1).div(price);
+    Big.DP = DP;
+  }
+  const sqrtPriceX96 = priceToSqrtRatioX96(price);
+  return TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 }
 
 /**
