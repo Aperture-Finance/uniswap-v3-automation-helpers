@@ -11,6 +11,7 @@ import Big from 'big.js';
 import JSBI from 'jsbi';
 
 import { LiquidityAmount, TickNumber, TickToLiquidityMap } from './pool';
+import { parsePrice } from './price';
 
 const Q96 = JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(96));
 const Q192 = JSBI.multiply(Q96, Q96);
@@ -58,6 +59,21 @@ export function priceToClosestTickSafe(price: Price<Token, Token>): number {
   } else {
     return priceToClosestTick(price);
   }
+}
+
+/**
+ * Given a human-readable price of `baseToken` denominated in `quoteToken`, calculate the closest tick.
+ * @param humanPrice The human-readable price of `baseToken` denominated in `quoteToken`.
+ * @param baseToken The base token.
+ * @param quoteToken The quote token.
+ * @returns The closest tick.
+ */
+export function humanPriceToClosestTick(
+  baseToken: Token,
+  quoteToken: Token,
+  humanPrice: string,
+): number {
+  return priceToClosestTickSafe(parsePrice(baseToken, quoteToken, humanPrice));
 }
 
 /**

@@ -98,6 +98,7 @@ import {
   MAX_PRICE,
   MIN_PRICE,
   alignPriceToClosestUsableTick,
+  humanPriceToClosestTick,
   priceToClosestTickSafe,
   priceToClosestUsableTick,
   rangeWidthRatioToTicks,
@@ -1726,6 +1727,11 @@ describe('Price to tick conversion', function () {
     const value0 = amount0.times(price);
     const ratio = value0.div(value0.add(amount1)).toNumber();
     expect(ratio).to.be.closeTo(token0ValueProportion.toNumber(), 0.001);
+  });
+
+  it('Human price to closest tick', function () {
+    const tick = humanPriceToClosestTick(token0, token1, maxPrice.toFixed());
+    expect(tick).to.equal(TickMath.MAX_TICK - 1);
   });
 });
 
