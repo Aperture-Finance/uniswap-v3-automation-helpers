@@ -9,7 +9,7 @@ import { getChainInfo } from './chain';
 
 // Let Big use 30 decimal places of precision since 2^96 < 10^29.
 Big.DP = 30;
-export const Q96 = new Big('2').pow(96);
+export const Q96 = new Big(2).pow(96);
 export const Q192 = Q96.times(Q96);
 
 // A list of two numbers representing a historical price datapoint provided by Coingecko.

@@ -7,6 +7,7 @@ import {
   priceToClosestTick,
   tickToPrice,
 } from '@uniswap/v3-sdk';
+import Big from 'big.js';
 import JSBI from 'jsbi';
 
 import { LiquidityAmount, TickNumber, TickToLiquidityMap } from './pool';
@@ -124,6 +125,65 @@ export function tickToLimitOrderRange(
     tickLower: Math.round(tickAvg - halfWidth),
     tickUpper: Math.round(tickAvg + halfWidth),
   };
+}
+
+/**
+ * Returns token0's raw price in terms of token1.
+ * @param tick The tick to query.
+ * @returns The token0 price in terms of token1.
+ */
+export function tickToBigPrice(tick: number): Big {
+  return new Big(TickMath.getSqrtRatioAtTick(tick).toString())
+    .pow(2)
+    .div(Q192.toString());
+}
+
+/**
+ * Returns the tick range for a position ratio and range width.
+ * @param width The width of the range.
+ * @param tickCurrent The current tick of the pool.
+ * @param token0ValueProportion The proportion of the position value that is held in token0, as a `Big` number between 0
+ * and 1, inclusive.
+ * @returns The tick range for the position.
+ */
+export function rangeWidthRatioToTicks(
+  width: number,
+  tickCurrent: number,
+  token0ValueProportion: Big,
+): {
+  tickLower: number;
+  tickUpper: number;
+} {
+  let tickLower: number, tickUpper: number;
+  if (token0ValueProportion.lt(0) || token0ValueProportion.gt(1)) {
+    throw new Error('token0ValueProportion must be between 0 and 1');
+  }
+  if (token0ValueProportion.eq(0)) {
+    tickLower = tickCurrent - width;
+    tickUpper = tickCurrent;
+  } else if (token0ValueProportion.eq(1)) {
+    tickLower = tickCurrent;
+    tickUpper = tickCurrent + width;
+  } else {
+    const price = tickToBigPrice(tickCurrent);
+    const a = token0ValueProportion;
+    const b = new Big(1).minus(a.times(2)).times(price.sqrt());
+    const c = price
+      .times(a.minus(new Big(1)))
+      .div(tickToBigPrice(width).sqrt());
+    const priceLowerSqrt = b
+      .pow(2)
+      .minus(a.times(c).times(4))
+      .sqrt()
+      .minus(b)
+      .div(a.times(2));
+    const sqrtRatioLowerX96 = JSBI.BigInt(
+      priceLowerSqrt.times(new Big(2).pow(96)).toFixed(0),
+    );
+    tickLower = TickMath.getTickAtSqrtRatio(sqrtRatioLowerX96);
+    tickUpper = tickLower + width;
+  }
+  return { tickLower, tickUpper };
 }
 
 /**
