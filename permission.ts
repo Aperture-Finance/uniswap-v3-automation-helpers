@@ -120,6 +120,7 @@ export async function checkPositionPermit(
     );
     return true;
   } catch (err) {
+    console.log(`npm.callStatic.permit() failed: ${err}`);
     return false;
   }
 }
