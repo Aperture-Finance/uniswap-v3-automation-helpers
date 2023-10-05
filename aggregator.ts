@@ -1,6 +1,7 @@
 import {
   ApertureSupportedChainId,
   INonfungiblePositionManager,
+  getChainInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { JsonRpcProvider, Provider } from '@ethersproject/providers';
 import { CurrencyAmount, Token } from '@uniswap/sdk-core';
@@ -16,7 +17,6 @@ import {
   simulateRebalance,
   simulateRemoveLiquidity,
 } from './automan';
-import { getChainInfo } from './chain';
 import { computePoolAddress } from './pool';
 import { PositionDetails } from './position';
 

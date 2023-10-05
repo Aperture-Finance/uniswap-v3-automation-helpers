@@ -1,10 +1,12 @@
-import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
+import {
+  ApertureSupportedChainId,
+  ChainSpecificRoutingAPIInfo,
+  getChainInfo,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import { PermitSingleData, PermitTransferFromData } from '@uniswap/permit2-sdk';
 import { MethodParameters } from '@uniswap/smart-order-router';
 import axios from 'axios';
 import { BigNumber, BigNumberish } from 'ethers';
-
-import { ChainSpecificRoutingAPIInfo, getChainInfo } from './chain';
 
 export type TokenInRoute = {
   address: string;

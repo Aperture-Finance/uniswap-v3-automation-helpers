@@ -2,20 +2,25 @@ import {
   ActionTypeEnum,
   ApertureSupportedChainId,
   ConditionTypeEnum,
+  DOUBLE_TICK,
   IERC20__factory,
   PriceConditionSchema,
+  Q192,
   UniV3Automan,
   UniV3Automan__factory,
   WETH__factory,
+  alignPriceToClosestUsableTick,
+  fractionToBig,
+  getChainInfo,
+  getRawRelativePriceFromTokenValueProportion,
+  getTokenValueProportionFromPriceRatio,
+  parsePrice,
+  priceToClosestTickSafe,
+  priceToClosestUsableTick,
+  tickToLimitOrderRange,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { reset as hardhatReset } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  CurrencyAmount,
-  Fraction,
-  Percent,
-  Price,
-  Token,
-} from '@uniswap/sdk-core';
+import { CurrencyAmount, Percent, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
   Pool,
@@ -36,7 +41,6 @@ import JSBI from 'jsbi';
 
 import { optimalMint, optimalRebalance } from '../aggregator';
 import { getAutomanReinvestCallInfo, simulateMintOptimal } from '../automan';
-import { getChainInfo } from '../chain';
 import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
 import {
   computeOperatorApprovalSlot,
@@ -57,6 +61,7 @@ import {
   getLiquidityArrayForPool,
   getPool,
   getTickToLiquidityMapForPool,
+  readTickToLiquidityMap,
 } from '../pool';
 import {
   BasicPositionInfo,
@@ -76,37 +81,11 @@ import {
   projectRebalancedPositionAtPrice,
   viewCollectableTokenAmounts,
 } from '../position';
-import {
-  Q192,
-  fractionToBig,
-  getRawRelativePriceFromTokenValueProportion,
-  getTokenHistoricalPricesFromCoingecko,
-  getTokenPriceFromCoingecko,
-  getTokenPriceListFromCoingecko,
-  getTokenPriceListFromCoingeckoWithAddresses,
-  getTokenValueProportionFromPriceRatio,
-  parsePrice,
-  priceToSqrtRatioX96,
-} from '../price';
 import { getPublicProvider } from '../provider';
 import {
   fetchQuoteFromRoutingApi,
   fetchQuoteFromSpecifiedRoutingApiInfo,
 } from '../routing';
-import {
-  DOUBLE_TICK,
-  MAX_PRICE,
-  MIN_PRICE,
-  alignPriceToClosestUsableTick,
-  humanPriceToClosestTick,
-  priceToClosestTickSafe,
-  priceToClosestUsableTick,
-  rangeWidthRatioToTicks,
-  readTickToLiquidityMap,
-  sqrtRatioToPrice,
-  tickToBigPrice,
-  tickToLimitOrderRange,
-} from '../tick';
 import {
   getAddLiquidityTx,
   getCollectTx,
@@ -807,7 +786,8 @@ describe('Automan transaction tests', function () {
     await automanContract.setControllers([WHALE_ADDRESS], [true]);
 
     // Set Automan address in CHAIN_ID_TO_INFO.
-    getChainInfo(chainId).aperture_uniswap_v3_automan = automanContract.address;
+    getChainInfo(chainId).aperture_uniswap_v3_automan =
+      automanContract.address as `0x${string}`;
 
     // Owner of position id 4 sets Automan as operator.
     impersonatedOwnerSigner = await ethers.getImpersonatedSigner(eoa);
@@ -1494,244 +1474,6 @@ describe('Position util tests', function () {
     expect(JSBI.subtract(liquidityAfter, liquidityBefore).toString()).to.equal(
       liquidity.toString(),
     );
-  });
-});
-
-describe('CoinGecko tests', function () {
-  beforeEach(async function () {
-    await resetHardhatNetwork();
-  });
-
-  it('Test CoinGecko single price', async function () {
-    const token = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
-    const usdPrice = await getTokenPriceFromCoingecko(
-      token,
-      'usd',
-      process.env.COINGECKO_API_KEY,
-    );
-    expect(usdPrice).to.be.greaterThan(0);
-    const ethPrice = await getTokenPriceFromCoingecko(
-      token,
-      'eth',
-      process.env.COINGECKO_API_KEY,
-    );
-    expect(ethPrice).to.be.closeTo(1, 0.01);
-  });
-
-  it('Test CoinGecko price list', async function () {
-    {
-      const prices = await getTokenPriceListFromCoingecko(
-        await Promise.all([
-          getToken(WBTC_ADDRESS, chainId, hardhatForkProvider),
-          getToken(WETH_ADDRESS, chainId, hardhatForkProvider),
-        ]),
-        'eth',
-        process.env.COINGECKO_API_KEY,
-      );
-      for (const price of Object.values(prices)) {
-        expect(price).to.be.greaterThan(0);
-      }
-    }
-
-    {
-      const prices = await getTokenPriceListFromCoingeckoWithAddresses(
-        ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-        [WBTC_ADDRESS, WETH_ADDRESS],
-        'usd',
-        process.env.COINGECKO_API_KEY,
-      );
-      for (const price of Object.values(prices)) {
-        expect(price).to.be.greaterThan(0);
-      }
-    }
-
-    expect(
-      getTokenPriceListFromCoingecko(
-        await Promise.all([
-          getToken(
-            WBTC_ADDRESS,
-            ApertureSupportedChainId.ETHEREUM_MAINNET_CHAIN_ID,
-            hardhatForkProvider,
-          ),
-          new Token(
-            ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID,
-            '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
-            6,
-          ),
-        ]),
-        'usd',
-      ),
-    ).to.be.rejectedWith('All tokens must have the same chain id');
-  });
-
-  it('Test CoinGecko historical price list', async function () {
-    const token = await getToken(WETH_ADDRESS, chainId, hardhatForkProvider);
-    const prices = await getTokenHistoricalPricesFromCoingecko(
-      token,
-      30,
-      'usd',
-      process.env.COINGECKO_API_KEY,
-    );
-    expect(prices.length).to.be.greaterThan(0);
-  });
-});
-
-describe('Price to tick conversion', function () {
-  const token0 = new Token(1, WBTC_ADDRESS, 18);
-  const token1 = new Token(1, WETH_ADDRESS, 18);
-  const fee = FeeAmount.MEDIUM;
-  const zeroPrice = new Price(token0, token1, '1', '0');
-  const maxPrice = new Price(
-    token0,
-    token1,
-    MAX_PRICE.denominator,
-    MAX_PRICE.numerator,
-  );
-
-  it('A zero price should return MIN_TICK', function () {
-    expect(priceToClosestUsableTick(zeroPrice, fee)).to.equal(
-      nearestUsableTick(TickMath.MIN_TICK, TICK_SPACINGS[fee]),
-    );
-  });
-
-  it('The tick is invariant to the order of base/quote tokens', function () {
-    expect(priceToClosestUsableTick(zeroPrice.invert(), fee)).to.equal(
-      priceToClosestUsableTick(zeroPrice, fee),
-    );
-    expect(priceToClosestUsableTick(maxPrice.invert(), fee)).to.equal(
-      priceToClosestUsableTick(maxPrice, fee),
-    );
-  });
-
-  it('If token1 is the baseCurrency, then a price of 0 should return MAX_TICK', function () {
-    expect(
-      priceToClosestUsableTick(new Price(token1, token0, '1', '0'), fee),
-    ).to.equal(nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[fee]));
-  });
-
-  it('MIN_PRICE should return MIN_TICK', function () {
-    expect(
-      priceToClosestUsableTick(
-        new Price(token0, token1, MIN_PRICE.denominator, MIN_PRICE.numerator),
-        fee,
-      ),
-    ).to.equal(nearestUsableTick(TickMath.MIN_TICK, TICK_SPACINGS[fee]));
-  });
-
-  it('Prices greater than MAX_PRICE should return MAX_TICK', function () {
-    expect(
-      priceToClosestUsableTick(
-        new Price(
-          token0,
-          token1,
-          MAX_PRICE.denominator,
-          JSBI.add(MAX_PRICE.numerator, JSBI.BigInt(1)),
-        ),
-        fee,
-      ),
-    ).to.equal(nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[fee]));
-  });
-
-  it('MAX_PRICE should return MAX_TICK', function () {
-    expect(priceToClosestUsableTick(maxPrice, fee)).to.equal(
-      nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[fee]),
-    );
-  });
-
-  it('Sqrt ratio to price', function () {
-    const price = alignPriceToClosestUsableTick(maxPrice, fee);
-    const tick = priceToClosestUsableTick(price, fee);
-    expect(
-      sqrtRatioToPrice(TickMath.getSqrtRatioAtTick(tick), token0, token1),
-    ).to.deep.equal(price);
-
-    const minPrice = tickToPrice(token0, token1, TickMath.MIN_TICK);
-    expect(
-      sqrtRatioToPrice(TickMath.MIN_SQRT_RATIO, token0, token1),
-    ).to.deep.equal(minPrice);
-  });
-
-  it('Price to sqrt ratio', function () {
-    const tick = priceToClosestUsableTick(
-      alignPriceToClosestUsableTick(maxPrice, fee),
-      fee,
-    );
-    const sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
-    const price = sqrtRatioToPrice(sqrtRatioX96, token0, token1);
-    expect(priceToSqrtRatioX96(fractionToBig(price)).toString()).to.equal(
-      sqrtRatioX96.toString(),
-    );
-  });
-
-  it('Price to Big', function () {
-    const minPrice = tickToPrice(token0, token1, TickMath.MIN_TICK);
-    const bigPrice = fractionToBig(minPrice);
-    expect(
-      minPrice.equalTo(
-        new Fraction(bigPrice.mul(Q192).toFixed(0), Q192.toFixed(0)),
-      ),
-    ).to.be.true;
-  });
-
-  it('Tick to limit order range', function () {
-    const tick = 18;
-    Object.entries(TICK_SPACINGS).forEach(([fee, tickSpacing]) => {
-      const { tickAvg, tickLower, tickUpper } = tickToLimitOrderRange(
-        tick,
-        Number(fee),
-      );
-      expect(Number.isInteger(tickAvg)).to.be.true;
-      expect(Number.isInteger(tickLower)).to.be.true;
-      expect(Number.isInteger(tickUpper)).to.be.true;
-      expect(Math.round(tick - tickAvg)).to.be.lessThan(tickSpacing);
-      expect(tickAvg).to.equal(Math.floor((tickLower + tickUpper) / 2));
-      expect(tickUpper - tickLower).to.equal(tickSpacing);
-    });
-    const widthMultiplier = 2;
-    const { tickAvg, tickLower, tickUpper } = tickToLimitOrderRange(
-      tick,
-      fee,
-      widthMultiplier,
-    );
-    const tickSpacing = TICK_SPACINGS[fee];
-    expect(Math.round(tick - tickAvg)).to.be.lessThan(tickSpacing);
-    expect(tickAvg).to.equal(Math.floor((tickLower + tickUpper) / 2));
-    expect(tickUpper - tickLower).to.equal(widthMultiplier * tickSpacing);
-  });
-
-  it('Tick to big price', function () {
-    expect(tickToBigPrice(100).toNumber()).to.be.equal(
-      new Big(1.0001).pow(100).toNumber(),
-    );
-  });
-
-  it('Range width and ratio to ticks', function () {
-    const tickCurrent = 200000;
-    const price = tickToBigPrice(tickCurrent);
-    const token0ValueProportion = new Big(0.3);
-    const width = 1000;
-    const { tickLower, tickUpper } = rangeWidthRatioToTicks(
-      width,
-      tickCurrent,
-      token0ValueProportion,
-    );
-    expect(tickUpper - tickLower).to.equal(width);
-    const priceLowerSqrt = tickToBigPrice(tickLower).sqrt();
-    const priceUpperSqrt = tickToBigPrice(tickUpper).sqrt();
-    // amount0 = liquidity * (1 / sqrt(price)) - (1 / sqrt(priceUpper))
-    const amount0 = new Big(1)
-      .div(price.sqrt())
-      .minus(new Big(1).div(priceUpperSqrt));
-    // amount1 = liquidity * (sqrt(price) - sqrt(priceLower))
-    const amount1 = price.sqrt().minus(priceLowerSqrt);
-    const value0 = amount0.times(price);
-    const ratio = value0.div(value0.add(amount1)).toNumber();
-    expect(ratio).to.be.closeTo(token0ValueProportion.toNumber(), 0.001);
-  });
-
-  it('Human price to closest tick', function () {
-    const tick = humanPriceToClosestTick(token0, token1, maxPrice.toFixed());
-    expect(tick).to.equal(TickMath.MAX_TICK - 1);
   });
 });
 

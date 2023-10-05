@@ -1,6 +1,7 @@
 import {
   ApertureSupportedChainId,
   IERC20__factory,
+  getChainInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import {
   JsonRpcProvider,
@@ -10,8 +11,6 @@ import {
 import { AccessList } from '@ethersproject/transactions';
 import { BigNumberish } from 'ethers';
 import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
-
-import { getChainInfo } from './chain';
 
 type StateOverrides = {
   [address: string]: {

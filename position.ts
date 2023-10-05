@@ -4,6 +4,10 @@ import {
   EphemeralGetPosition__factory,
   INonfungiblePositionManager__factory,
   IUniV3Automan__factory,
+  fractionToBig,
+  getChainInfo,
+  getTokenValueProportionFromPriceRatio,
+  priceToSqrtRatioX96,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { PositionStateStructOutput } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralGetPosition';
 import { JsonRpcProvider, Provider } from '@ethersproject/providers';
@@ -20,7 +24,6 @@ import { BigNumber, BigNumberish, Signer } from 'ethers';
 import JSBI from 'jsbi';
 
 import { getAutomanReinvestCallInfo } from './automan';
-import { getChainInfo } from './chain';
 import { getToken } from './currency';
 import { getNPMApprovalOverrides, staticCallWithOverrides } from './overrides';
 import {
@@ -29,11 +32,6 @@ import {
   getPoolFromBasicPositionInfo,
   getPoolPrice,
 } from './pool';
-import {
-  fractionToBig,
-  getTokenValueProportionFromPriceRatio,
-  priceToSqrtRatioX96,
-} from './price';
 
 export interface BasicPositionInfo {
   token0: Token;

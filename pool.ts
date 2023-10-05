@@ -1,7 +1,10 @@
 import {
   ApertureSupportedChainId,
+  DOUBLE_TICK,
   EphemeralGetPopulatedTicksInRange__factory,
   IUniswapV3Pool__factory,
+  getChainInfo,
+  sqrtRatioToPrice,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { TickLens } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralGetPopulatedTicksInRange';
 import { Provider } from '@ethersproject/abstract-provider';
@@ -17,7 +20,6 @@ import axios from 'axios';
 import { BigNumberish, Signer } from 'ethers';
 import JSBI from 'jsbi';
 
-import { getChainInfo } from './chain';
 import { getToken } from './currency';
 import {
   AllV3TicksQuery,
@@ -25,7 +27,6 @@ import {
 } from './data/__graphql_generated__/uniswap-thegraph-types-and-hooks';
 import { BasicPositionInfo } from './position';
 import { getPublicProvider } from './provider';
-import { DOUBLE_TICK, sqrtRatioToPrice } from './tick';
 
 /**
  * Computes a pool address
@@ -376,6 +377,27 @@ export async function getTickToLiquidityMapForPool(
     }
   }
   return data;
+}
+
+/**
+ * Returns the liquidity amount at the specified tick.
+ * @param tickToLiquidityMap Sorted map from tick to liquidity amount.
+ * @param tick The tick to query.
+ * @returns The liquidity amount at the specified tick.
+ */
+export function readTickToLiquidityMap(
+  tickToLiquidityMap: TickToLiquidityMap,
+  tick: TickNumber,
+): LiquidityAmount {
+  if (tickToLiquidityMap.get(tick) !== undefined) {
+    return tickToLiquidityMap.get(tick)!;
+  } else {
+    const key = [...tickToLiquidityMap.keys()].findIndex((t) => t > tick) - 1;
+    if (key >= 0) {
+      return tickToLiquidityMap.get(key)!;
+    }
+  }
+  return JSBI.BigInt(0);
 }
 
 /**

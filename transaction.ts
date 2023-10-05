@@ -1,10 +1,14 @@
 import {
   ApertureSupportedChainId,
+  ChainInfo,
   INonfungiblePositionManager,
   INonfungiblePositionManager__factory,
   IUniV3Automan__factory,
   PermitInfo,
   WETH__factory,
+  getChainInfo,
+  priceToClosestTickSafe,
+  tickToLimitOrderRange,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { EventFragment } from '@ethersproject/abi';
 import {
@@ -38,7 +42,6 @@ import {
   getAutomanRebalanceCallInfo,
   getAutomanReinvestCallInfo,
 } from './automan';
-import { ChainInfo, getChainInfo } from './chain';
 import { getNativeCurrency } from './currency';
 import { getPool } from './pool';
 import {
@@ -48,7 +51,6 @@ import {
   getBasicPositionInfo,
   viewCollectableTokenAmounts,
 } from './position';
-import { priceToClosestTickSafe, tickToLimitOrderRange } from './tick';
 
 function getTxToNonfungiblePositionManager(
   chainInfo: ChainInfo,

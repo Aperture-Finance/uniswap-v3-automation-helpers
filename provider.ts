@@ -1,7 +1,6 @@
 import { providers } from '@0xsequence/multicall';
+import { getChainInfo } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { ethers } from 'ethers';
-
-import { getChainInfo } from './chain';
 
 /**
  * Creates a public ethers provider for the specified chain id.
