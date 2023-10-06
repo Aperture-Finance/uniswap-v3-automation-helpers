@@ -574,7 +574,8 @@ export async function getRebalanceTx(
       newPositionTickLower,
       newPositionTickUpper,
       ownerAddress,
-      Number(slippageTolerance.toFixed(6)),
+      Number(slippageTolerance.numerator.toString()) /
+        Number(slippageTolerance.denominator.toString()),
       provider,
     ));
   }

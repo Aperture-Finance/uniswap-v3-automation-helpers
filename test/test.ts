@@ -905,6 +905,7 @@ describe('Automan transaction tests', function () {
       300000,
       /*slippageTolerance=*/ new Percent(50, 100),
       /*deadlineEpochSeconds=*/ Math.floor(Date.now() / 1000),
+      // Hardhat provider doesn't support 'eth_createAccessList' and state overrides.
       new providers.MulticallProvider(hardhatForkProvider),
       existingPosition,
       undefined,
