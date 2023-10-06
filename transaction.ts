@@ -12,6 +12,7 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { EventFragment } from '@ethersproject/abi';
 import {
+  JsonRpcProvider,
   Log,
   Provider,
   TransactionReceipt,
@@ -37,10 +38,12 @@ import {
 import { BigNumber, BigNumberish } from 'ethers';
 import JSBI from 'jsbi';
 
+import { optimalMint } from './aggregator';
 import {
   AutomanFragment,
   getAutomanRebalanceCallInfo,
   getAutomanReinvestCallInfo,
+  simulateRemoveLiquidity,
 } from './automan';
 import { getNativeCurrency } from './currency';
 import { getPool } from './pool';
@@ -169,7 +172,6 @@ export async function getCreatePositionTx(
   chainId: ApertureSupportedChainId,
   provider: Provider,
 ): Promise<TransactionRequest> {
-  const chainInfo = getChainInfo(chainId);
   let createPool = false;
   try {
     await getPool(
@@ -189,7 +191,93 @@ export async function getCreatePositionTx(
       createPool,
     },
   );
-  return getTxToNonfungiblePositionManager(chainInfo, calldata, value);
+  return getTxToNonfungiblePositionManager(
+    getChainInfo(chainId),
+    calldata,
+    value,
+  );
+}
+
+/**
+ * Generates an unsigned transaction that mints the optimal amount of liquidity for the specified token amounts and price range.
+ * @param chainId The chain ID.
+ * @param token0Amount The token0 amount.
+ * @param token1Amount The token1 amount.
+ * @param fee The pool fee tier.
+ * @param tickLower The lower tick of the range.
+ * @param tickUpper The upper tick of the range.
+ * @param recipient The recipient address.
+ * @param deadline The deadline in seconds before which the transaction must be mined.
+ * @param slippage The slippage tolerance.
+ * @param provider A JSON RPC provider or a base provider.
+ */
+export async function getOptimalMintTx(
+  chainId: ApertureSupportedChainId,
+  token0Amount: CurrencyAmount<Currency>,
+  token1Amount: CurrencyAmount<Currency>,
+  fee: FeeAmount,
+  tickLower: number,
+  tickUpper: number,
+  recipient: string,
+  deadline: BigNumberish,
+  slippage: number,
+  provider: JsonRpcProvider | Provider,
+) {
+  let value: BigNumberish | undefined;
+  if (token0Amount.currency.isNative) {
+    token0Amount = CurrencyAmount.fromRawAmount(
+      getNativeCurrency(chainId).wrapped,
+      token0Amount.quotient,
+    );
+    value = token0Amount.quotient.toString();
+  } else if (token1Amount.currency.isNative) {
+    token1Amount = CurrencyAmount.fromRawAmount(
+      getNativeCurrency(chainId).wrapped,
+      token1Amount.quotient,
+    );
+    value = token1Amount.quotient.toString();
+  }
+  const { amount0, amount1, swapData } = await optimalMint(
+    chainId,
+    token0Amount as CurrencyAmount<Token>,
+    token1Amount as CurrencyAmount<Token>,
+    fee,
+    tickLower,
+    tickUpper,
+    recipient,
+    slippage,
+    provider,
+  );
+  const slippageTolerance: Percent = new Percent(
+    Math.floor(slippage * 1e6),
+    1e6,
+  );
+  const mintParams = {
+    token0: (token0Amount.currency as Token).address,
+    token1: (token1Amount.currency as Token).address,
+    fee,
+    tickLower,
+    tickUpper,
+    amount0Desired: token0Amount.quotient.toString(),
+    amount1Desired: token1Amount.quotient.toString(),
+    amount0Min: slippageTolerance
+      .multiply(amount0.toString())
+      .quotient.toString(),
+    amount1Min: slippageTolerance
+      .multiply(amount1.toString())
+      .quotient.toString(),
+    recipient,
+    deadline,
+  };
+  const data = IUniV3Automan__factory.createInterface().encodeFunctionData(
+    'mintOptimal',
+    [mintParams, swapData],
+  );
+  return {
+    to: getChainInfo(chainId).aperture_uniswap_v3_automan,
+    data,
+    value,
+  };
 }
 
 /**
@@ -252,9 +340,9 @@ function convertCollectableTokenAmountToExpectedCurrencyOwed(
     collectableTokenAmount.token0Amount;
   let expectedCurrencyOwed1: CurrencyAmount<Currency> =
     collectableTokenAmount.token1Amount;
-  const nativeEther = getNativeCurrency(chainId);
-  const weth = nativeEther.wrapped;
   if (receiveNativeEtherIfApplicable) {
+    const nativeEther = getNativeCurrency(chainId);
+    const weth = nativeEther.wrapped;
     if (weth.equals(token0)) {
       expectedCurrencyOwed0 = CurrencyAmount.fromRawAmount(
         nativeEther,
@@ -303,8 +391,8 @@ export async function getRemoveLiquidityTx(
     removeLiquidityOptions.tokenId.toString(),
     provider,
     {
-      token0: position.amount0.currency,
-      token1: position.amount1.currency,
+      token0: position.pool.token0,
+      token1: position.pool.token1,
       tickLower: position.tickLower,
       tickUpper: position.tickUpper,
       fee: position.pool.fee,
@@ -325,8 +413,8 @@ export async function getRemoveLiquidityTx(
         ...convertCollectableTokenAmountToExpectedCurrencyOwed(
           collectableTokenAmount,
           chainId,
-          position.amount0.currency,
-          position.amount1.currency,
+          position.pool.token0,
+          position.pool.token1,
           receiveNativeEtherIfApplicable,
         ),
       },
@@ -438,20 +526,22 @@ async function getAmountsWithSlippage(
  * @param deadlineEpochSeconds Timestamp when the tx expires (in seconds since epoch).
  * @param provider Ethers provider.
  * @param position Optional, the existing position.
- * @param permitInfo Optional. If Automan doesn't already has authority over the existing position, this should be populated with a valid owner-signed permit info.
+ * @param permitInfo Optional. If Automan doesn't already have authority over the existing position, this should be populated with valid owner-signed permit info.
+ * @param use1inch Optional. If set to true, the 1inch aggregator will be used to facilitate the swap.
  * @returns The generated transaction request and expected amounts.
  */
 export async function getRebalanceTx(
   chainId: ApertureSupportedChainId,
   ownerAddress: string,
   existingPositionId: BigNumberish,
-  newPositionTickLower: BigNumberish,
-  newPositionTickUpper: BigNumberish,
+  newPositionTickLower: number,
+  newPositionTickUpper: number,
   slippageTolerance: Percent,
   deadlineEpochSeconds: BigNumberish,
-  provider: Provider,
+  provider: JsonRpcProvider | Provider,
   position?: Position,
   permitInfo?: PermitInfo,
+  use1inch?: boolean,
 ): Promise<{
   tx: TransactionRequest;
   amounts: SimulatedAmounts;
@@ -463,9 +553,34 @@ export async function getRebalanceTx(
       provider,
     ));
   }
+  let swapData = '0x';
+  if (use1inch) {
+    const { amount0: receive0, amount1: receive1 } =
+      await simulateRemoveLiquidity(
+        chainId,
+        provider,
+        ownerAddress,
+        ownerAddress,
+        existingPositionId,
+        0,
+        0,
+        0,
+      );
+    ({ swapData } = await optimalMint(
+      chainId,
+      CurrencyAmount.fromRawAmount(position.pool.token0, receive0.toString()),
+      CurrencyAmount.fromRawAmount(position.pool.token1, receive1.toString()),
+      position.pool.fee,
+      newPositionTickLower,
+      newPositionTickUpper,
+      ownerAddress,
+      Number(slippageTolerance.toFixed(6)),
+      provider,
+    ));
+  }
   const mintParams: INonfungiblePositionManager.MintParamsStruct = {
-    token0: position.amount0.currency.address,
-    token1: position.amount1.currency.address,
+    token0: position.pool.token0.address,
+    token1: position.pool.token1.address,
     fee: position.pool.fee,
     tickLower: newPositionTickLower,
     tickUpper: newPositionTickUpper,
@@ -482,6 +597,7 @@ export async function getRebalanceTx(
     existingPositionId,
     0,
     permitInfo,
+    swapData,
   );
   const amounts = await getAmountsWithSlippage(
     aperture_uniswap_v3_automan,
@@ -502,6 +618,7 @@ export async function getRebalanceTx(
         existingPositionId,
         0,
         permitInfo,
+        swapData,
       ).data,
     },
     amounts: amounts,

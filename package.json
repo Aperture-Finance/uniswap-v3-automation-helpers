@@ -1,6 +1,6 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
   "author": "Aperture Finance <engineering@aperture.finance>",
   "license": "MIT",
@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "test": "npx hardhat test",
+    "test": "npx hardhat test --v",
     "lint": "eslint ./ --quiet",
     "lint:fix": "eslint ./ --quiet --fix && prettier -w ./",
     "prettier": "prettier -c ./",
@@ -70,7 +70,8 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
     "graphql": "^16.7.1",
-    "hardhat": "^2.17.3",
+    "hardhat": "^2.18.0",
+    "hardhat-tracer": "^2.6.0",
     "prettier": "^2.8.8",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"

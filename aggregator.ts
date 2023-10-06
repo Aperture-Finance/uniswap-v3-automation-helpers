@@ -69,6 +69,15 @@ export async function getApproveTarget(
   }
 }
 
+/**
+ * Get a quote for a swap.
+ * @param chainId The chain ID.
+ * @param src Contract address of a token to sell
+ * @param dst Contract address of a token to buy
+ * @param amount Amount of a token to sell, set in minimal divisible units
+ * @param from Address of a seller, make sure that this address has approved to spend src in needed amount
+ * @param slippage Limit of price slippage you are willing to accept in percentage
+ */
 export async function quote(
   chainId: ApertureSupportedChainId,
   src: string,
@@ -213,7 +222,7 @@ async function optimalMintRouter(
     zeroForOne ? mintParams.token1 : mintParams.token0,
     poolAmountIn.toString(),
     optimal_swap_router!,
-    slippage,
+    slippage * 100,
   );
   const swapData = encodeOptimalSwapData(
     chainId,
