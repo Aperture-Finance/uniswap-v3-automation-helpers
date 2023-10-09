@@ -1,6 +1,7 @@
 import {
   ApertureSupportedChainId,
   ERC20__factory,
+  getChainInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
 import { parseFixed } from '@ethersproject/bignumber';
@@ -11,8 +12,6 @@ import {
   NativeCurrency,
   Token,
 } from '@uniswap/sdk-core';
-
-import { getChainInfo } from './chain';
 
 // The `Currency` type is defined as `Currency = NativeCurrency | Token`.
 // When a liquidity pool involves ETH, i.e. WETH is one of the two tokens in the pool, the

@@ -4,12 +4,11 @@ import {
   ConditionTypeEnum,
   CreateTriggerPayload,
   PriceCondition,
+  getRawRelativePriceFromTokenValueProportion,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Price, Token } from '@uniswap/sdk-core';
 import Big, { BigSource } from 'big.js';
 import { BigNumberish } from 'ethers';
-
-import { getRawRelativePriceFromTokenValueProportion } from './price';
 
 export function generateLimitOrderCloseRequestPayload(
   ownerAddr: string,

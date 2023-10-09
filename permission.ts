@@ -1,11 +1,11 @@
 import {
   ApertureSupportedChainId,
   PermitInfo,
+  getChainInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
 import { BigNumberish, TypedDataDomain, TypedDataField, ethers } from 'ethers';
 
-import { getChainInfo } from './chain';
 import { getNPM } from './position';
 
 export interface PositionApprovalStatus {

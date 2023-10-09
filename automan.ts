@@ -4,13 +4,13 @@ import {
   IUniV3Automan__factory,
   PermitInfo,
   UniV3Automan,
+  getChainInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { JsonRpcProvider, Provider } from '@ethersproject/providers';
 import { FeeAmount, TICK_SPACINGS, nearestUsableTick } from '@uniswap/v3-sdk';
 import { BigNumberish, BytesLike, Signer } from 'ethers';
 import { solidityPack, splitSignature } from 'ethers/lib/utils';
 
-import { getChainInfo } from './chain';
 import {
   getERC20Overrides,
   getNPMApprovalOverrides,

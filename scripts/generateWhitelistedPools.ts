@@ -1,13 +1,15 @@
-import { ApertureSupportedChainId } from '@aperture_finance/uniswap-v3-automation-sdk';
+import {
+  ApertureSupportedChainId,
+  getChainInfo,
+  getTokenPriceListFromCoingecko,
+} from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Token } from '@uniswap/sdk-core';
 import { FeeAmount } from '@uniswap/v3-sdk';
 import axios from 'axios';
 import { config as dotenvConfig } from 'dotenv';
 import { readFileSync, writeFileSync } from 'fs';
 
-import { getChainInfo } from '../chain';
 import { computePoolAddress } from '../pool';
-import { getTokenPriceListFromCoingecko } from '../price';
 import { Pool } from '../whitelist';
 
 dotenvConfig();
