@@ -43,7 +43,12 @@ import JSBI from 'jsbi';
 
 import { optimalMint, optimalRebalance } from '../aggregator';
 import { getAutomanReinvestCallInfo, simulateMintOptimal } from '../automan';
-import { getCurrencyAmount, getNativeCurrency, getToken } from '../currency';
+import {
+  checkTokenLiquidityAgainstChainNativeCurrency,
+  getCurrencyAmount,
+  getNativeCurrency,
+  getToken,
+} from '../currency';
 import {
   computeOperatorApprovalSlot,
   generateAccessList,
@@ -59,6 +64,7 @@ import {
   generateTypedDataForPermit,
 } from '../permission';
 import {
+  checkAutomationSupportForPool,
   getFeeTierDistribution,
   getLiquidityArrayForPool,
   getPool,
@@ -1830,5 +1836,47 @@ describe('Routing tests', function () {
       Number(predictedLiquidity.toString()),
       Number(predictedLiquidity.toString()) * 0.005,
     );
+  });
+
+  it('Test automation eligiblity', async function () {
+    const avaxProvider = getPublicProvider(
+      ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+    );
+    const [SHIBe, USDC, WAVAX] = await Promise.all([
+      getToken(
+        '0x02D980A0D7AF3fb7Cf7Df8cB35d9eDBCF355f665',
+        ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+        avaxProvider,
+      ),
+      getToken(
+        '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+        ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+        avaxProvider,
+      ),
+      getToken(
+        '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+        ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+        avaxProvider,
+      ),
+    ]);
+    expect(
+      await checkTokenLiquidityAgainstChainNativeCurrency(
+        ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+        SHIBe.address,
+      ),
+    ).to.equal('-1');
+    expect(
+      await checkTokenLiquidityAgainstChainNativeCurrency(
+        ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+        USDC.address,
+      ),
+    ).to.not.equal('-1');
+    expect(
+      await checkTokenLiquidityAgainstChainNativeCurrency(
+        ApertureSupportedChainId.AVALANCHE_MAINNET_CHAIN_ID,
+        WAVAX.address,
+      ),
+    ).to.equal('1');
+    expect(await checkAutomationSupportForPool(SHIBe, WAVAX)).to.equal(false);
   });
 });
