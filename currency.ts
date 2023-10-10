@@ -234,7 +234,6 @@ export async function checkTokenLiquidityAgainstChainNativeCurrency(
     tokenAddress,
     rawNativeCurrencyAmount,
   ).catch(() => undefined);
-  // If the quote fails, we want to cache the no-quote result, so we write the string '-1' to the cache table.
   if (rawTokenAmount === undefined) {
     return '-1';
   }
