@@ -10,7 +10,7 @@ import {
   priceToSqrtRatioX96,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { PositionStateStructOutput } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralGetPosition';
-import { JsonRpcProvider, Provider } from '@ethersproject/providers';
+import { BlockTag, JsonRpcProvider, Provider } from '@ethersproject/providers';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
@@ -528,12 +528,14 @@ export class PositionDetails implements BasicPositionInfo {
     chainId: ApertureSupportedChainId,
     positionId: BigNumberish,
     provider: Provider,
+    blockNumber?: BlockTag,
   ): Promise<PositionDetails> {
     const returnData = await provider.call(
       new EphemeralGetPosition__factory().getDeployTransaction(
         getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
         positionId,
       ),
+      blockNumber,
     );
     return PositionDetails.fromPositionStateStruct(
       chainId,
