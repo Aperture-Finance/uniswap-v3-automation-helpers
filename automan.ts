@@ -114,7 +114,7 @@ export function encodeOptimalSwapData(
 }
 
 export function getAutomanDecreaseLiquidityCallInfo(
-  positionId: BigNumberish,
+  tokenId: BigNumberish,
   liquidity: BigNumberish,
   deadline: BigNumberish,
   amount0Min: BigNumberish = 0,
@@ -123,7 +123,7 @@ export function getAutomanDecreaseLiquidityCallInfo(
   permitInfo?: PermitInfo,
 ): AutomanCallInfo<'decreaseLiquidity'> {
   const params: INonfungiblePositionManager.DecreaseLiquidityParamsStruct = {
-    tokenId: positionId,
+    tokenId,
     liquidity,
     amount0Min,
     amount1Min,
@@ -140,28 +140,21 @@ export function getAutomanDecreaseLiquidityCallInfo(
       ),
     };
   }
-  const permitSignature = splitSignature(permitInfo.signature);
+  const { v, r, s } = splitSignature(permitInfo.signature);
   const functionFragment =
     'decreaseLiquidity((uint256,uint128,uint256,uint256,uint256),uint256,uint256,uint8,bytes32,bytes32)';
   return {
     functionFragment,
     data: IUniV3Automan__factory.createInterface().encodeFunctionData(
       functionFragment,
-      [
-        params,
-        feeBips,
-        permitInfo.deadline,
-        permitSignature.v,
-        permitSignature.r,
-        permitSignature.s,
-      ],
+      [params, feeBips, permitInfo.deadline, v, r, s],
     ),
   };
 }
 
 export function getAutomanRebalanceCallInfo(
   mintParams: INonfungiblePositionManager.MintParamsStruct,
-  existingPositionId: BigNumberish,
+  tokenId: BigNumberish,
   feeBips: BigNumberish = 0,
   permitInfo?: PermitInfo,
   swapData: BytesLike = '0x',
@@ -173,33 +166,24 @@ export function getAutomanRebalanceCallInfo(
       functionFragment,
       data: IUniV3Automan__factory.createInterface().encodeFunctionData(
         functionFragment,
-        [mintParams, existingPositionId, feeBips, swapData],
+        [mintParams, tokenId, feeBips, swapData],
       ),
     };
   }
-  const permitSignature = splitSignature(permitInfo.signature);
+  const { v, r, s } = splitSignature(permitInfo.signature);
   const functionFragment =
     'rebalance((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256),uint256,uint256,bytes,uint256,uint8,bytes32,bytes32)';
   return {
     functionFragment,
     data: IUniV3Automan__factory.createInterface().encodeFunctionData(
       functionFragment,
-      [
-        mintParams,
-        existingPositionId,
-        feeBips,
-        swapData,
-        permitInfo.deadline,
-        permitSignature.v,
-        permitSignature.r,
-        permitSignature.s,
-      ],
+      [mintParams, tokenId, feeBips, swapData, permitInfo.deadline, v, r, s],
     ),
   };
 }
 
 export function getAutomanReinvestCallInfo(
-  positionId: BigNumberish,
+  tokenId: BigNumberish,
   deadline: BigNumberish,
   amount0Min: BigNumberish = 0,
   amount1Min: BigNumberish = 0,
@@ -207,15 +191,14 @@ export function getAutomanReinvestCallInfo(
   permitInfo?: PermitInfo,
   swapData: BytesLike = '0x',
 ): AutomanCallInfo<'reinvest'> {
-  const increaseLiquidityParams: INonfungiblePositionManager.IncreaseLiquidityParamsStruct =
-    {
-      tokenId: positionId,
-      amount0Desired: 0, // Param value ignored by Automan.
-      amount1Desired: 0, // Param value ignored by Automan.
-      amount0Min,
-      amount1Min,
-      deadline,
-    };
+  const params: INonfungiblePositionManager.IncreaseLiquidityParamsStruct = {
+    tokenId,
+    amount0Desired: 0, // Param value ignored by Automan.
+    amount1Desired: 0, // Param value ignored by Automan.
+    amount0Min,
+    amount1Min,
+    deadline,
+  };
   if (permitInfo === undefined) {
     const functionFragment =
       'reinvest((uint256,uint256,uint256,uint256,uint256,uint256),uint256,bytes)';
@@ -223,26 +206,18 @@ export function getAutomanReinvestCallInfo(
       functionFragment,
       data: IUniV3Automan__factory.createInterface().encodeFunctionData(
         functionFragment,
-        [increaseLiquidityParams, feeBips, swapData],
+        [params, feeBips, swapData],
       ),
     };
   }
-  const permitSignature = splitSignature(permitInfo.signature);
+  const { v, r, s } = splitSignature(permitInfo.signature);
   const functionFragment =
     'reinvest((uint256,uint256,uint256,uint256,uint256,uint256),uint256,bytes,uint256,uint8,bytes32,bytes32)';
   return {
     functionFragment,
     data: IUniV3Automan__factory.createInterface().encodeFunctionData(
       functionFragment,
-      [
-        increaseLiquidityParams,
-        feeBips,
-        swapData,
-        permitInfo.deadline,
-        permitSignature.v,
-        permitSignature.r,
-        permitSignature.s,
-      ],
+      [params, feeBips, swapData, permitInfo.deadline, v, r, s],
     ),
   };
 }
@@ -255,14 +230,13 @@ export function getAutomanRemoveLiquidityCallInfo(
   feeBips: BigNumberish = 0,
   permitInfo?: PermitInfo,
 ): AutomanCallInfo<'removeLiquidity('> {
-  const decreaseLiquidityParams: INonfungiblePositionManager.DecreaseLiquidityParamsStruct =
-    {
-      tokenId,
-      liquidity: 0, // Param value ignored by Automan.
-      amount0Min,
-      amount1Min,
-      deadline,
-    };
+  const params: INonfungiblePositionManager.DecreaseLiquidityParamsStruct = {
+    tokenId,
+    liquidity: 0, // Param value ignored by Automan.
+    amount0Min,
+    amount1Min,
+    deadline,
+  };
   if (permitInfo === undefined) {
     const functionFragment =
       'removeLiquidity((uint256,uint128,uint256,uint256,uint256),uint256)';
@@ -270,25 +244,18 @@ export function getAutomanRemoveLiquidityCallInfo(
       functionFragment,
       data: IUniV3Automan__factory.createInterface().encodeFunctionData(
         functionFragment,
-        [decreaseLiquidityParams, feeBips],
+        [params, feeBips],
       ),
     };
   }
-  const permitSignature = splitSignature(permitInfo.signature);
+  const { v, r, s } = splitSignature(permitInfo.signature);
   const functionFragment =
     'removeLiquidity((uint256,uint128,uint256,uint256,uint256),uint256,uint256,uint8,bytes32,bytes32)';
   return {
     functionFragment,
     data: IUniV3Automan__factory.createInterface().encodeFunctionData(
       functionFragment,
-      [
-        decreaseLiquidityParams,
-        feeBips,
-        permitInfo.deadline,
-        permitSignature.v,
-        permitSignature.r,
-        permitSignature.s,
-      ],
+      [params, feeBips, permitInfo.deadline, v, r, s],
     ),
   };
 }

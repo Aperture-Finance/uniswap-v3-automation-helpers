@@ -628,7 +628,7 @@ export async function getRebalanceTx(
         swapData,
       ).data,
     },
-    amounts: amounts,
+    amounts,
   };
 }
 
@@ -685,7 +685,7 @@ export async function getReinvestTx(
         permitInfo,
       ).data,
     },
-    amounts: amounts,
+    amounts,
   };
 }
 
