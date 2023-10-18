@@ -937,9 +937,6 @@ describe('Automan transaction tests', function () {
   });
 
   it('Optimal mint', async function () {
-    // TODO: fix this test.
-    // As of Oct 9, 2023, this test fails with "call revert exception".
-    return;
     const pool = await getPool(
       WBTC_ADDRESS,
       WETH_ADDRESS,
