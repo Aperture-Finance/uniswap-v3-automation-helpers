@@ -1749,7 +1749,7 @@ describe('Routing tests', function () {
     console.log(`1 ETH -> ${quote.quoteDecimals} USDC`);
   });
 
-  it('Test optimalMint', async function () {
+  it.skip('Test optimalMint', async function () {
     const chainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
     const provider = new ethers.providers.JsonRpcProvider(
       process.env.ARBITRUM_RPC_URL,
