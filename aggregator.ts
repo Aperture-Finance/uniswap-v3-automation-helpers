@@ -305,9 +305,19 @@ export async function optimalRebalance(
     recipient: fromAddress, // Param value ignored by Automan for rebalance.
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
-  const swapData = usePool
-    ? '0x'
-    : await getOptimalMintSwapData(chainId, provider, mintParams, slippage);
+  let swapData = '0x';
+  if (!usePool) {
+    try {
+      swapData = await getOptimalMintSwapData(
+        chainId,
+        provider,
+        mintParams,
+        slippage,
+      );
+    } catch (e) {
+      console.error(`Failed to get swap data: ${e}`);
+    }
+  }
   const { amount0, amount1, liquidity } = await simulateRebalance(
     chainId,
     provider,
