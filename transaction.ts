@@ -555,29 +555,35 @@ export async function getRebalanceTx(
   }
   let swapData = '0x';
   if (use1inch) {
-    const { amount0: receive0, amount1: receive1 } =
-      await simulateRemoveLiquidity(
+    try {
+      const { amount0: receive0, amount1: receive1 } =
+        await simulateRemoveLiquidity(
+          chainId,
+          provider,
+          ownerAddress,
+          ownerAddress,
+          existingPositionId,
+          0,
+          0,
+          0,
+        );
+      ({ swapData } = await optimalMint(
         chainId,
+        CurrencyAmount.fromRawAmount(position.pool.token0, receive0.toString()),
+        CurrencyAmount.fromRawAmount(position.pool.token1, receive1.toString()),
+        position.pool.fee,
+        newPositionTickLower,
+        newPositionTickUpper,
+        ownerAddress,
+        Number(slippageTolerance.numerator.toString()) /
+          Number(slippageTolerance.denominator.toString()),
         provider,
-        ownerAddress,
-        ownerAddress,
-        existingPositionId,
-        0,
-        0,
-        0,
+      ));
+    } catch (err) {
+      console.log(
+        `Failed to construct 1inch swap data: ${err}. Will proceed with same-pool swap.`,
       );
-    ({ swapData } = await optimalMint(
-      chainId,
-      CurrencyAmount.fromRawAmount(position.pool.token0, receive0.toString()),
-      CurrencyAmount.fromRawAmount(position.pool.token1, receive1.toString()),
-      position.pool.fee,
-      newPositionTickLower,
-      newPositionTickUpper,
-      ownerAddress,
-      Number(slippageTolerance.numerator.toString()) /
-        Number(slippageTolerance.denominator.toString()),
-      provider,
-    ));
+    }
   }
   const mintParams: INonfungiblePositionManager.MintParamsStruct = {
     token0: position.pool.token0.address,
