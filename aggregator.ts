@@ -192,10 +192,9 @@ async function optimalMintPool(
   };
 }
 
-async function optimalMintRouter(
+async function getOptimalMintSwapData(
   chainId: ApertureSupportedChainId,
   provider: JsonRpcProvider | Provider,
-  fromAddress: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   slippage: number,
 ) {
@@ -224,7 +223,7 @@ async function optimalMintRouter(
     optimal_swap_router!,
     slippage * 100,
   );
-  const swapData = encodeOptimalSwapData(
+  return encodeOptimalSwapData(
     chainId,
     mintParams.token0,
     mintParams.token1,
@@ -235,6 +234,21 @@ async function optimalMintRouter(
     approveTarget,
     tx.to,
     tx.data,
+  );
+}
+
+async function optimalMintRouter(
+  chainId: ApertureSupportedChainId,
+  provider: JsonRpcProvider | Provider,
+  fromAddress: string,
+  mintParams: INonfungiblePositionManager.MintParamsStruct,
+  slippage: number,
+) {
+  const swapData = await getOptimalMintSwapData(
+    chainId,
+    provider,
+    mintParams,
+    slippage,
   );
   const { amount0, amount1, liquidity } = await simulateMintOptimal(
     chainId,
@@ -291,15 +305,9 @@ export async function optimalRebalance(
     recipient: fromAddress, // Param value ignored by Automan for rebalance.
     deadline: Math.floor(Date.now() / 1000 + 60 * 30),
   };
-  const { swapData } = usePool
-    ? await optimalMintPool(chainId, provider, fromAddress, mintParams)
-    : await optimalMintRouter(
-        chainId,
-        provider,
-        fromAddress,
-        mintParams,
-        slippage,
-      );
+  const swapData = usePool
+    ? '0x'
+    : await getOptimalMintSwapData(chainId, provider, mintParams, slippage);
   const { amount0, amount1, liquidity } = await simulateRebalance(
     chainId,
     provider,
