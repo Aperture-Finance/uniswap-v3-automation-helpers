@@ -20,9 +20,8 @@ import {
 import { computePoolAddress } from './pool';
 import { PositionDetails } from './position';
 
-const ApiBaseUrl = 'https://api.1inch.dev';
+const ApiBaseUrl = 'https://1inch-api.aperture.finance';
 const headers = {
-  Authorization: `Bearer ${process.env.ONEINCH_API_KEY}`,
   Accept: 'application/json',
 };
 
