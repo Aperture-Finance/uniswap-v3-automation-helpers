@@ -32,6 +32,7 @@ import {
   IncreaseOptions,
   MintOptions,
   NonfungiblePositionManager,
+  Pool,
   Position,
   RemoveLiquidityOptions,
 } from '@uniswap/v3-sdk';
@@ -237,7 +238,7 @@ export async function getOptimalMintTx(
     );
     value = token1Amount.quotient.toString();
   }
-  const { amount0, amount1, swapData } = await optimalMint(
+  const { liquidity, swapData } = await optimalMint(
     chainId,
     token0Amount as CurrencyAmount<Token>,
     token1Amount as CurrencyAmount<Token>,
@@ -248,24 +249,27 @@ export async function getOptimalMintTx(
     slippage,
     provider,
   );
-  const slippageTolerance: Percent = new Percent(
-    Math.floor(slippage * 1e6),
-    1e6,
+  const token0 = (token0Amount.currency as Token).address;
+  const token1 = (token1Amount.currency as Token).address;
+  const position = new Position({
+    pool: await getPool(token0, token1, fee, chainId, provider),
+    liquidity: liquidity.toString(),
+    tickLower,
+    tickUpper,
+  });
+  const { amount0, amount1 } = position.mintAmountsWithSlippage(
+    new Percent(Math.floor(slippage * 1e6), 1e6),
   );
   const mintParams = {
-    token0: (token0Amount.currency as Token).address,
-    token1: (token1Amount.currency as Token).address,
+    token0,
+    token1,
     fee,
     tickLower,
     tickUpper,
     amount0Desired: token0Amount.quotient.toString(),
     amount1Desired: token1Amount.quotient.toString(),
-    amount0Min: slippageTolerance
-      .multiply(amount0.toString())
-      .quotient.toString(),
-    amount1Min: slippageTolerance
-      .multiply(amount1.toString())
-      .quotient.toString(),
+    amount0Min: amount0.toString(),
+    amount1Min: amount1.toString(),
     recipient,
     deadline,
   };
@@ -484,6 +488,9 @@ interface SimulatedAmounts {
 }
 
 async function getAmountsWithSlippage(
+  pool: Pool,
+  tickLower: number,
+  tickUpper: number,
   automanAddress: string,
   ownerAddress: string,
   functionFragment: AutomanFragment,
@@ -496,7 +503,7 @@ async function getAmountsWithSlippage(
     to: automanAddress,
     data,
   });
-  const { amount0, amount1 } =
+  const { amount0, amount1, liquidity } =
     IUniV3Automan__factory.createInterface().decodeFunctionResult(
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -505,13 +512,19 @@ async function getAmountsWithSlippage(
     ) as unknown as {
       amount0: BigNumber;
       amount1: BigNumber;
+      liquidity: BigNumber;
     };
-  const coefficient = new Percent(1).subtract(slippageTolerance);
+  const { amount0: amount0Min, amount1: amount1Min } = new Position({
+    pool,
+    liquidity: liquidity.toString(),
+    tickLower,
+    tickUpper,
+  }).mintAmountsWithSlippage(slippageTolerance);
   return {
     amount0,
     amount1,
-    amount0Min: coefficient.multiply(amount0.toString()).quotient.toString(),
-    amount1Min: coefficient.multiply(amount1.toString()).quotient.toString(),
+    amount0Min: amount0Min.toString(),
+    amount1Min: amount1Min.toString(),
   };
 }
 
@@ -607,6 +620,9 @@ export async function getRebalanceTx(
     swapData,
   );
   const amounts = await getAmountsWithSlippage(
+    position.pool,
+    newPositionTickLower,
+    newPositionTickUpper,
     aperture_uniswap_v3_automan,
     ownerAddress,
     functionFragment,
@@ -640,7 +656,7 @@ export async function getRebalanceTx(
  * @param slippageTolerance How much the reinvested amount of either token0 or token1 is allowed to change unfavorably.
  * @param deadlineEpochSeconds Timestamp when the tx expires (in seconds since epoch).
  * @param provider Ethers provider.
- * @param permitInfo Optional. If Automan doesn't already has authority over the existing position, this should be populated with a valid owner-signed permit info.
+ * @param permitInfo Optional. If Automan doesn't already have authority over the existing position, this should be populated with a valid owner-signed permit info.
  * @returns The generated transaction request and expected amounts.
  */
 export async function getReinvestTx(
@@ -655,6 +671,11 @@ export async function getReinvestTx(
   tx: TransactionRequest;
   amounts: SimulatedAmounts;
 }> {
+  const { pool, tickLower, tickUpper } = await PositionDetails.fromPositionId(
+    chainId,
+    positionId,
+    provider,
+  );
   const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
   const { functionFragment, data } = getAutomanReinvestCallInfo(
     positionId,
@@ -665,6 +686,9 @@ export async function getReinvestTx(
     permitInfo,
   );
   const amounts = await getAmountsWithSlippage(
+    pool,
+    tickLower,
+    tickUpper,
     aperture_uniswap_v3_automan,
     ownerAddress,
     functionFragment,

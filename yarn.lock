@@ -154,7 +154,7 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@aperture_finance/uniswap-v3-automation-sdk@1.7.1":
+"@aperture_finance/uniswap-v3-automation-sdk@^1.7.1":
   version "1.7.1"
   resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-1.7.1.tgz#66b9f6d16c86e43a61bbcc9cb95a20b4e436991f"
   integrity sha512-JOP6hnT86qImvfVnP3dCP/OaSwzIV22JxWaS141mU4btb1CygW+TeSUUTOh+gxWJO3ggNas/Z5nH93LDTvnGyg==
