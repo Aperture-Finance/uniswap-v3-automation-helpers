@@ -833,7 +833,7 @@ describe('Automan transaction tests', function () {
       positionId,
       240000,
       300000,
-      /*slippageTolerance=*/ new Percent(0),
+      /*slippageTolerance=*/ new Percent(1, 100),
       /*deadlineEpochSeconds=*/ Math.floor(Date.now() / 1000),
       hardhatForkProvider,
       existingPosition,
@@ -1002,7 +1002,7 @@ describe('Automan transaction tests', function () {
       chainId,
       eoa,
       positionId,
-      /*slippageTolerance=*/ new Percent(0),
+      /*slippageTolerance=*/ new Percent(1, 100),
       /*deadlineEpochSeconds=*/ Math.floor(Date.now() / 1000),
       hardhatForkProvider,
     );
