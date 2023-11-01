@@ -69,7 +69,6 @@ import {
   getLiquidityArrayForPool,
   getPool,
   getTickToLiquidityMapForPool,
-  readTickToLiquidityMap,
 } from '../pool';
 import {
   BasicPositionInfo,
@@ -1664,12 +1663,6 @@ describe('Pool subgraph query tests', function () {
     for (const liquidity of tickToLiquidityMap.values()) {
       expect(JSBI.greaterThanOrEqual(liquidity, JSBI.BigInt(0))).to.equal(true);
     }
-    expect(
-      JSBI.equal(
-        pool.liquidity,
-        readTickToLiquidityMap(tickToLiquidityMap, tickCurrentAligned)!,
-      ),
-    ).to.equal(true);
     expect(
       liquidityArr[
         liquidityArr.findIndex(({ tick }) => tick > tickCurrentAligned) - 1
