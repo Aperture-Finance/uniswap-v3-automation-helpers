@@ -72,17 +72,17 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@aperture_finance/uniswap-v3-automation-sdk@^1.7.1":
-  version "1.7.1"
-  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-1.7.1.tgz#66b9f6d16c86e43a61bbcc9cb95a20b4e436991f"
-  integrity sha512-JOP6hnT86qImvfVnP3dCP/OaSwzIV22JxWaS141mU4btb1CygW+TeSUUTOh+gxWJO3ggNas/Z5nH93LDTvnGyg==
+"@aperture_finance/uniswap-v3-automation-sdk@^1.7.2":
+  version "1.7.2"
+  resolved "https://registry.yarnpkg.com/@aperture_finance/uniswap-v3-automation-sdk/-/uniswap-v3-automation-sdk-1.7.2.tgz#d71a83074069baf95ef36df35cb561caffa00a52"
+  integrity sha512-cGo12Sx+u8aN6j+4EKsfrJRDIxoq+OZbJJ8pTkXhUaTBiV75esTx/9mTbTzfgONiBYEq1o1+sHHowIma1Ep8xQ==
   dependencies:
     "@uniswap/v3-sdk" "^3.10.0"
-    axios "^1.5.1"
+    axios "^1.6.0"
     big.js "^6.2.1"
     ethers "5.7.2"
     json-stable-stringify "^1.0.2"
-    viem "^1.16.5"
+    viem "^1.18.2"
     zod "^3.22.4"
 
 "@ardatan/relay-compiler@12.0.0":
@@ -2700,15 +2700,6 @@ axios@^0.21.1:
   integrity sha512-ut5vewkiu8jjGBdqpM44XxjuCjq9LAKeHVmoVfHVzy8eHgxxq8SbAVQNovDA8mVi05kP0Ea/n/UzcSHcTJQfNg==
   dependencies:
     follow-redirects "^1.14.0"
-
-axios@^1.5.1:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.5.1.tgz#11fbaa11fc35f431193a9564109c88c1f27b585f"
-  integrity sha512-Q28iYCWzNHjAm+yEAot5QaAMxhMghWLFVf7rRdwhUI+c2jix2DUXjAHXVi+s1ibs3mjPO/cCgbA++3BjD0vP/A==
-  dependencies:
-    follow-redirects "^1.15.0"
-    form-data "^4.0.0"
-    proxy-from-env "^1.1.0"
 
 axios@^1.6.0:
   version "1.6.0"
@@ -6091,10 +6082,10 @@ value-or-promise@^1.0.11, value-or-promise@^1.0.12:
   resolved "https://registry.yarnpkg.com/value-or-promise/-/value-or-promise-1.0.12.tgz#0e5abfeec70148c78460a849f6b003ea7986f15c"
   integrity sha512-Z6Uz+TYwEqE7ZN50gwn+1LCVo9ZVrpxRPOhOLnncYkY1ZzOYtrX8Fwf/rFktZ8R5mJms6EZf5TqNOMeZmnPq9Q==
 
-viem@^1.16.5:
-  version "1.16.6"
-  resolved "https://registry.yarnpkg.com/viem/-/viem-1.16.6.tgz#78118c9269506a59e2bc4deab13f1646e113d3fc"
-  integrity sha512-jcWcFQ+xzIfDwexwPJRvCuCRJKEkK9iHTStG7mpU5MmuSBpACs4nATBDyXNFtUiyYTFzLlVEwWkt68K0nCSImg==
+viem@^1.18.2:
+  version "1.18.2"
+  resolved "https://registry.yarnpkg.com/viem/-/viem-1.18.2.tgz#2e9135d593e7a77b6b5a8cbd1800521ffda3b23c"
+  integrity sha512-ifobXCKwzztmjHbHowAWqTASO6tAqF6udKB9ONXkJQU1cmt830MABiMwJGtTO9Gb9ION1N+324G7nHDbpPn4wg==
   dependencies:
     "@adraffy/ens-normalize" "1.9.4"
     "@noble/curves" "1.2.0"
