@@ -102,13 +102,16 @@ function callsPositionManagerContract(
 function getCollectionCounts(nftTransfers: NftTransferPartsFragment[]): {
   [key: string]: number | undefined;
 } {
-  return nftTransfers.reduce((acc, NFTChange) => {
-    const key = NFTChange.asset.collection?.name ?? NFTChange.asset.name;
-    if (key) {
-      acc[key] = (acc?.[key] ?? 0) + 1;
-    }
-    return acc;
-  }, {} as { [key: string]: number | undefined });
+  return nftTransfers.reduce(
+    (acc, NFTChange) => {
+      const key = NFTChange.asset.collection?.name ?? NFTChange.asset.name;
+      if (key) {
+        acc[key] = (acc?.[key] ?? 0) + 1;
+      }
+      return acc;
+    },
+    {} as { [key: string]: number | undefined },
+  );
 }
 
 function getSwapTitle(
