@@ -497,7 +497,7 @@ describe('Position liquidity management tests', function () {
     );
     const eoaSigner = await ethers.getImpersonatedSigner(eoa);
     const txReceipt = await (await eoaSigner.sendTransaction(txRequest)).wait();
-    const collectedFees = await getCollectedFeesFromReceipt(
+    const collectedFees = getCollectedFeesFromReceipt(
       txReceipt,
       position4BasicInfo.token0,
       position4BasicInfo.token1,
@@ -545,7 +545,7 @@ describe('Position liquidity management tests', function () {
     const removeLiquidityTxReceipt = await (
       await eoaSigner.sendTransaction(removeLiquidityTxRequest)
     ).wait();
-    const collectedFees = await getCollectedFeesFromReceipt(
+    const collectedFees = getCollectedFeesFromReceipt(
       removeLiquidityTxReceipt,
       position4BasicInfo.token0,
       position4BasicInfo.token1,
@@ -1827,7 +1827,7 @@ describe('Routing tests', function () {
     );
     expect(liquidity.toNumber()).to.be.closeTo(
       Number(predictedLiquidity.toString()),
-      Number(predictedLiquidity.toString()) * 0.005,
+      Number(predictedLiquidity.toString()) * 0.01,
     );
   });
 

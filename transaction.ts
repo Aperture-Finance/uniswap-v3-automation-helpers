@@ -817,11 +817,11 @@ export function getMintedPositionIdFromTxReceipt(
  * @param token1 Token 1.
  * @returns A promise that resolves to the collected amount of the two tokens in the position.
  */
-export async function getCollectedFeesFromReceipt(
+export function getCollectedFeesFromReceipt(
   receipt: TransactionReceipt,
   token0: Token,
   token1: Token,
-): Promise<CollectableTokenAmounts> {
+): CollectableTokenAmounts {
   const npmInterface = INonfungiblePositionManager__factory.createInterface();
   const collectLog = filterLogsByEvent(
     receipt,
