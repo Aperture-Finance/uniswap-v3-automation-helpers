@@ -36,8 +36,8 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@0xsequence/multicall": "^1.4.1",
-    "@aperture_finance/uniswap-v3-automation-sdk": "^1.7.4",
+    "@0xsequence/multicall": "^1.4.3",
+    "@aperture_finance/uniswap-v3-automation-sdk": "^1.7.5",
     "@uniswap/permit2-sdk": "^1.2.0",
     "@uniswap/smart-order-router": "^3.17.2",
     "@uniswap/v3-sdk": "^3.10.0",
