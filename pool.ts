@@ -1,12 +1,10 @@
 import {
   ApertureSupportedChainId,
   DOUBLE_TICK,
-  EphemeralGetPopulatedTicksInRange__factory,
   IUniswapV3Pool__factory,
   getChainInfo,
   sqrtRatioToPrice,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { TickLens } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralGetPopulatedTicksInRange';
 import { Provider } from '@ethersproject/abstract-provider';
 import { Price, Token } from '@uniswap/sdk-core';
 import {
@@ -16,6 +14,8 @@ import {
   computePoolAddress as _computePoolAddress,
   tickToPrice,
 } from '@uniswap/v3-sdk';
+import { EphemeralGetPopulatedTicksInRange__factory } from 'aperture-lens';
+import { PoolUtils } from 'aperture-lens/dist/typechain/contracts/EphemeralGetPopulatedTicksInRange';
 import axios from 'axios';
 import { BigNumberish, Signer } from 'ethers';
 import JSBI from 'jsbi';
@@ -449,7 +449,7 @@ async function getPopulatedTicksInRange(
   return iface.decodeFunctionResult(
     'getPopulatedTicksInRange',
     returnData,
-  )[0] as TickLens.PopulatedTickStructOutput[];
+  )[0] as PoolUtils.PopulatedTickStructOutput[];
 }
 
 export interface Liquidity {
