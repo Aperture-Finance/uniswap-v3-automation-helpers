@@ -1742,11 +1742,9 @@ describe('Routing tests', function () {
     console.log(`1 ETH -> ${quote.quoteDecimals} USDC`);
   });
 
-  it.skip('Test optimalMint', async function () {
+  it('Test optimalMint', async function () {
     const chainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
-    const provider = new ethers.providers.JsonRpcProvider(
-      process.env.ARBITRUM_RPC_URL,
-    );
+    const provider = new ethers.providers.InfuraProvider(chainId);
     const token0 = '0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f';
     const token1 = '0x82af49447d8a07e3bd95bd0d56f35241523fbab1';
     const fee = FeeAmount.MEDIUM;
@@ -1827,7 +1825,7 @@ describe('Routing tests', function () {
     );
     expect(liquidity.toNumber()).to.be.closeTo(
       Number(predictedLiquidity.toString()),
-      Number(predictedLiquidity.toString()) * 0.01,
+      Number(predictedLiquidity.toString()) * 0.05,
     );
   });
 

@@ -1,7 +1,5 @@
 import {
   ApertureSupportedChainId,
-  EphemeralAllPositions__factory,
-  EphemeralGetPosition__factory,
   INonfungiblePositionManager__factory,
   IUniV3Automan__factory,
   fractionToBig,
@@ -9,7 +7,6 @@ import {
   getTokenValueProportionFromPriceRatio,
   priceToSqrtRatioX96,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { PositionStateStructOutput } from '@aperture_finance/uniswap-v3-automation-sdk/dist/typechain-types/src/lens/EphemeralGetPosition';
 import { BlockTag, JsonRpcProvider, Provider } from '@ethersproject/providers';
 import { BigintIsh, CurrencyAmount, Token } from '@uniswap/sdk-core';
 import {
@@ -19,6 +16,11 @@ import {
   PositionLibrary,
   TickMath,
 } from '@uniswap/v3-sdk';
+import {
+  EphemeralAllPositionsByOwner__factory,
+  EphemeralGetPosition__factory,
+} from 'aperture-lens';
+import { PositionStateStructOutput } from 'aperture-lens/dist/typechain/contracts/EphemeralGetPosition';
 import Big from 'big.js';
 import { BigNumber, BigNumberish, Signer } from 'ethers';
 import JSBI from 'jsbi';
@@ -338,12 +340,12 @@ export async function getAllPositionsDetails(
   provider: Provider,
 ): Promise<Map<string, PositionDetails>> {
   const returnData = await provider.call(
-    new EphemeralAllPositions__factory().getDeployTransaction(
+    new EphemeralAllPositionsByOwner__factory().getDeployTransaction(
       getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
       owner,
     ),
   );
-  const iface = EphemeralAllPositions__factory.createInterface();
+  const iface = EphemeralAllPositionsByOwner__factory.createInterface();
   const positions = iface.decodeFunctionResult(
     'allPositions',
     returnData,
