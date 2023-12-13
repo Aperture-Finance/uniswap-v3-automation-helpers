@@ -154,7 +154,7 @@ export async function optimalMint(
     amount0Min: 0,
     amount1Min: 0,
     recipient: fromAddress,
-    deadline: Math.floor(Date.now() / 1000 + 60 * 30),
+    deadline: Math.floor(Date.now() / 1000 + 86400),
   };
   if (getChainInfo(chainId).optimal_swap_router === undefined) {
     return await optimalMintPool(chainId, provider, fromAddress, mintParams);
@@ -302,7 +302,7 @@ export async function optimalRebalance(
     amount0Min: 0, // Setting this to zero for tx simulation.
     amount1Min: 0, // Setting this to zero for tx simulation.
     recipient: fromAddress, // Param value ignored by Automan for rebalance.
-    deadline: Math.floor(Date.now() / 1000 + 60 * 30),
+    deadline: Math.floor(Date.now() / 1000 + 86400),
   };
   let swapData = '0x';
   if (!usePool) {
