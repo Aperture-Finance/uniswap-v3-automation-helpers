@@ -363,7 +363,7 @@ export async function simulateRemoveLiquidity(
 ): Promise<RemoveLiquidityReturnType> {
   const { functionFragment, data } = getAutomanRemoveLiquidityCallInfo(
     tokenId,
-    Math.floor(Date.now() / 1000 + 60 * 30),
+    Math.floor(Date.now() / 1000 + 86400),
     amount0Min,
     amount1Min,
     feeBips,

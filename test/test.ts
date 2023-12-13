@@ -1701,10 +1701,10 @@ describe('Pool subgraph query tests', function () {
 
   it('Get all pools', async function () {
     const pools = await getPoolsFromSubgraph(
-      ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID,
+      ApertureSupportedChainId.MANTA_PACIFIC_MAINNET_CHAIN_ID,
     );
     const whitelistedPools = getWhitelistedPools(
-      ApertureSupportedChainId.MANTA_PACIFIC_TESTNET_CHAIN_ID,
+      ApertureSupportedChainId.MANTA_PACIFIC_MAINNET_CHAIN_ID,
       pools,
     );
     expect(whitelistedPools.size).to.be.greaterThanOrEqual(6);
