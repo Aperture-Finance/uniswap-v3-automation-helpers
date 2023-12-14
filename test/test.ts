@@ -106,6 +106,7 @@ import {
   getRemoveLiquidityTx,
   getUnwrapETHTx,
   getWrapETHTx,
+  getZapOutTx,
 } from '../transaction';
 import { getPoolsFromSubgraph, getWhitelistedPools } from '../whitelist';
 
@@ -991,6 +992,20 @@ describe('Automan transaction tests', function () {
       tickLower,
       tickUpper,
     });
+  });
+
+  it('Test getZapOutTx', async function () {
+    const { tx } = await getZapOutTx(
+      chainId,
+      eoa,
+      positionId,
+      true,
+      /*slippageTolerance=*/ new Percent(1, 100),
+      /*deadlineEpochSeconds=*/ Math.floor(Date.now() / 1000),
+      hardhatForkProvider,
+    );
+    const eoaSigner = await ethers.getImpersonatedSigner(eoa);
+    await (await eoaSigner.sendTransaction(tx)).wait();
   });
 
   it('Reinvest', async function () {

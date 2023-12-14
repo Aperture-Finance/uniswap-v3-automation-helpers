@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "test": "npx hardhat test --v",
+    "test": "npx hardhat test",
     "lint": "eslint ./ --quiet",
     "lint:fix": "eslint ./ --quiet --fix && prettier -w ./",
     "prettier": "prettier -c ./",
