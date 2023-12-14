@@ -12,6 +12,7 @@ import { BigNumberish, BytesLike, Signer } from 'ethers';
 import { solidityPack, splitSignature } from 'ethers/lib/utils';
 
 import {
+  getAutomanWhitelistOverrides,
   getERC20Overrides,
   getNPMApprovalOverrides,
   staticCallWithOverrides,
@@ -364,7 +365,13 @@ export async function simulateDecreaseLiquiditySingle(
       from,
       getChainInfo(chainId).aperture_uniswap_v3_automan,
       data,
-      getNPMApprovalOverrides(chainId, owner),
+      {
+        ...getNPMApprovalOverrides(chainId, owner),
+        ...getAutomanWhitelistOverrides(
+          chainId,
+          getChainInfo(chainId).aperture_router_proxy!,
+        ),
+      },
       provider,
       blockNumber,
     ),

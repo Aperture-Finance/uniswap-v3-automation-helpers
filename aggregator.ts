@@ -158,11 +158,17 @@ export async function optimalMint(
     recipient: fromAddress,
     deadline: Math.floor(Date.now() / 1000 + 86400),
   };
+  const poolPromise = optimalMintPool(
+    chainId,
+    provider,
+    fromAddress,
+    mintParams,
+  );
   if (getChainInfo(chainId).optimal_swap_router === undefined) {
-    return await optimalMintPool(chainId, provider, fromAddress, mintParams);
+    return await poolPromise;
   }
   const [poolEstimate, routerEstimate] = await Promise.all([
-    optimalMintPool(chainId, provider, fromAddress, mintParams),
+    poolPromise,
     optimalMintRouter(chainId, provider, fromAddress, mintParams, slippage),
   ]);
   // use the same pool if the quote isn't better
@@ -337,57 +343,101 @@ export async function optimalRebalance(
   };
 }
 
-export async function optimalZapOut(
+async function getZapOutSwapData(
   chainId: ApertureSupportedChainId,
-  positionId: BigNumberish,
-  liquidity: BigNumberish,
-  zeroForOne: boolean,
-  feeBips: BigNumberish,
-  usePool: boolean,
-  fromAddress: string,
-  slippage: number,
   provider: JsonRpcProvider | Provider,
+  fromAddress: string,
+  position: PositionDetails,
+  feeBips: BigNumberish,
+  zeroForOne: boolean,
+  slippage: number,
 ) {
-  const position = await PositionDetails.fromPositionId(
-    chainId,
-    positionId,
-    provider,
-  );
-  const { amount0, amount1 } = await simulateRemoveLiquidity(
+  let swapData = '0x';
+  try {
+    const { amount0, amount1 } = await simulateRemoveLiquidity(
+      chainId,
+      provider,
+      fromAddress,
+      position.owner,
+      position.tokenId,
+      0,
+      0,
+      feeBips,
+    );
+    const tokenIn = zeroForOne
+      ? position.token0.address
+      : position.token1.address;
+    const tokenOut = zeroForOne
+      ? position.token1.address
+      : position.token0.address;
+    const amountIn = zeroForOne ? amount0.toString() : amount1.toString();
+    // get a quote from 1inch
+    const { tx } = await quote(
+      chainId,
+      tokenIn,
+      tokenOut,
+      amountIn,
+      getChainInfo(chainId).aperture_router_proxy!,
+      slippage * 100,
+    );
+    const approveTarget = await getApproveTarget(chainId);
+    swapData = encodeSwapData(
+      chainId,
+      tx.to,
+      approveTarget,
+      tokenIn,
+      tokenOut,
+      amountIn,
+      tx.data,
+    );
+  } catch (e) {
+    console.error(`Failed to get swap data: ${e}`);
+  }
+  return swapData;
+}
+
+async function poolZapOut(
+  chainId: ApertureSupportedChainId,
+  provider: JsonRpcProvider | Provider,
+  fromAddress: string,
+  position: PositionDetails,
+  feeBips: BigNumberish,
+  zeroForOne: boolean,
+) {
+  const amount = await simulateDecreaseLiquiditySingle(
     chainId,
     provider,
     fromAddress,
     position.owner,
     position.tokenId,
-    0,
+    position.liquidity,
+    zeroForOne,
     0,
     feeBips,
   );
-  const tokenIn = zeroForOne
-    ? position.token0.address
-    : position.token1.address;
-  const tokenOut = zeroForOne
-    ? position.token1.address
-    : position.token0.address;
-  const amountIn = zeroForOne ? amount0.toString() : amount1.toString();
-  // get a quote from 1inch
-  const { tx } = await quote(
+  return {
+    amount,
+    swapData: '0x',
+  };
+}
+
+async function routerZapOut(
+  chainId: ApertureSupportedChainId,
+  provider: JsonRpcProvider | Provider,
+  fromAddress: string,
+  position: PositionDetails,
+  feeBips: BigNumberish,
+  zeroForOne: boolean,
+  slippage: number,
+) {
+  const swapData = await getZapOutSwapData(
     chainId,
-    tokenIn,
-    tokenOut,
-    amountIn,
-    getChainInfo(chainId).aperture_router_proxy!,
-    slippage * 100,
-  );
-  const approveTarget = await getApproveTarget(chainId);
-  const swapData = encodeSwapData(
-    chainId,
-    tx.to,
-    approveTarget,
-    tokenIn,
-    tokenOut,
-    amountIn,
-    tx.data,
+    provider,
+    fromAddress,
+    position,
+    feeBips,
+    zeroForOne,
+    slippage,
   );
   const amount = await simulateDecreaseLiquiditySingle(
     chainId,
@@ -395,7 +445,7 @@ export async function optimalZapOut(
     fromAddress,
     position.owner,
     position.tokenId,
-    liquidity,
+    position.liquidity,
     zeroForOne,
     0,
     feeBips,
@@ -405,4 +455,59 @@ export async function optimalZapOut(
     amount,
     swapData,
   };
+}
+
+/**
+ * Get the optimal amount of tokens to zap out of a position.
+ * @param chainId The chain ID.
+ * @param positionId The position ID.
+ * @param zeroForOne Whether to swap token0 for token1 or vice versa.
+ * @param feeBips The percentage of position value to pay as a fee, multiplied by 1e18.
+ * @param fromAddress The address of the caller.
+ * @param slippage The slippage tolerance.
+ * @param provider A JSON RPC provider or a base provider.
+ */
+export async function optimalZapOut(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  zeroForOne: boolean,
+  feeBips: BigNumberish,
+  fromAddress: string,
+  slippage: number,
+  provider: JsonRpcProvider | Provider,
+) {
+  const position = await PositionDetails.fromPositionId(
+    chainId,
+    positionId,
+    provider,
+  );
+  const poolPromise = poolZapOut(
+    chainId,
+    provider,
+    fromAddress,
+    position,
+    feeBips,
+    zeroForOne,
+  );
+  if (getChainInfo(chainId).aperture_router_proxy === undefined) {
+    return await poolPromise;
+  }
+  const [poolEstimate, routerEstimate] = await Promise.all([
+    poolPromise,
+    routerZapOut(
+      chainId,
+      provider,
+      fromAddress,
+      position,
+      feeBips,
+      zeroForOne,
+      slippage,
+    ),
+  ]);
+  // use the same pool if the quote isn't better
+  if (poolEstimate.amount.gte(routerEstimate.amount)) {
+    return poolEstimate;
+  } else {
+    return routerEstimate;
+  }
 }
