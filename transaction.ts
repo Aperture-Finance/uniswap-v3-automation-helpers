@@ -431,6 +431,8 @@ export async function getRemoveLiquidityTx(
   );
 }
 
+export async function getRemoveLiquiditySingleTx() {}
+
 /**
  * Generates an unsigned transaction that collects tokens from the specified position.
  * @param positionId Position id.
@@ -593,7 +595,7 @@ export async function getRebalanceTx(
         provider,
       ));
     } catch (err) {
-      console.log(
+      console.error(
         `Failed to construct 1inch swap data: ${err}. Will proceed with same-pool swap.`,
       );
     }

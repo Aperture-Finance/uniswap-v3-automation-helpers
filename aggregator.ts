@@ -12,7 +12,9 @@ import { BigNumberish } from 'ethers';
 
 import {
   encodeOptimalSwapData,
+  encodeSwapData,
   getAutomanContract,
+  simulateDecreaseLiquiditySingle,
   simulateMintOptimal,
   simulateRebalance,
   simulateRemoveLiquidity,
@@ -331,6 +333,76 @@ export async function optimalRebalance(
     amount0,
     amount1,
     liquidity,
+    swapData,
+  };
+}
+
+export async function optimalZapOut(
+  chainId: ApertureSupportedChainId,
+  positionId: BigNumberish,
+  liquidity: BigNumberish,
+  zeroForOne: boolean,
+  feeBips: BigNumberish,
+  usePool: boolean,
+  fromAddress: string,
+  slippage: number,
+  provider: JsonRpcProvider | Provider,
+) {
+  const position = await PositionDetails.fromPositionId(
+    chainId,
+    positionId,
+    provider,
+  );
+  const { amount0, amount1 } = await simulateRemoveLiquidity(
+    chainId,
+    provider,
+    fromAddress,
+    position.owner,
+    position.tokenId,
+    0,
+    0,
+    feeBips,
+  );
+  const tokenIn = zeroForOne
+    ? position.token0.address
+    : position.token1.address;
+  const tokenOut = zeroForOne
+    ? position.token1.address
+    : position.token0.address;
+  const amountIn = zeroForOne ? amount0.toString() : amount1.toString();
+  // get a quote from 1inch
+  const { tx } = await quote(
+    chainId,
+    tokenIn,
+    tokenOut,
+    amountIn,
+    getChainInfo(chainId).aperture_router_proxy!,
+    slippage * 100,
+  );
+  const approveTarget = await getApproveTarget(chainId);
+  const swapData = encodeSwapData(
+    chainId,
+    tx.to,
+    approveTarget,
+    tokenIn,
+    tokenOut,
+    amountIn,
+    tx.data,
+  );
+  const amount = await simulateDecreaseLiquiditySingle(
+    chainId,
+    provider,
+    fromAddress,
+    position.owner,
+    position.tokenId,
+    liquidity,
+    zeroForOne,
+    0,
+    feeBips,
+    swapData,
+  );
+  return {
+    amount,
     swapData,
   };
 }
