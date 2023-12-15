@@ -41,7 +41,7 @@ import { defaultAbiCoder, getAddress } from 'ethers/lib/utils';
 import hre, { ethers } from 'hardhat';
 import JSBI from 'jsbi';
 
-import { optimalMint, optimalRebalance } from '../aggregator';
+import { optimalMint, optimalRebalance, optimalZapOut } from '../aggregator';
 import { getAutomanReinvestCallInfo, simulateMintOptimal } from '../automan';
 import {
   checkTokenLiquidityAgainstChainNativeCurrency,
@@ -106,6 +106,7 @@ import {
   getRemoveLiquidityTx,
   getUnwrapETHTx,
   getWrapETHTx,
+  getZapOutTx,
 } from '../transaction';
 import { getPoolsFromSubgraph, getWhitelistedPools } from '../whitelist';
 
@@ -993,6 +994,20 @@ describe('Automan transaction tests', function () {
     });
   });
 
+  it('Test getZapOutTx', async function () {
+    const { tx } = await getZapOutTx(
+      chainId,
+      eoa,
+      positionId,
+      true,
+      /*slippageTolerance=*/ new Percent(1, 100),
+      /*deadlineEpochSeconds=*/ Math.floor(Date.now() / 1000),
+      hardhatForkProvider,
+    );
+    const eoaSigner = await ethers.getImpersonatedSigner(eoa);
+    await (await eoaSigner.sendTransaction(tx)).wait();
+  });
+
   it('Reinvest', async function () {
     const liquidityBeforeReinvest = (
       await getBasicPositionInfo(chainId, positionId, hardhatForkProvider)
@@ -1827,6 +1842,22 @@ describe('Routing tests', function () {
       Number(predictedLiquidity.toString()),
       Number(predictedLiquidity.toString()) * 0.05,
     );
+  });
+
+  it('Test optimal zap out', async function () {
+    const chainId = ApertureSupportedChainId.ARBITRUM_MAINNET_CHAIN_ID;
+    const provider = new ethers.providers.InfuraProvider(chainId);
+    const tokenId = 726230;
+    const { amount } = await optimalZapOut(
+      chainId,
+      tokenId,
+      false,
+      1e12,
+      await getNPM(chainId, provider).ownerOf(tokenId),
+      0.1,
+      provider,
+    );
+    console.log('zap out amount', amount.toString());
   });
 
   it('Test automation eligiblity', async function () {
