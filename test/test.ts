@@ -1744,7 +1744,7 @@ describe('Routing tests', function () {
     const quote = await fetchQuoteFromSpecifiedRoutingApiInfo(
       3441005 as ApertureSupportedChainId,
       {
-        url: 'https://manta-routing.aperture.finance/quote',
+        url: 'https://uniswap-routing.aperture.finance/quote',
         type: 'ROUTING_API',
       },
       'ETH',
@@ -1755,6 +1755,19 @@ describe('Routing tests', function () {
     expect(quote.amountDecimals === '1');
     expect(Number(quote.quoteDecimals)).to.be.greaterThan(0);
     console.log(`1 ETH -> ${quote.quoteDecimals} USDC`);
+  });
+
+  it('Fetch quote swapping 1 USDC for ETH on Scroll mainnet', async function () {
+    const quote = await fetchQuoteFromRoutingApi(
+      ApertureSupportedChainId.SCROLL_MAINNET_CHAIN_ID,
+      '0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4', // USDC on Scroll
+      'ETH',
+      '1000000',
+      'exactIn',
+    );
+    expect(quote.amountDecimals === '1');
+    expect(Number(quote.quoteDecimals)).to.be.greaterThan(0);
+    console.log(`1 USDC -> ${quote.quoteDecimals} ETH`);
   });
 
   it('Test optimalMint', async function () {
