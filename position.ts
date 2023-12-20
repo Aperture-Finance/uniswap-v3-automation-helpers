@@ -63,6 +63,7 @@ export async function getBasicPositionInfo(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
+  blockNumber?: BlockTag,
 ): Promise<BasicPositionInfo> {
   const npm = getNPM(chainId, provider);
   const positionInfo = await npm.positions(positionId);
@@ -192,12 +193,14 @@ export async function viewCollectableTokenAmounts(
   positionId: BigNumberish,
   provider: Provider,
   basicPositionInfo?: BasicPositionInfo,
+  blockNumber?: BlockTag,
 ): Promise<CollectableTokenAmounts> {
   if (basicPositionInfo === undefined) {
     basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
       provider,
+      blockNumber,
     );
   }
   const pool = getPoolContract(
@@ -207,6 +210,7 @@ export async function viewCollectableTokenAmounts(
     chainId,
     provider,
   );
+  const overrides = { blockTag: blockNumber };
   const [
     slot0,
     feeGrowthGlobal0X128,
@@ -215,10 +219,10 @@ export async function viewCollectableTokenAmounts(
     upper,
     position,
   ] = await Promise.all([
-    pool.slot0(),
-    pool.feeGrowthGlobal0X128(),
-    pool.feeGrowthGlobal1X128(),
-    pool.ticks(basicPositionInfo.tickLower),
+    pool.slot0(overrides),
+    pool.feeGrowthGlobal0X128(overrides),
+    pool.feeGrowthGlobal1X128(overrides),
+    pool.ticks(basicPositionInfo.tickLower, overrides),
     pool.ticks(basicPositionInfo.tickUpper),
     getNPM(chainId, provider).positions(positionId),
   ]);
