@@ -66,10 +66,11 @@ export async function getBasicPositionInfo(
   blockNumber?: BlockTag,
 ): Promise<BasicPositionInfo> {
   const npm = getNPM(chainId, provider);
-  const positionInfo = await npm.positions(positionId);
+  const overrides = { blockTag: blockNumber };
+  const positionInfo = await npm.positions(positionId, overrides);
   const [token0, token1] = await Promise.all([
-    getToken(positionInfo.token0, chainId, provider),
-    getToken(positionInfo.token1, chainId, provider),
+    getToken(positionInfo.token0, chainId, provider, blockNumber),
+    getToken(positionInfo.token1, chainId, provider, blockNumber),
   ]);
   return {
     token0,
@@ -224,7 +225,7 @@ export async function viewCollectableTokenAmounts(
     pool.feeGrowthGlobal1X128(overrides),
     pool.ticks(basicPositionInfo.tickLower, overrides),
     pool.ticks(basicPositionInfo.tickUpper),
-    getNPM(chainId, provider).positions(positionId),
+    getNPM(chainId, provider).positions(positionId, overrides),
   ]);
 
   // https://github.com/Uniswap/v4-core/blob/f630c8ca8c669509d958353200953762fd15761a/contracts/libraries/Pool.sol#L566

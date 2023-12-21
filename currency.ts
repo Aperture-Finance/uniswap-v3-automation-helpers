@@ -5,6 +5,7 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
 import { parseFixed } from '@ethersproject/bignumber';
+import { BlockTag } from '@ethersproject/providers';
 import {
   Currency,
   CurrencyAmount,
@@ -29,7 +30,7 @@ export async function getToken(
   tokenAddress: string,
   chainId: ApertureSupportedChainId,
   provider: Provider,
-  blockNumber?: number,
+  blockNumber?: BlockTag,
   showSymbolAndName?: boolean,
 ): Promise<Token> {
   const contract = ERC20__factory.connect(tokenAddress, provider);
