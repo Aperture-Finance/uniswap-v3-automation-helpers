@@ -384,14 +384,14 @@ export async function getRemoveLiquidityTx(
   provider: Provider,
   receiveNativeEtherIfApplicable?: boolean,
   position?: Position,
-  blockNumber?: BlockTag,
+  blockTag?: BlockTag,
 ): Promise<TransactionRequest> {
   if (position === undefined) {
     ({ position } = await PositionDetails.fromPositionId(
       chainId,
       removeLiquidityOptions.tokenId.toString(),
       provider,
-      blockNumber,
+      blockTag,
     ));
   }
   const collectableTokenAmount = await viewCollectableTokenAmounts(
@@ -405,7 +405,7 @@ export async function getRemoveLiquidityTx(
       tickUpper: position.tickUpper,
       fee: position.pool.fee,
     },
-    blockNumber,
+    blockTag,
   );
   const { calldata, value } = NonfungiblePositionManager.removeCallParameters(
     position,

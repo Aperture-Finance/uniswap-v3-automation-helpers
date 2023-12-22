@@ -30,11 +30,11 @@ export async function getToken(
   tokenAddress: string,
   chainId: ApertureSupportedChainId,
   provider: Provider,
-  blockNumber?: BlockTag,
+  blockTag?: BlockTag,
   showSymbolAndName?: boolean,
 ): Promise<Token> {
   const contract = ERC20__factory.connect(tokenAddress, provider);
-  const opts = { blockTag: blockNumber };
+  const opts = { blockTag };
   if (showSymbolAndName) {
     try {
       const [decimals, symbol, name] = await Promise.all([
