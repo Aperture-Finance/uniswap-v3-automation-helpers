@@ -222,7 +222,7 @@ export async function viewCollectableTokenAmounts(
     pool.feeGrowthGlobal0X128(overrides),
     pool.feeGrowthGlobal1X128(overrides),
     pool.ticks(basicPositionInfo.tickLower, overrides),
-    pool.ticks(basicPositionInfo.tickUpper),
+    pool.ticks(basicPositionInfo.tickUpper, overrides),
     getNPM(chainId, provider).positions(positionId, overrides),
   ]);
 
