@@ -100,11 +100,13 @@ export class CustomInfuraProvider extends ethers.providers.InfuraProvider {
   /**
    * Override the default InfuraProvider's `getUrl` function to support more networks.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static getUrl(network: Network, apiKey: any): ConnectionInfo {
     const host = CustomInfuraProvider.getHost(network);
     const connection: ConnectionInfo = {
       allowGzip: true,
       url: 'https:/' + '/' + host + '/v3/' + apiKey.projectId,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       throttleCallback: (attempt: number, url: string) => {
         if (apiKey.projectId === defaultProjectId) {
           showThrottleMessage();
