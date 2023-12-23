@@ -19,6 +19,7 @@ import {
   simulateRebalance,
   simulateRemoveLiquidity,
 } from './automan';
+import { StateOverrides, getERC20Overrides } from './overrides';
 import { computePoolAddress } from './pool';
 import { PositionDetails } from './position';
 
@@ -158,18 +159,52 @@ export async function optimalMint(
     recipient: fromAddress,
     deadline: Math.floor(Date.now() / 1000 + 86400),
   };
+  const { aperture_uniswap_v3_automan, optimal_swap_router } =
+    getChainInfo(chainId);
+  let overrides: StateOverrides | undefined;
+  if (provider instanceof JsonRpcProvider) {
+    // forge token approvals and balances
+    const [token0Overrides, token1Overrides] = await Promise.all([
+      getERC20Overrides(
+        mintParams.token0,
+        fromAddress,
+        aperture_uniswap_v3_automan,
+        mintParams.amount0Desired,
+        provider,
+      ),
+      getERC20Overrides(
+        mintParams.token1,
+        fromAddress,
+        aperture_uniswap_v3_automan,
+        mintParams.amount1Desired,
+        provider,
+      ),
+    ]);
+    overrides = {
+      ...token0Overrides,
+      ...token1Overrides,
+    };
+  }
   const poolPromise = optimalMintPool(
     chainId,
     provider,
     fromAddress,
     mintParams,
+    overrides,
   );
-  if (getChainInfo(chainId).optimal_swap_router === undefined) {
+  if (optimal_swap_router === undefined) {
     return await poolPromise;
   }
   const [poolEstimate, routerEstimate] = await Promise.all([
     poolPromise,
-    optimalMintRouter(chainId, provider, fromAddress, mintParams, slippage),
+    optimalMintRouter(
+      chainId,
+      provider,
+      fromAddress,
+      mintParams,
+      slippage,
+      overrides,
+    ),
   ]);
   // use the same pool if the quote isn't better
   if (poolEstimate.liquidity.gte(routerEstimate.liquidity)) {
@@ -184,12 +219,16 @@ async function optimalMintPool(
   provider: JsonRpcProvider | Provider,
   fromAddress: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
+  overrides?: StateOverrides,
 ) {
   const { amount0, amount1, liquidity } = await simulateMintOptimal(
     chainId,
     provider,
     fromAddress,
     mintParams,
+    undefined,
+    undefined,
+    overrides,
   );
   return {
     amount0,
@@ -250,6 +289,7 @@ async function optimalMintRouter(
   fromAddress: string,
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   slippage: number,
+  overrides?: StateOverrides,
 ) {
   const swapData = await getOptimalMintSwapData(
     chainId,
@@ -263,6 +303,8 @@ async function optimalMintRouter(
     fromAddress,
     mintParams,
     swapData,
+    undefined,
+    overrides,
   );
   return {
     amount0,
