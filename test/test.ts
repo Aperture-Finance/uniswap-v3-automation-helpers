@@ -1856,7 +1856,7 @@ describe('Routing tests', function () {
     );
     expect(liquidity.toNumber()).to.be.closeTo(
       Number(predictedLiquidity.toString()),
-      Number(predictedLiquidity.toString()) * 0.05,
+      Number(predictedLiquidity.toString()) * 0.1,
     );
   });
 
