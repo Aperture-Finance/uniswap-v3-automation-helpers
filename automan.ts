@@ -12,6 +12,7 @@ import { BigNumberish, BytesLike, Signer } from 'ethers';
 import { solidityPack, splitSignature } from 'ethers/lib/utils';
 
 import {
+  StateOverrides,
   getAutomanWhitelistOverrides,
   getERC20Overrides,
   getNPMApprovalOverrides,
@@ -386,6 +387,7 @@ export async function simulateDecreaseLiquiditySingle(
  * @param mintParams The mint parameters.
  * @param swapData The swap data if using a router.
  * @param blockNumber Optional block number to query.
+ * @param overrides Optional token approval and balance overrides.
  * @returns {tokenId, liquidity, amount0, amount1}
  */
 export async function simulateMintOptimal(
@@ -395,6 +397,7 @@ export async function simulateMintOptimal(
   mintParams: INonfungiblePositionManager.MintParamsStruct,
   swapData: BytesLike = '0x',
   blockNumber?: number,
+  overrides?: StateOverrides,
 ): Promise<MintReturnType> {
   checkTicks(mintParams);
   const data = IUniV3Automan__factory.createInterface().encodeFunctionData(
@@ -409,29 +412,32 @@ export async function simulateMintOptimal(
   };
   let returnData: string;
   if (provider instanceof JsonRpcProvider) {
-    // forge token approvals and balances
-    const [token0Overrides, token1Overrides] = await Promise.all([
-      getERC20Overrides(
-        mintParams.token0,
-        from,
-        aperture_uniswap_v3_automan,
-        mintParams.amount0Desired,
-        provider,
-      ),
-      getERC20Overrides(
-        mintParams.token1,
-        from,
-        aperture_uniswap_v3_automan,
-        mintParams.amount1Desired,
-        provider,
-      ),
-    ]);
-    returnData = await staticCallWithOverrides(
-      tx,
-      {
+    if (overrides === undefined) {
+      // forge token approvals and balances
+      const [token0Overrides, token1Overrides] = await Promise.all([
+        getERC20Overrides(
+          mintParams.token0,
+          from,
+          aperture_uniswap_v3_automan,
+          mintParams.amount0Desired,
+          provider,
+        ),
+        getERC20Overrides(
+          mintParams.token1,
+          from,
+          aperture_uniswap_v3_automan,
+          mintParams.amount1Desired,
+          provider,
+        ),
+      ]);
+      overrides = {
         ...token0Overrides,
         ...token1Overrides,
-      },
+      };
+    }
+    returnData = await staticCallWithOverrides(
+      tx,
+      overrides,
       provider,
       blockNumber,
     );

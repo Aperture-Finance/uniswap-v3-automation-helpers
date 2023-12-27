@@ -12,7 +12,7 @@ import { AccessList } from '@ethersproject/transactions';
 import { BigNumberish } from 'ethers';
 import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
 
-type StateOverrides = {
+export type StateOverrides = {
   [address: string]: {
     balance?: string;
     nonce?: string;
