@@ -131,6 +131,7 @@ export async function quote(
  * @param fromAddress The address to mint from.
  * @param slippage The slippage tolerance.
  * @param provider A JSON RPC provider or a base provider.
+ * @param usePool Whether to use the pool or the aggregator for the swap.
  */
 export async function optimalMint(
   chainId: ApertureSupportedChainId,
@@ -142,6 +143,7 @@ export async function optimalMint(
   fromAddress: string,
   slippage: number,
   provider: JsonRpcProvider | Provider,
+  usePool = false,
 ) {
   if (!token0Amount.currency.sortsBefore(token1Amount.currency)) {
     throw new Error('token0 must be sorted before token1');
@@ -192,25 +194,29 @@ export async function optimalMint(
     mintParams,
     overrides,
   );
-  if (optimal_swap_router === undefined) {
-    return await poolPromise;
-  }
-  const [poolEstimate, routerEstimate] = await Promise.all([
-    poolPromise,
-    optimalMintRouter(
-      chainId,
-      provider,
-      fromAddress,
-      mintParams,
-      slippage,
-      overrides,
-    ),
-  ]);
-  // use the same pool if the quote isn't better
-  if (poolEstimate.liquidity.gte(routerEstimate.liquidity)) {
-    return poolEstimate;
+  if (!usePool) {
+    if (optimal_swap_router === undefined) {
+      return await poolPromise;
+    }
+    const [poolEstimate, routerEstimate] = await Promise.all([
+      poolPromise,
+      optimalMintRouter(
+        chainId,
+        provider,
+        fromAddress,
+        mintParams,
+        slippage,
+        overrides,
+      ),
+    ]);
+    // use the same pool if the quote isn't better
+    if (poolEstimate.liquidity.gte(routerEstimate.liquidity)) {
+      return poolEstimate;
+    } else {
+      return routerEstimate;
+    }
   } else {
-    return routerEstimate;
+    return await poolPromise;
   }
 }
 

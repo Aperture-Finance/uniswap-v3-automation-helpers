@@ -212,6 +212,7 @@ export async function getCreatePositionTx(
  * @param deadline The deadline in seconds before which the transaction must be mined.
  * @param slippage The slippage tolerance.
  * @param provider A JSON RPC provider or a base provider.
+ * @param use1inch Optional. If set to true, the 1inch aggregator will be used to facilitate the swap.
  */
 export async function getOptimalMintTx(
   chainId: ApertureSupportedChainId,
@@ -224,6 +225,7 @@ export async function getOptimalMintTx(
   deadline: BigNumberish,
   slippage: number,
   provider: JsonRpcProvider | Provider,
+  use1inch?: boolean,
 ) {
   let value: BigNumberish | undefined;
   if (token0Amount.currency.isNative) {
@@ -249,6 +251,7 @@ export async function getOptimalMintTx(
     recipient,
     slippage,
     provider,
+    !use1inch,
   );
   const token0 = (token0Amount.currency as Token).address;
   const token1 = (token1Amount.currency as Token).address;

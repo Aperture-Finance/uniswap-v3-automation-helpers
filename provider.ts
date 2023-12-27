@@ -1,6 +1,7 @@
 import { providers } from '@0xsequence/multicall';
 import {
   ApertureSupportedChainId,
+  InfuraNetworkId,
   getChainInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Logger } from '@ethersproject/logger';
@@ -20,7 +21,7 @@ const logger = new Logger('providers/5.7.2');
 const defaultProjectId = '84842078b09946638c03157f83405213';
 
 export class CustomInfuraProvider extends ethers.providers.InfuraProvider {
-  static getNetwork(network: Networkish): Network {
+  static getNetwork(network: InfuraNetworkId | Networkish): Network {
     if (typeof network === 'string') {
       switch (network) {
         case 'linea':
