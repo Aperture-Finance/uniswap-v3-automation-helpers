@@ -12,6 +12,7 @@ import {
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { EventFragment } from '@ethersproject/abi';
 import {
+  BlockTag,
   JsonRpcProvider,
   Log,
   Provider,
@@ -386,12 +387,14 @@ export async function getRemoveLiquidityTx(
   provider: Provider,
   receiveNativeEtherIfApplicable?: boolean,
   position?: Position,
+  blockTag?: BlockTag,
 ): Promise<TransactionRequest> {
   if (position === undefined) {
     ({ position } = await PositionDetails.fromPositionId(
       chainId,
       removeLiquidityOptions.tokenId.toString(),
       provider,
+      blockTag,
     ));
   }
   const collectableTokenAmount = await viewCollectableTokenAmounts(
@@ -405,6 +408,7 @@ export async function getRemoveLiquidityTx(
       tickUpper: position.tickUpper,
       fee: position.pool.fee,
     },
+    blockTag,
   );
   const { calldata, value } = NonfungiblePositionManager.removeCallParameters(
     position,

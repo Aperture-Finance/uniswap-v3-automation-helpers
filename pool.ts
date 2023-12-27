@@ -6,6 +6,7 @@ import {
   sqrtRatioToPrice,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
 import { Provider } from '@ethersproject/abstract-provider';
+import { BlockTag } from '@ethersproject/providers';
 import { Price, Token } from '@uniswap/sdk-core';
 import {
   FeeAmount,
@@ -111,7 +112,7 @@ export function getPoolContract(
  * @param fee Fee tier of the pool.
  * @param chainId Chain id.
  * @param provider Ethers provider.
- * @param blockNumber Optional block number to query.
+ * @param blockTag Optional block tag to query.
  * @returns The constructed Uniswap SDK Pool object.
  */
 export async function getPool(
@@ -120,11 +121,11 @@ export async function getPool(
   fee: FeeAmount,
   chainId: ApertureSupportedChainId,
   provider?: Provider,
-  blockNumber?: number,
+  blockTag?: BlockTag,
 ): Promise<Pool> {
   provider = provider ?? getPublicProvider(chainId);
   const poolContract = getPoolContract(tokenA, tokenB, fee, chainId, provider);
-  const opts = { blockTag: blockNumber };
+  const opts = { blockTag };
   // If the specified pool has not been created yet, then the slot0() and liquidity() calls should fail (and throw an error).
   // Also update the tokens to the canonical type.
   const [slot0, inRangeLiquidity, tokenACanon, tokenBCanon] = await Promise.all(
@@ -135,13 +136,13 @@ export async function getPool(
         typeof tokenA === 'string' ? tokenA : tokenA.address,
         chainId,
         provider,
-        blockNumber,
+        blockTag,
       ),
       getToken(
         typeof tokenB === 'string' ? tokenB : tokenB.address,
         chainId,
         provider,
-        blockNumber,
+        blockTag,
       ),
     ],
   );

@@ -1603,11 +1603,9 @@ describe('Position util tests', function () {
     const { aperture_uniswap_v3_automan } = getChainInfo(chainId);
     const provider = new ethers.providers.InfuraProvider(chainId);
     const positionId = 761879;
-    const blockNumber = 119626480;
+    const blockTag = 119626480;
     const npm = getNPM(chainId, provider);
-    const opts = {
-      blockTag: blockNumber,
-    };
+    const opts = { blockTag };
     const owner = await npm.ownerOf(positionId, opts);
     expect(await npm.isApprovedForAll(owner, aperture_uniswap_v3_automan, opts))
       .to.be.false;
@@ -1615,11 +1613,11 @@ describe('Position util tests', function () {
       chainId,
       positionId,
       provider,
-      blockNumber,
+      blockTag,
     );
     await hardhatReset(
       `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      blockNumber,
+      blockTag,
     );
     const signer = await ethers.getImpersonatedSigner(owner);
     await npm

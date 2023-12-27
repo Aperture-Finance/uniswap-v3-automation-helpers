@@ -63,12 +63,14 @@ export async function getBasicPositionInfo(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
+  blockTag?: BlockTag,
 ): Promise<BasicPositionInfo> {
   const npm = getNPM(chainId, provider);
-  const positionInfo = await npm.positions(positionId);
+  const overrides = { blockTag };
+  const positionInfo = await npm.positions(positionId, overrides);
   const [token0, token1] = await Promise.all([
-    getToken(positionInfo.token0, chainId, provider),
-    getToken(positionInfo.token1, chainId, provider),
+    getToken(positionInfo.token0, chainId, provider, blockTag),
+    getToken(positionInfo.token1, chainId, provider, blockTag),
   ]);
   return {
     token0,
@@ -101,26 +103,24 @@ export async function getPositionFromBasicInfo(
  * @param chainId The chain ID.
  * @param positionId The position id.
  * @param provider The ethers provider.
- * @param blockNumber Optional block number to query.
+ * @param blockTag Optional block tag to query.
  * @returns The `Position` object.
  */
 export async function getPosition(
   chainId: ApertureSupportedChainId,
   positionId: BigNumberish,
   provider: Provider,
-  blockNumber?: number,
+  blockTag?: BlockTag,
 ) {
   const npm = getNPM(chainId, provider);
-  const positionInfo = await npm.positions(positionId, {
-    blockTag: blockNumber,
-  });
+  const positionInfo = await npm.positions(positionId, { blockTag });
   const pool = await getPool(
     positionInfo.token0,
     positionInfo.token1,
     positionInfo.fee,
     chainId,
     provider,
-    blockNumber,
+    blockTag,
   );
   return new Position({
     pool,
@@ -192,12 +192,14 @@ export async function viewCollectableTokenAmounts(
   positionId: BigNumberish,
   provider: Provider,
   basicPositionInfo?: BasicPositionInfo,
+  blockTag?: BlockTag,
 ): Promise<CollectableTokenAmounts> {
   if (basicPositionInfo === undefined) {
     basicPositionInfo = await getBasicPositionInfo(
       chainId,
       positionId,
       provider,
+      blockTag,
     );
   }
   const pool = getPoolContract(
@@ -207,6 +209,7 @@ export async function viewCollectableTokenAmounts(
     chainId,
     provider,
   );
+  const overrides = { blockTag };
   const [
     slot0,
     feeGrowthGlobal0X128,
@@ -215,12 +218,12 @@ export async function viewCollectableTokenAmounts(
     upper,
     position,
   ] = await Promise.all([
-    pool.slot0(),
-    pool.feeGrowthGlobal0X128(),
-    pool.feeGrowthGlobal1X128(),
-    pool.ticks(basicPositionInfo.tickLower),
-    pool.ticks(basicPositionInfo.tickUpper),
-    getNPM(chainId, provider).positions(positionId),
+    pool.slot0(overrides),
+    pool.feeGrowthGlobal0X128(overrides),
+    pool.feeGrowthGlobal1X128(overrides),
+    pool.ticks(basicPositionInfo.tickLower, overrides),
+    pool.ticks(basicPositionInfo.tickUpper, overrides),
+    getNPM(chainId, provider).positions(positionId, overrides),
   ]);
 
   // https://github.com/Uniswap/v4-core/blob/f630c8ca8c669509d958353200953762fd15761a/contracts/libraries/Pool.sol#L566
@@ -530,14 +533,14 @@ export class PositionDetails implements BasicPositionInfo {
     chainId: ApertureSupportedChainId,
     positionId: BigNumberish,
     provider: Provider,
-    blockNumber?: BlockTag,
+    blockTag?: BlockTag,
   ): Promise<PositionDetails> {
     const returnData = await provider.call(
       new EphemeralGetPosition__factory().getDeployTransaction(
         getChainInfo(chainId).uniswap_v3_nonfungible_position_manager,
         positionId,
       ),
-      blockNumber,
+      blockTag,
     );
     return PositionDetails.fromPositionStateStruct(
       chainId,
