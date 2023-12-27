@@ -1,11 +1,129 @@
 import { providers } from '@0xsequence/multicall';
 import {
   ApertureSupportedChainId,
+  InfuraNetworkId,
   getChainInfo,
 } from '@aperture_finance/uniswap-v3-automation-sdk';
-import { Provider, TransactionRequest } from '@ethersproject/providers';
+import { Logger } from '@ethersproject/logger';
+import { Network } from '@ethersproject/networks';
+import {
+  Networkish,
+  Provider,
+  TransactionRequest,
+  showThrottleMessage,
+} from '@ethersproject/providers';
 import { serialize } from '@ethersproject/transactions';
+import { ConnectionInfo } from '@ethersproject/web';
 import { BigNumber, ethers } from 'ethers';
+
+const logger = new Logger('providers/5.7.2');
+
+const defaultProjectId = '84842078b09946638c03157f83405213';
+
+export class CustomInfuraProvider extends ethers.providers.InfuraProvider {
+  static getNetwork(network: InfuraNetworkId | Networkish): Network {
+    if (typeof network === 'string') {
+      switch (network) {
+        case 'linea':
+          return {
+            name: 'linea',
+            chainId: 59144,
+          };
+        case 'base':
+          return {
+            name: 'base',
+            chainId: 8453,
+          };
+        case 'avalanche':
+          return {
+            name: 'avalanche',
+            chainId: 43114,
+          };
+        case 'celo':
+          return {
+            name: 'celo',
+            chainId: 42220,
+          };
+        case 'bnbsmartchain':
+          return {
+            name: 'bnbsmartchain',
+            chainId: 56,
+          };
+      }
+    }
+    return super.getNetwork(network);
+  }
+
+  static getHost(network: Network): string {
+    switch (network ? network.name : 'unknown') {
+      case 'mainnet':
+      case 'homestead':
+        return 'mainnet.infura.io';
+      case 'goerli':
+        return 'goerli.infura.io';
+      case 'sepolia':
+        return 'sepolia.infura.io';
+      case 'matic':
+        return 'polygon-mainnet.infura.io';
+      case 'maticmum':
+        return 'polygon-mumbai.infura.io';
+      case 'optimism':
+        return 'optimism-mainnet.infura.io';
+      case 'optimism-goerli':
+        return 'optimism-goerli.infura.io';
+      case 'arbitrum':
+        return 'arbitrum-mainnet.infura.io';
+      case 'arbitrum-goerli':
+        return 'arbitrum-goerli.infura.io';
+      case 'linea':
+        return 'linea-mainnet.infura.io';
+      case 'base':
+        return 'base-mainnet.infura.io';
+      case 'avalanche':
+        return 'avalanche-mainnet.infura.io';
+      case 'celo':
+        return 'celo-mainnet.infura.io';
+      case 'bnbsmartchain':
+        return 'bnbsmartchain-mainnet.infura.io';
+      default:
+        logger.throwError(
+          'unsupported network',
+          Logger.errors.INVALID_ARGUMENT,
+          {
+            argument: 'network',
+            value: network,
+          },
+        );
+        throw new Error('unsupported network');
+    }
+  }
+
+  /**
+   * Override the default InfuraProvider's `getUrl` function to support more networks.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static getUrl(network: Network, apiKey: any): ConnectionInfo {
+    const host = CustomInfuraProvider.getHost(network);
+    const connection: ConnectionInfo = {
+      allowGzip: true,
+      url: 'https:/' + '/' + host + '/v3/' + apiKey.projectId,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      throttleCallback: (attempt: number, url: string) => {
+        if (apiKey.projectId === defaultProjectId) {
+          showThrottleMessage();
+        }
+        return Promise.resolve(true);
+      },
+    };
+
+    if (apiKey.projectSecret != null) {
+      connection.user = '';
+      connection.password = apiKey.projectSecret;
+    }
+
+    return connection;
+  }
+}
 
 /**
  * Creates a public ethers provider for the specified chain id.
@@ -17,8 +135,8 @@ export function getPublicProvider(
 ): providers.MulticallProvider {
   const info = getChainInfo(chainId);
   const provider = info.infura_network_id
-    ? new ethers.providers.InfuraProvider(info.infura_network_id)
-    : new ethers.providers.JsonRpcProvider(info.rpc_url);
+    ? new CustomInfuraProvider(info.infura_network_id)
+    : new ethers.providers.StaticJsonRpcProvider(info.rpc_url, chainId);
   return new providers.MulticallProvider(provider, {
     timeWindow: 0,
   });

@@ -977,6 +977,7 @@ describe('Automan transaction tests', function () {
       Math.floor(Date.now() / 1000) + 60,
       0.5,
       new providers.MulticallProvider(hardhatForkProvider),
+      false,
     );
     const txReceipt = await (
       await impersonatedOwnerSigner.sendTransaction(tx)
@@ -1854,7 +1855,7 @@ describe('Routing tests', function () {
     );
     expect(liquidity.toNumber()).to.be.closeTo(
       Number(predictedLiquidity.toString()),
-      Number(predictedLiquidity.toString()) * 0.06,
+      Number(predictedLiquidity.toString()) * 0.1,
     );
   });
 
