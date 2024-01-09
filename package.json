@@ -1,6 +1,6 @@
 {
   "name": "@aperture_finance/uniswap-v3-automation-helpers",
-  "version": "1.13.1",
+  "version": "1.14.1",
   "description": "Helpers for Aperture's Uniswap V3 automation platform",
   "author": "Aperture Finance <engineering@aperture.finance>",
   "license": "MIT",
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@0xsequence/multicall": "^1.6.2",
-    "@aperture_finance/uniswap-v3-automation-sdk": "^1.12.0",
+    "@aperture_finance/uniswap-v3-automation-sdk": "^1.14.0",
     "@uniswap/permit2-sdk": "^1.2.0",
     "@uniswap/smart-order-router": "^3.20.0",
     "@uniswap/v3-sdk": "^3.10.0",
